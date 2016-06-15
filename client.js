@@ -1,15 +1,19 @@
 $(function () {
     "use strict";
 
+    var connection;
+
     var content = $('#content');
     var chat = $('#chat');
     var seentyping = $('#seen-typing');
     var input = $('#input');
     var status = $('#status');
+    var reconnect = $('#reconnect');
     // var host = "//127.0.0.1";
-    // var host = "//175.139.12.245";
+    // var host = "//175.139.8.250";
     // var host = "//192.168.0.10";
     var host = location.host;
+    // var port = 8080;
     var port = 3777;
     var connect = false;
     var window_active = true;
@@ -17,7 +21,7 @@ $(function () {
     var sound = false;
     var msgs = [];
     var history = 0;
-    var id = Math.random();
+    var id;
     var sender = null;
     var timer;
 
@@ -62,141 +66,166 @@ $(function () {
     }
 
 
-
-    // ========================================== CONNECTING ====================================================
-
-    var connection = new WebSocket('ws:'+host+':'+port);
-
-    connection.onopen = function () {
-        input.removeAttr('disabled');
-        input.focus();
+    function connect_this(host, port) {
+        console.log("Connection start..");
+        id = Math.random();
+        connection = new WebSocket('ws:'+host+':'+port);
         connect = true;
-        if(localStorage.getItem("myName")) {
-            myName = localStorage.getItem("myName");
-            connection.send(JSON.stringify({id:id, msg:"/nick "+myName}));
-        }
-    }
 
-    connection.onerror = function (error) {
-        content.html($('<p>', { text: 'Sorry, but there\'s some problem with your connection or the server is down.' } ));
-        connect = false;
-    }
-
-
-
-    /// ========================================== GET MSG ====================================================
-
-    connection.onmessage = function (message) {
-        try {
-            var json = JSON.parse(message.data);
-            // var time = get_time(json.time);
-        } catch (e) {
-            console.log('This doesn\'t look like a valid JSON: ', message.msg);
-            return;
+        connection.onopen = function () {
+            console.log(connection);
+            input.removeAttr('disabled');
+            input.focus();
+            // if(localStorage.getItem("myName") && localStorage.getItem("myId")) {
+            //     myName = localStorage.getItem("myName");
+            //     id = localStorage.getItem("myId");
+            //     connection.send(JSON.stringify({id:id, msg:"/nick "+myName}));
+            // } else {
+            //     sender = null;
+            //     addMessage(
+            //         "",
+            //         "<br><i>Please type in <b>/nick &lt;your name&gt;</b> to begin.</i>",
+            //         "server",
+            //         get_time((new Date()).getTime())
+            //     );
+            // }
         }
 
-        if (json.type === 'ping') {
-            connection.send(JSON.stringify({id:id, msg:"pong"}));
-        } else if (json.type === 'alert') {
-            sender = json.author;
-            addMessage(
-                "",
-                json.msg,
-                "server",
-                json.time
-            );
-            var audio = new Audio('toing.mp3');
-            audio.play();
-        } else if (json.type === 'welcome') {
-            sender = null;
-            addMessage(
-                "",
-                json.msg,
-                "server",
-                json.time
-            );
-            myName = json.nickname;
-            connect = true;
-            localStorage.setItem("myName", myName);
-        } else if (json.type === 'newNick') {
-            sender = null;
-            addMessage(
-                "",
-                json.msg,
-                "server",
-                json.time
-            );
-            myName = json.nickname;
-            localStorage.setItem("myName", myName);
-        } else if (json.type === 'history') {
-            sender = null;
-            for (var i=0; i < json.length; i++) {
+        connection.onerror = function (error) {
+            content.html($('<p>', { text: 'Sorry, but there\'s some problem with your connection or the server is down.' } ));
+            connect = false;
+        }
+
+        connection.onmessage = function (message) {
+            try {
+                var json = JSON.parse(message.data);
+            } catch (e) {
+                console.log('This doesn\'t look like a valid JSON: ', message.msg);
+                return;
+            }
+
+            if (json.type === 'ping') {
+                connection.send(JSON.stringify({id:id, msg:"pong"}));
+            } else if (json.type === 'alert') {
+                sender = json.author;
                 addMessage(
                     "",
-                    json.msg[i],
+                    json.msg,
                     "server",
                     json.time
                 );
+                var audio = new Audio('toing.mp3');
+                audio.play();
+            } else if (json.type === 'welcome') {
+                sender = null;
+                addMessage(
+                    "",
+                    json.msg,
+                    "server",
+                    json.time
+                );
+                myName = json.nickname;
+                connect = true;
+                localStorage.setItem("myName", myName);
+                localStorage.setItem("myId", id);
+            } else if (json.type === 'newNick') {
+                sender = null;
+                addMessage(
+                    "",
+                    json.msg,
+                    "server",
+                    json.time
+                );
+                myName = json.nickname;
+                localStorage.setItem("myName", myName);
+            } else if (json.type === 'history') {
+                sender = null;
+                for (var i=0; i < json.length; i++) {
+                    addMessage(
+                        "",
+                        json.msg[i],
+                        "server",
+                        json.time
+                    );
+                }
+            } else if (json.type === 'info') {
+                sender = null;
+                addMessage(
+                    "",
+                    json.msg,
+                    "server",
+                    json.time
+                );
+            } else if (json.type === 'user-add') {
+                sender = null;
+                addMessage(
+                    "",
+                    json.msg,
+                    "server",
+                    json.time
+                );
+            } else if (json.type === 'user-remove') {
+                sender = null;
+                addMessage(
+                    "",
+                    json.msg,
+                    "server",
+                    json.time
+                );
+            } else if (json.type === 'user-info') {
+                sender = null;
+                addMessage(
+                    "",
+                    json.msg,
+                    "server",
+                    json.time
+                );
+            } else if (json.type === 'connected') {
+                sender = null;
+                addMessage(
+                    "",
+                    json.msg,
+                    "server",
+                    json.time
+                );
+                if(localStorage.getItem("myName") && localStorage.getItem("myId")) {
+                    myName = localStorage.getItem("myName");
+                    id = localStorage.getItem("myId");
+                    connection.send(JSON.stringify({id:id, msg:"/reconnect "+myName}));
+                } else {
+                    sender = null;
+                    addMessage(
+                        "",
+                        "<br><i>Please type in <b>/nick &lt;your name&gt;</b> to begin.</i>",
+                        "server",
+                        get_time((new Date()).getTime())
+                    );
+                }
+            } else if (json.type === 'typing') {
+                seentyping.html("<i>"+json.author+" is typing..</i>");
+                content.scrollTop(content[0].scrollHeight);
+                window.clearTimeout(timer);
+                timer = window.setTimeout(function() {
+                    seentyping.html("");
+                }, 5000);
+            } else if (json.type === 'seen') {
+                window.clearTimeout(timer);
+                seentyping.html("<i>seen by "+json.author+" "+get_time((new Date()).getTime())+"</i>");
+                content.scrollTop(content[0].scrollHeight);
+            } else if (json.type === 'message') {
+                sender = json.author;
+                addMessage(
+                    json.author+": ", 
+                    json.msg, 
+                    "client",
+                    json.time
+                );
+            } else {
+                console.log('Hmm..., I\'ve never seen JSON like this: ', json);
             }
-        } else if (json.type === 'info') {
-            sender = null;
-            addMessage(
-                "",
-                json.msg,
-                "server",
-                json.time
-            );
-        } else if (json.type === 'user-add') {
-            sender = null;
-            addMessage(
-                "",
-                json.msg,
-                "server",
-                json.time
-            );
-        } else if (json.type === 'user-remove') {
-            sender = null;
-            addMessage(
-                "",
-                json.msg,
-                "server",
-                json.time
-            );
-        } else if (json.type === 'user-info') {
-            sender = null;
-            addMessage(
-                "",
-                json.msg,
-                "server",
-                json.time
-            );
-        } else if (json.type === 'typing') {
-            seentyping.html("<i>"+json.author+" is typing..</i>");
-            content.scrollTop(content[0].scrollHeight);
-            window.clearTimeout(timer);
-            timer = window.setTimeout(function() {
-                seentyping.html("");
-            }, 5000);
-        } else if (json.type === 'seen') {
-            window.clearTimeout(timer);
-            seentyping.html("<i>seen by "+json.author+" "+get_time((new Date()).getTime())+"</i>");
-            content.scrollTop(content[0].scrollHeight);
-        } else if (json.type === 'message') {
-            sender = json.author;
-            addMessage(
-                json.author+": ", 
-                json.msg, 
-                "client",
-                json.time
-            );
-        } else {
-            console.log('Hmm..., I\'ve never seen JSON like this: ', json);
-        }
+        }       
     }
 
-
-
-    // ========================================== SEND MSG ====================================================
 
     input.keydown(function(e) {
         var msg = $(this).val();
@@ -205,33 +234,46 @@ $(function () {
                 return;
             }
             var d = new Date();
-            if(msg == "/mute") {
-                sender = myName;
+            if(msg == "/connect") {
+                if(connect === false) {
+                    sender = myName;
+                    var time = (new Date()).getTime();
+                    chat.append('<p class="server"><i>Connecting..</i><span class="time">'+get_time(time)+'</span></p>');
+                    connect_this(host, port);
+                    check_con();
+                }
+                $(this).val("");
+            } else if(msg == "/mute") {
+                sender = null;
                 addMessage("", "<i>You just changed your sound to <b>mute</b></i>", "server", (new Date()).getTime());
                 sound = false;
             } else if(msg == "/unmute") {
-                sender = myName;
+                sender = null;
                 addMessage("", "<i>You just changed your sound to <b>unmute</b></i>", "server", (new Date()).getTime());
                 sound = true;
             } else if(msg == "/clear") {
                 chat.html("");
             } else {
-                if(msg == "/quit") {
-                    localStorage.removeItem('myName');
+                if(connect === true) {
+                    if(msg == "/quit") {
+                        localStorage.removeItem('myName');
+                        localStorage.removeItem('myId');
+                        connect = false;
+                    }
+                    sender = null;
+                    connection.send(JSON.stringify({id:id, msg:msg}));
+                    addMessage(
+                        myName+": ", 
+                        msg, 
+                        "client",
+                        (new Date()).getTime()
+                    );
+                    msgs.push(msg);
+                    msgs = msgs.slice(-10);
+                    history = msgs.length;
                 }
-                sender = null;
-                connection.send(JSON.stringify({id:id, msg:msg}));
-                addMessage(
-                    myName+": ", 
-                    msg, 
-                    "client",
-                    (new Date()).getTime()
-                );
             }
-            msgs.push(msg);
-            msgs = msgs.slice(-10);
             $(this).val("");
-            history = msgs.length;
         } else if (e.keyCode === 40) {
             if(history < msgs.length) {
                 var m = msgs[history];
@@ -255,15 +297,10 @@ $(function () {
 
     input.keyup(function(e) {
         var msg = $(this).val();
-        if(msg.length === 1 && msg !== "/" && myName !== "You") {
+        if(msg.length === 1 && msg !== "/" && myName !== "You" && connect === true) {
             connection.send(JSON.stringify({id:id, msg:"/typing"}));
         }
     })
-
-
-
-
-    // ========================================== ADD MSG ====================================================
 
     var addMessage = function(author, message, textClass, time) {
         seentyping.html("");
@@ -282,40 +319,51 @@ $(function () {
         content.scrollTop(content[0].scrollHeight);
     }
 
-    
 
-    // ========================================== NO RESPOND ====================================================
-
-    setInterval(function() {
-        if (connection.readyState !== 1) {
-            input.attr('disabled', 'disabled').val('Unable to comminucate with the WebSocket server.');
-            connect = false;
-        }
-    }, 3000);
-
-
-
-    window.onbeforeunload = function() {
-        // if(connect === false) {
-        //     return;
-        // }
-        // return("Please type quit to end your connection. Thank You.");
-        // localStorage.removeItem('myName');
+    function check_con() {
+        var ska_inteval = setInterval(function() {
+            if (connection.readyState !== 1) {
+                if(localStorage.getItem("myName")) {
+                    if(connect === true) {
+                        connect_this(host, port);
+                        var time = (new Date()).getTime();
+                        chat.append('<p class="server"><i>You are not connected..</i><span class="time">'+get_time(time)+'</span></p>');
+                        chat.append('<p class="server"><i>Connecting..</i><span class="time">'+get_time(time)+'</span></p>');
+                        connect = false;
+                    }
+                } else {
+                    clearInterval(ska_inteval);
+                }
+            }
+        }, 3000);
     }
+
+
+    if(localStorage.getItem("myName") && localStorage.getItem("myId")) {
+        connect_this(host, port);
+        check_con();
+    } else {
+        var time = (new Date()).getTime();
+        chat.append('<p class="server"><i>Please type <b>/connect</b> to start connection...</i><span class="time">'+get_time(time)+'</span></p>');
+        input.removeAttr('disabled');
+    }
+
 
     window.onfocus = function() {
         change_title();
         window_active = true;
-        // console.log("Window - focus");
     }
 
     window.onblur = function() {
         window_active = false;
-        // console.log("Window - blur");
     }
 
     window.onclick = function() {
         input.focus();
+    }
+
+    window.onresize = function() {
+        content.scrollTop(content[0].scrollHeight);
     }
 
     function change_title() {
@@ -326,6 +374,19 @@ $(function () {
             }
         }
     }
+
+    console.log("\n"
+    +"==============================================================\n"
+    +"   __                               __       __    _________\n"
+    +"  /  \\  |  /      /\\      |        /  \\     /  \\       |\n"
+    +"  |     | /      /  \\     |       /    \\   /    \\      |\n"
+    +"   \\    |/      /    \\    |      |      | |      |     |\n"
+    +"    \\   |\\     /______\\   |      |      | |      |     |\n"
+    +"     |  | \\   /        \\  |       \\    /   \\    /      |\n"
+    +"  \\__/  |  \\ /          \\ |_____   \\__/     \\__/       |\n"
+    +"  \n"
+    +"==============================================================\n"
+    +"      -- https://www.facebook.com/skaloot --              \n");
 
 });
 

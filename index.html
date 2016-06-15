@@ -6,27 +6,30 @@
         <title>Websocket</title>
 
         <style>
-        body { margin: 0;font-family:tahoma; font-size:14px;  }
+        body { margin: 0;font-family:tahoma; font-size:1em; letter-spacing:0.02em;  }
         * { padding:0px; margin:0px;outline: 0; }
         p { line-height:1.4; }
-        #content { padding:15px; background:#ddd; overflow-y: auto; position: absolute;
+        #content { padding:15px; background:#ddd; overflow-y: auto; position: absolute; padding-bottom:30px;
                    border:1px solid #CCC; margin:10px; height: auto; bottom: 50px; top: 0px;left: 0px;right: 0px; }
         #content #chat p { line-height: 1.6; }
-        #seen-typing { color:#999; }
+        #seen-typing { color:#999; position:absolute; bottom:70px; z-index:10; left:25px; font-size:0.9em; }
         #input-holder { margin-left: 10px;margin-right: 30px; position: absolute;bottom: 10px;width: auto;left: 0px;right: 0px; }
-        #input { border:1px solid #ccc; display: block; padding:10px; width:100%; font-size:14px; }
+        #input { border:1px solid #ccc; display: block; padding:10px; width:100%; font-size:1em; }
         #status { width:200px; display:block; float:left; margin-top:15px; }
         .client { color:#000; }
         .server { color:#777; }
-        .time { color:#999; opacity: 0;margin-left: 15px;font-size: 12px; }
+        .time { color:#999; opacity: 0;margin-left: 15px;font-size: 1em; }
         p:hover .time { opacity: 1; }
+        #reconnect { padding:7px 10px; border:1px solid #ccc; border-radius:3px; background-color:#fff; font-size:1em; }
         </style>
     </head>
     <body>
         <div id="content">
-            <div id="chat"></div>
-            <div id="seen-typing"></div>
+            <div id="chat">
+                <!-- <button type='button' id='reconnect'>Connect</button> -->
+            </div>
         </div>
+        <div id="seen-typing"></div>
         <div id="input-holder">
             <input type="text" id="input" disabled autofocus="off">
         </div>
