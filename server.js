@@ -79,16 +79,16 @@ var wsServer = new webSocketServer({
 
 wsServer.on('request', function(request) {
 	var time = (new Date()).getTime();
-    console.log(get_time(time) + ' Connection from origin ' + request.origin);
-    var connection = request.accept(null, request.origin);
-    var userName = null;
-    var userId = null;
-    var ping = true;
-    var ping_result = " has closed the connection";
-    var flood = false;
-    var active = false;
-    var seen = 0;
-    var check = false;
+	console.log(get_time(time) + ' Connection from origin ' + request.origin);
+	var connection = request.accept(null, request.origin);
+	var userName = null;
+	var userId = null;
+	var ping = true;
+	var ping_result = " has closed the connection";
+	var flood = false;
+	var active = false;
+	var seen = 0;
+	var check = false;
 	var detail;
 	var pinger;
 
