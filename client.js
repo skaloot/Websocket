@@ -9,10 +9,11 @@ $(function () {
     var input = $('#input');
     var status = $('#status');
     var reconnect = $('#reconnect');
-    // var host = "//127.0.0.1";
+    var host = "//127.0.0.1";
+    // var host = "//localhost";
     // var host = "//175.139.8.250";
     // var host = "//192.168.0.10";
-    var host = location.host;
+    // var host = location.host;
     // var port = 8080;
     var port = 3777;
     var connect = false;
@@ -76,19 +77,6 @@ $(function () {
             console.log(connection);
             input.removeAttr('disabled');
             input.focus();
-            // if(localStorage.getItem("myName") && localStorage.getItem("myId")) {
-            //     myName = localStorage.getItem("myName");
-            //     id = localStorage.getItem("myId");
-            //     connection.send(JSON.stringify({id:id, msg:"/nick "+myName}));
-            // } else {
-            //     sender = null;
-            //     addMessage(
-            //         "",
-            //         "<br><i>Please type in <b>/nick &lt;your name&gt;</b> to begin.</i>",
-            //         "server",
-            //         get_time((new Date()).getTime())
-            //     );
-            // }
         }
 
         connection.onerror = function (error) {
@@ -191,12 +179,12 @@ $(function () {
                 if(localStorage.getItem("myName") && localStorage.getItem("myId")) {
                     myName = localStorage.getItem("myName");
                     id = localStorage.getItem("myId");
-                    connection.send(JSON.stringify({id:id, msg:"/reconnect "+myName}));
+                    connection.send(JSON.stringify({id:id, msg:"/nick "+myName}));
                 } else {
                     sender = null;
                     addMessage(
                         "",
-                        "<br><i>Please type in <b>/nick &lt;your name&gt;</b> to begin.</i>",
+                        "<i>Please type in <b>/nick &lt;your name&gt;</b> to begin.</i>",
                         "server",
                         get_time((new Date()).getTime())
                     );
@@ -339,14 +327,10 @@ $(function () {
     }
 
 
-    if(localStorage.getItem("myName") && localStorage.getItem("myId")) {
-        connect_this(host, port);
-        check_con();
-    } else {
-        var time = (new Date()).getTime();
-        chat.append('<p class="server"><i>Please type <b>/connect</b> to start connection...</i><span class="time">'+get_time(time)+'</span></p>');
-        input.removeAttr('disabled');
-    }
+    var time = (new Date()).getTime();
+	chat.append('<p class="server"><i>Connecting...</i><span class="time">'+get_time(time)+'</span></p>');
+	connect_this(host, port);
+	check_con();
 
 
     window.onfocus = function() {
