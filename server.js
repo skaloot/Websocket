@@ -1,6 +1,4 @@
 
-// http://ejohn.org/blog/ecmascript-5-strict-mode-json-and-more/
-
 "use strict";
 
 
@@ -79,18 +77,18 @@ var wsServer = new webSocketServer({
 
 wsServer.on('request', function(request) {
 	var time = (new Date()).getTime();
-	console.log(get_time(time) + ' Connection from origin ' + request.origin);
-	var connection = request.accept(null, request.origin);
-	var userName = null;
-	var userId = null;
-	var ping = true;
-	var ping_result = " has closed the connection";
-	var flood = false;
-	var active = false;
-	var seen = 0;
-	var check = false;
+    console.log(get_time(time) + ' Connection from origin ' + request.origin);
+    var connection = request.accept(null, request.origin);
+    var userName = null;
+    var userId = null;
+    var ping = true;
+    var ping_result = " has closed the connection";
+    var flood = false;
+    var active = false;
+    var seen = 0;
+    var check = false;
+    var quit = false;
 	var detail;
-	var pinger;
 
     if (history.length > 0) {
         connection.sendUTF(JSON.stringify(history));
@@ -209,6 +207,7 @@ wsServer.on('request', function(request) {
                         +"<br>--- bye ---</i>",
                         author: "[Server]",
                     }));
+					quit = true;
                     connection.close();
                     remove_client();
                 } else if(msgs.msg == "/shutdown") {
@@ -416,9 +415,12 @@ wsServer.on('request', function(request) {
     // ========================================== DISCONNECT ====================================================
 
     connection.on('close', function(connection) {
-		console.log(get_time(time) + ' ' + userName +' has closed connection - ping started');
-        clients[index].active = false;
-		ping();
+		index = get_index(userId);
+		if(userName !== null && active === true && quit === false) {
+			console.log(get_time(time) + ' ' + userName +' has closed connection - ping started');
+			clients[index].active = false;
+			ping();
+		}
     });
 
 
