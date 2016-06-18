@@ -1,17 +1,25 @@
 
 "use strict";
 
+function get_time(today) {
+    var today = new Date();
+    var h = today.getHours();
+    var m = today.getMinutes();
+    var s = today.getSeconds();
+    h = checkTime(h);
+    m = checkTime(m);
+    s = checkTime(s);
+    var time = h + ":" + m + ":" + s + " - ";
+    // var time = h + ":" + m;
+    return time;
+}
 
-process.title = 'node-chat';
-// var webSocketsServerPort = 8080;
-var webSocketsServerPort = 3777;
-var webSocketServer = require('websocket').server;
-var http = require('http');
-var history = {type: 'history',msg:[]};
-var clients = [];
-var index = 0;
-
-
+function checkTime(i) {
+    if (i < 10) {
+        i = "0" + i;
+    }
+    return i;
+}
 
 function htmlEntities(str) {
     return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -22,25 +30,21 @@ function originIsAllowed(origin) {
   return true;
 }
 
-function get_time(today) {
-	var today = new Date();
-	var h = today.getHours();
-	var m = today.getMinutes();
-	var s = today.getSeconds();
-	h = checkTime(h);
-	m = checkTime(m);
-	s = checkTime(s);
-	var time = h + ":" + m + ":" + s + " - ";
-	// var time = h + ":" + m;
-	return time;
-}
 
-function checkTime(i) {
-	if (i < 10) {
-		i = "0" + i;
-	}
-	return i;
-}
+// =========================================================================================================
+
+
+process.title = 'node-chat';
+// var webSocketsServerPort = 8080;
+var webSocketsServerPort = 3777;
+var webSocketServer = require('websocket').server;
+var http = require('http');
+var history = {type: 'history',msg:[]};
+var clients = [];
+var clients_count = 0;
+var msg_count = 0;
+var index = 0;
+var start_time = new Date();
 
 
 var colors = [ 'red', 'green', 'blue', 'magenta', 'purple', 'plum', 'orange' ];
@@ -76,7 +80,7 @@ var wsServer = new webSocketServer({
 // ========================================== CONNECT ====================================================
 
 wsServer.on('request', function(request) {
-	var time = (new Date()).getTime();
+    var time = (new Date()).getTime();
     console.log(get_time(time) + ' Connection from origin ' + request.origin);
     var connection = request.accept(null, request.origin);
     var userName = null;
@@ -88,7 +92,7 @@ wsServer.on('request', function(request) {
     var seen = 0;
     var check = false;
     var quit = false;
-	var detail;
+    var detail;
 
     if (history.length > 0) {
         connection.sendUTF(JSON.stringify(history));
@@ -99,92 +103,100 @@ wsServer.on('request', function(request) {
     connection.sendUTF(JSON.stringify({
         type: 'connected',
         time: (new Date()).getTime(),
-        msg: "<i>Connected..",
+        msg: "<i>Connected...",
         author: "[Server]",
     }));
 
     // ========================================== GET MSG ====================================================
 
     connection.on('message', function(message) {
-		var time = (new Date()).getTime();
+        var time = (new Date()).getTime();
         if (message.type === 'utf8') {
             // ========================================== NO NICK ====================================================
             var msgs = JSON.parse(message.utf8Data);
-			console.log(get_time(time) + ' Received Message : ' + msgs.msg);
-			if (userName === null) {
+            console.log(get_time(time) + ' Received Message : ' + msgs.msg);
+            if (userName === null) {
                 if(msgs.msg.substring(0, 6) == "/nick ") {
-					var reconnect = false;
-					for(var i in clients) {
-						if(clients[i].user_id == msgs.id) {
-							if(clients[i].active === false) {
-								console.log(get_time(time) + " Found user! - "+ clients[i].user_name+" - "+clients[i].user_id);
-								userName = clients[i].user_name;
-								userId = msgs.id;
-								clients[i].connection = connection;
-								clients[i].user_id = msgs.id;
-								clients[i].active = true;
-								active = true;
-								reconnect = true;
-								index = i;
-								return;
-							} else {
-								connection.sendUTF(JSON.stringify({
-									type:'info',
-									time: (new Date()).getTime(),
-									msg: "<i>Oopss.. Username already exist.",
-									author: "[Server]",
-								}));
-								return;
-							}
-						}
-					}
-					if(reconnect === false) {
-						userName = htmlEntities(msgs.msg.substring(6, msgs.msg.length));
-						userId = msgs.id;
-						detail = {
-							connection: connection,
-							user_name: userName,
-							user_id: userId,
-							origin: request.origin,
-							pinger: true,
-							seen: false,
-							active: true,
-						};
-						clients.push(detail);
-						active = true;
-						index = get_index(userId);
+                    var reconnect = false;
+                    for(var i in clients) {
+                        if(clients[i].user_id == msgs.id) {
+                            if(clients[i].active === false) {
+                                console.log(get_time(time) + " Found user! - "+ clients[i].user_name+" - "+clients[i].user_id);
+                                userName = clients[i].user_name;
+                                userId = msgs.id;
+                                clients[i].connection = connection;
+                                clients[i].user_id = msgs.id;
+                                clients[i].active = true;
+                                clients[i].seen = false;
+                                active = true;
+                                reconnect = true;
+                                index = i;
+                                if(clients[i].msg.length > 0) {
+                                    for(var n in clients[i].msg) {
+                                        connection.sendUTF(clients[i].msg[n]);
+                                    }
+                                }
+                                clients[i].msg = [];
+                                return;
+                            } else {
+                                connection.sendUTF(JSON.stringify({
+                                    type:'info',
+                                    time: (new Date()).getTime(),
+                                    msg: "<i>Oopss.. Username already exist.",
+                                    author: "[Server]",
+                                }));
+                                return;
+                            }
+                        }
+                    }
+                    if(reconnect === false) {
+                        userName = htmlEntities(msgs.msg.substring(6, msgs.msg.length));
+                        userId = msgs.id;
+                        detail = {
+                            connection: connection,
+                            user_name: userName,
+                            user_id: userId,
+                            origin: request.origin,
+                            seen: false,
+                            active: true,
+                            msg: [],
+                        };
+                        clients.push(detail);
+                        active = true;
+                        index = get_index(userId);
+                        clients_count++;
 
-						var users = "";
-						var n = 1;
-						for(var i in clients) {
-							if(clients[i].user_name !== null) {
-								users += "<br>"+(n++)+". "+clients[i].user_name;
-							}
-							console.log(get_time(time)+ " " +clients[i].user_name+" - "+clients[i].user_id);
-						}
-						connection.sendUTF(JSON.stringify({
-							type:'welcome', 
-							time: (new Date()).getTime(),
-							msg: "<i>------------------------------------"
-							+"<br><b>WELCOME "+userName+"!!</b><br>Type <b>/help</b> for list of command."
-							+"<br>------------------------------------</i>"
-							+"<br>Online users"+users+"<br>------------------</i>",
-							author: "[Server]",
-							nickname: userName,
-						}));
-						var json = JSON.stringify({
-							type:'user-add',
-							time: (new Date()).getTime(),
-							msg: "<i><b>"+userName+"</b> just connected..</i>",
-							author: "[Server]",
-						});
-						for(var i in clients) {
-							if(userId !== clients[i].user_id && clients[i].user_name !== null && active === true) {
-								clients[i].connection.sendUTF(json);
-							}
-						}
-						console.log(get_time(time) + ' User is known as: ' + userName + ' - ' + userId);
-					}
+                        var users = "";
+                        var n = 1;
+                        for(var i in clients) {
+                            if(clients[i].user_name !== null) {
+                                users += "<br>"+(n++)+". "+clients[i].user_name;
+                            }
+                            console.log(get_time(time)+ " " +clients[i].user_name+" - "+clients[i].user_id);
+                        }
+                        connection.sendUTF(JSON.stringify({
+                            type:'welcome', 
+                            time: (new Date()).getTime(),
+                            msg: "<i>------------------------------------"
+                            +"<br><b>WELCOME "+userName+"!!</b><br>Type <b>/help</b> for list of command."
+                            +"<br>------------------------------------</i>"
+                            +"<br>Online users"+users+"<br>------------------</i>",
+                            author: "[Server]",
+                            nickname: userName,
+                        }));
+                        var json = JSON.stringify({
+                            type:'user-add',
+                            time: (new Date()).getTime(),
+                            msg: "<i><b>"+userName+"</b> just connected..</i>",
+                            author: "[Server]",
+                        });
+                        for(var i in clients) {
+                            if(userId !== clients[i].user_id && clients[i].user_name !== null && clients[i].active === true) {
+                                clients[i].connection.sendUTF(json);
+                            }
+                        }
+                        console.log(get_time(time) + ' User is known as: ' + userName + ' - ' + userId);
+                    }
                 } else {
                     connection.sendUTF(JSON.stringify({
                         type:'info',
@@ -196,7 +208,7 @@ wsServer.on('request', function(request) {
                 }
             // ========================================== HAS NICK ====================================================
             } else {
-				index = get_index(userId);
+                index = get_index(userId);
                 var msgs = JSON.parse(message.utf8Data);
                 if(msgs.msg == "/quit") {
                     ping_result = " has closed the connection";
@@ -207,20 +219,31 @@ wsServer.on('request', function(request) {
                         +"<br>--- bye ---</i>",
                         author: "[Server]",
                     }));
-					quit = true;
+                    quit = true;
                     connection.close();
                     remove_client();
                 } else if(msgs.msg == "/shutdown") {
                     wsServer.shutDown();
                     return;
+                } else if(msgs.msg == "/info") {
+                    connection.sendUTF(JSON.stringify({
+                        type:'info',
+                        time: (new Date()).getTime(),
+                        msg: "<i>------------------<br>Server Info"
+                        +"<br> - Start Time : "+start_time
+                        +"<br> - Total Users : "+clients_count
+                        +"<br> - Total Message : "+msg_count
+                        +"<br>------------------</i>",
+                        author: "[Server]",
+                    }));
                 } else if(msgs.msg.substring(0, 6) == "/nick ") {
                     var check = true;
                     var newNick = htmlEntities(msgs.msg.substring(6, msgs.msg.length));
-					for(var i in clients) {
-						if(htmlEntities(msgs.msg.substring(6, msgs.msg.length)) === clients[i].user_name) {
+                    for(var i in clients) {
+                        if(htmlEntities(msgs.msg.substring(6, msgs.msg.length)) === clients[i].user_name) {
                             check = false;
                         }
-					}
+                    }
                     if(check === false) {
                         connection.sendUTF(JSON.stringify({
                             type:'info',
@@ -245,22 +268,22 @@ wsServer.on('request', function(request) {
                             user: userName,
                             newNick: newNick,
                         });
-						for(var i in clients) {
-							if(userId !== clients[i].user_id && clients[i].user_name !== null && active === true) {
-								clients[i].connection.sendUTF(json);
-							}
-						}
+                        for(var i in clients) {
+                            if(userId !== clients[i].user_id && clients[i].user_name !== null && clients[i].active === true) {
+                                clients[i].connection.sendUTF(json);
+                            }
+                        }
                         userName = newNick;
                         clients[index].user_name = userName;
                     }
                 } else if(msgs.msg == "/users") {
                     var users = "";
                     var n = 1;
-					for(var i in clients) {
-						if(clients[i].user_name !== null && active === true) {
-							users += "<br>"+(n++)+". "+clients[i].user_name;
+                    for(var i in clients) {
+                        if(clients[i].user_name !== null && active === true) {
+                            users += "<br>"+(n++)+". "+clients[i].user_name;
                         }
-					}
+                    }
                     connection.sendUTF(JSON.stringify({
                         type:'info',
                         time: (new Date()).getTime(),
@@ -274,12 +297,12 @@ wsServer.on('request', function(request) {
                         msg: "<i><b>"+userName+"</b> needs your attention.</i>",
                         author: "[Server]",
                     });
-					for(var i in clients) {
-						if(userId !== clients[i].user_id && clients[i].user_name !== null && active === true) {
+                    for(var i in clients) {
+                        if(userId !== clients[i].user_id && clients[i].user_name !== null && clients[i].active === true) {
                             clients[i].connection.sendUTF(json);
                             clients[i].seen = false;
                         }
-					}
+                    }
                 } else if(msgs.msg.substring(0, 5) == "/msg ") {
                     var res = msgs.msg.split(" ");
                     var receipient = res[1];
@@ -292,13 +315,13 @@ wsServer.on('request', function(request) {
                         author: userName,
                     });
                     var found = false;
-					for(var i in clients) {
-						if(clients[i].user_name === receipient) {
+                    for(var i in clients) {
+                        if(clients[i].user_name === receipient) {
                             clients[i].connection.sendUTF(json);
                             found = true;
                             return;
                         }
-					}
+                    }
                     if(found === false) {
                         connection.sendUTF(JSON.stringify({
                             type:'info',
@@ -313,14 +336,14 @@ wsServer.on('request', function(request) {
                     res.splice(0,2);
                     var the_msg = res.toString().replace(/,/g, " ");
                     var found = false;
-					for(var i in clients) {
-						if(clients[i].user_name === receipient) {
+                    for(var i in clients) {
+                        if(clients[i].user_name === receipient) {
                             clients[i].connection.close();
                             // clients.splice(i, 1);
                             found = true;
                             return;
                         }
-					}
+                    }
                     if(found === false) {
                         connection.sendUTF(JSON.stringify({
                             type:'info',
@@ -331,28 +354,28 @@ wsServer.on('request', function(request) {
                     }
                 } else if(msgs.msg == "/typing") {
                     var json = JSON.stringify({type:'typing', author: userName});
-					for(var i in clients) {
-						if(userId !== clients[i].user_id && clients[i].user_name !== null && active === true) {
-							clients[i].connection.sendUTF(json);
-						}
-					}
+                    for(var i in clients) {
+                        if(userId !== clients[i].user_id && clients[i].user_name !== null && clients[i].active === true) {
+                            clients[i].connection.sendUTF(json);
+                        }
+                    }
                 } else if(msgs.msg == "/seen") {
                     var all = true;
-					clients[index].seen = true;
-					for(var i in clients) {
-						if(clients[i].seen === false) {
+                    clients[index].seen = true;
+                    for(var i in clients) {
+                        if(clients[i].seen === false) {
                             all = false;
                         }
-					}
+                    }
                     var json = JSON.stringify({type:'seen', author: userName});
                     if(all == true && clients.length > 2) {
                         var json = JSON.stringify({type:'seen', author: "all"});
                     }
-					for(var i in clients) {
-						if(userId !== clients[i].user_id && clients[i].user_name !== null && active === true) {
-							clients[i].connection.sendUTF(json);
-						}
-					}
+                    for(var i in clients) {
+                        if(userId !== clients[i].user_id && clients[i].user_name !== null && clients[i].active === true) {
+                            clients[i].connection.sendUTF(json);
+                        }
+                    }
                 } else if(msgs.msg == "/flood") {
                     if(flood === true) {
                         connection.sendUTF(JSON.stringify({
@@ -368,11 +391,11 @@ wsServer.on('request', function(request) {
                     var timer = setInterval(function() {
                         n++;
                         var json = JSON.stringify({type:'info', author: userName, msg:"you have just been flooded by "+userName+" - "+n});
-						for(var i in clients) {
-							if(userId !== clients[i].user_id && clients[i].user_name !== null && active === true) {
-								clients[i].connection.sendUTF(json);
-							}
-						}
+                        for(var i in clients) {
+                            if(userId !== clients[i].user_id && clients[i].user_name !== null && clients[i].active === true) {
+                                clients[i].connection.sendUTF(json);
+                            }
+                        }
                         if(i === 2000 || flood === false) {
                             clearInterval(timer);
                             flood = false;
@@ -396,16 +419,21 @@ wsServer.on('request', function(request) {
                         msg: htmlEntities(msgs.msg),
                         author: userName,
                     };
+                    msg_count++;
                     history['msg'].push(obj);
                     history['msg'] = history['msg'].slice(-10);
                     var json = JSON.stringify(obj);
-					for(var i in clients) {
-						if(userId !== clients[i].user_id && clients[i].user_name !== null && active === true) {
+                    for(var i in clients) {
+                        if(userId !== clients[i].user_id && clients[i].user_name !== null && clients[i].active === true) {
                             clients[i].connection.sendUTF(json);
                             clients[i].seen = false;
                         }
-					}
-					clients[index].seen = true;
+                        if(userId !== clients[i].user_id && clients[i].user_name !== null && clients[i].active === false) {
+                            clients[i].msg.push(json);
+                            clients[i].seen = false;
+                        }
+                    }
+                    clients[index].seen = true;
                 }
             }
         }
@@ -415,41 +443,41 @@ wsServer.on('request', function(request) {
     // ========================================== DISCONNECT ====================================================
 
     connection.on('close', function(connection) {
-		index = get_index(userId);
-		if(userName !== null && active === true && quit === false) {
-			console.log(get_time(time) + ' ' + userName +' has closed connection - ping started');
-			clients[index].active = false;
-			ping();
-		}
+        index = get_index(userId);
+        if(userName !== null && active === true && quit === false) {
+            console.log(get_time(time) + ' ' + userName +' has closed connection - ping started');
+            clients[index].active = false;
+            ping();
+        }
     });
 
 
     var get_index = function(id) {
         for(var i in clients) {
            if(clients[i].user_id === id) {
-			 return i;
+             return i;
            }
         }
-		return null;
+        return null;
     }
 
 
 
 
     // ========================================== PING ====================================================
-	
-	var ping = function() {
-		setTimeout(function() {
-			if(clients[index].active === false) {
-				ping_result = " has been disconnected.. - [No Respond]";
-				remove_client();
-			} else {
-				console.log(get_time(time) + clients[index].user_name +' is active');
-			}
-		}, 10000);
+    
+    var ping = function() {
+        setTimeout(function() {
+            if(clients[index].active === false) {
+                ping_result = " has been disconnected.. - [No Respond]";
+                remove_client();
+            } else {
+                console.log(get_time(time) + clients[index].user_name +' is active');
+            }
+        }, 10000);
     }
-	
-	var remove_client = function() {
+    
+    var remove_client = function() {
         var json = JSON.stringify({
             type:'user-remove',
             time: (new Date()).getTime(),
@@ -465,9 +493,9 @@ wsServer.on('request', function(request) {
         }
         userName = null;
         userId = null;
-		index = get_index(userId);
+        index = get_index(userId);
     }
-	
+    
 });
 
 
