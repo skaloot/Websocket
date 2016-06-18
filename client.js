@@ -11,7 +11,7 @@ $(function () {
     var reconnect = $('#reconnect');
     // var host = "//127.0.0.1";
     // var host = "//localhost";
-    // var host = "//175.139.8.250";
+    // var host = "//175.142.186.238";
     // var host = "//192.168.0.10";
     var host = location.host;
     // var port = 8080;
