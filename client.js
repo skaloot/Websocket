@@ -9,11 +9,11 @@ $(function () {
     var input = $('#input');
     var status = $('#status');
     var reconnect = $('#reconnect');
-    var host = "//127.0.0.1";
+    // var host = "//127.0.0.1";
     // var host = "//localhost";
     // var host = "//175.139.8.250";
     // var host = "//192.168.0.10";
-    // var host = location.host;
+    var host = location.host;
     // var port = 8080;
     var port = 3777;
     var connect = false;
@@ -71,7 +71,6 @@ $(function () {
         console.log("Connection start..");
         id = Math.random();
         connection = new WebSocket('ws:'+host+':'+port);
-        connect = true;
 
         connection.onopen = function () {
             console.log(connection);
@@ -170,6 +169,7 @@ $(function () {
                 );
             } else if (json.type === 'connected') {
                 sender = null;
+                connect = true;
                 addMessage(
                     "",
                     json.msg,
@@ -316,7 +316,7 @@ $(function () {
                         connect_this(host, port);
                         var time = (new Date()).getTime();
                         chat.append('<p class="server"><i>You are not connected..</i><span class="time">'+get_time(time)+'</span></p>');
-                        chat.append('<p class="server"><i>Connecting..</i><span class="time">'+get_time(time)+'</span></p>');
+                        chat.append('<p class="server"><i>Connecting...</i><span class="time">'+get_time(time)+'</span></p>');
                         connect = false;
                     }
                 } else {
@@ -328,9 +328,9 @@ $(function () {
 
 
     var time = (new Date()).getTime();
-	chat.append('<p class="server"><i>Connecting...</i><span class="time">'+get_time(time)+'</span></p>');
-	connect_this(host, port);
-	check_con();
+    chat.append('<p class="server"><i>Connecting...</i><span class="time">'+get_time(time)+'</span></p>');
+    connect_this(host, port);
+    check_con();
 
 
     window.onfocus = function() {
