@@ -121,7 +121,7 @@ wsServer.on('request', function(request) {
                     for(var i in clients) {
                         if(clients[i].user_id == msgs.id) {
                             if(clients[i].active === false) {
-                                console.log(get_time(time) + " Found user! - "+ clients[i].user_name+" - "+clients[i].user_id);
+                                console.log(get_time(time) + " Existing user! - "+ clients[i].user_name+" - "+clients[i].user_id);
                                 userName = clients[i].user_name;
                                 userId = msgs.id;
                                 clients[i].connection = connection;
@@ -142,7 +142,7 @@ wsServer.on('request', function(request) {
                                 connection.sendUTF(JSON.stringify({
                                     type:'info',
                                     time: (new Date()).getTime(),
-                                    msg: "<i>Oopss.. Username already exist.",
+                                    msg: "<i>Oopss.. You are already connected.",
                                     author: "[Server]",
                                 }));
                                 return;
@@ -159,11 +159,12 @@ wsServer.on('request', function(request) {
                             origin: request.origin,
                             seen: false,
                             active: true,
+                            ping: true,
                             msg: [],
                         };
                         clients.push(detail);
                         active = true;
-                        index = get_index(userId);
+                        index = clients.length-1;
                         clients_count++;
 
                         var users = "";
@@ -172,7 +173,6 @@ wsServer.on('request', function(request) {
                             if(clients[i].user_name !== null) {
                                 users += "<br>"+(n++)+". "+clients[i].user_name;
                             }
-                            console.log(get_time(time)+ " " +clients[i].user_name+" - "+clients[i].user_id);
                         }
                         connection.sendUTF(JSON.stringify({
                             type:'welcome', 
@@ -221,7 +221,6 @@ wsServer.on('request', function(request) {
                     }));
                     quit = true;
                     connection.close();
-                    remove_client();
                 } else if(msgs.msg == "/shutdown") {
                     wsServer.shutDown();
                     return;
@@ -269,7 +268,7 @@ wsServer.on('request', function(request) {
                             newNick: newNick,
                         });
                         for(var i in clients) {
-                            if(userId !== clients[i].user_id && clients[i].user_name !== null && clients[i].active === true) {
+                            if(userId !== clients[i].user_id && clients[i].active === true) {
                                 clients[i].connection.sendUTF(json);
                             }
                         }
@@ -280,7 +279,7 @@ wsServer.on('request', function(request) {
                     var users = "";
                     var n = 1;
                     for(var i in clients) {
-                        if(clients[i].user_name !== null && active === true) {
+                        if(clients[i].active === true) {
                             users += "<br>"+(n++)+". "+clients[i].user_name;
                         }
                     }
@@ -298,7 +297,7 @@ wsServer.on('request', function(request) {
                         author: "[Server]",
                     });
                     for(var i in clients) {
-                        if(userId !== clients[i].user_id && clients[i].user_name !== null && clients[i].active === true) {
+                        if(userId !== clients[i].user_id && clients[i].active === true) {
                             clients[i].connection.sendUTF(json);
                             clients[i].seen = false;
                         }
@@ -339,7 +338,6 @@ wsServer.on('request', function(request) {
                     for(var i in clients) {
                         if(clients[i].user_name === receipient) {
                             clients[i].connection.close();
-                            // clients.splice(i, 1);
                             found = true;
                             return;
                         }
@@ -355,7 +353,7 @@ wsServer.on('request', function(request) {
                 } else if(msgs.msg == "/typing") {
                     var json = JSON.stringify({type:'typing', author: userName});
                     for(var i in clients) {
-                        if(userId !== clients[i].user_id && clients[i].user_name !== null && clients[i].active === true) {
+                        if(userId !== clients[i].user_id && clients[i].active === true) {
                             clients[i].connection.sendUTF(json);
                         }
                     }
@@ -372,7 +370,7 @@ wsServer.on('request', function(request) {
                         var json = JSON.stringify({type:'seen', author: "all"});
                     }
                     for(var i in clients) {
-                        if(userId !== clients[i].user_id && clients[i].user_name !== null && clients[i].active === true) {
+                        if(userId !== clients[i].user_id && clients[i].active === true) {
                             clients[i].connection.sendUTF(json);
                         }
                     }
@@ -392,7 +390,7 @@ wsServer.on('request', function(request) {
                         n++;
                         var json = JSON.stringify({type:'info', author: userName, msg:"you have just been flooded by "+userName+" - "+n});
                         for(var i in clients) {
-                            if(userId !== clients[i].user_id && clients[i].user_name !== null && clients[i].active === true) {
+                            if(userId !== clients[i].user_id && clients[i].active === true) {
                                 clients[i].connection.sendUTF(json);
                             }
                         }
@@ -411,7 +409,7 @@ wsServer.on('request', function(request) {
                         author: "[Server]",
                     }));
                 } else if(msgs.msg == "pong") {
-                    ping = true;
+                    clients[index].active = true;
                 } else {
                     var obj = {
                         type:'message',
@@ -424,11 +422,11 @@ wsServer.on('request', function(request) {
                     history['msg'] = history['msg'].slice(-10);
                     var json = JSON.stringify(obj);
                     for(var i in clients) {
-                        if(userId !== clients[i].user_id && clients[i].user_name !== null && clients[i].active === true) {
+                        if(userId !== clients[i].user_id && clients[i].active === true) {
                             clients[i].connection.sendUTF(json);
                             clients[i].seen = false;
                         }
-                        if(userId !== clients[i].user_id && clients[i].user_name !== null && clients[i].active === false) {
+                        if(userId !== clients[i].user_id && clients[i].active === false) {
                             clients[i].msg.push(json);
                             clients[i].seen = false;
                         }
@@ -444,17 +442,24 @@ wsServer.on('request', function(request) {
 
     connection.on('close', function(connection) {
         index = get_index(userId);
-        if(userName !== null && active === true && quit === false) {
-            console.log(get_time(time) + ' ' + userName +' has closed connection - ping started');
+        console.log("Index - "+index);
+        if(index !== null && userName !== null && clients[index].active === true && quit === false) {
             clients[index].active = false;
-            ping();
+            if(clients[index].ping === true) {
+                console.log(get_time(time) + ' ' + clients[index].user_name +' has closed connection - ping started');
+                clients[index].ping = false;
+                ping(clients[index].user_id);
+            }
+        }
+        if(quit === true) {
+            remove_client(index);
         }
     });
 
 
     var get_index = function(id) {
         for(var i in clients) {
-           if(clients[i].user_id === id) {
+           if(clients[i].user_id == id) {
              return i;
            }
         }
@@ -466,34 +471,35 @@ wsServer.on('request', function(request) {
 
     // ========================================== PING ====================================================
     
-    var ping = function() {
+    var ping = function(id) {
         setTimeout(function() {
-            if(clients[index].active === false) {
-                ping_result = " has been disconnected.. - [No Respond]";
-                remove_client();
-            } else {
-                console.log(get_time(time) + clients[index].user_name +' is active');
+            index = get_index(id);
+            if(index !== null) {
+                if(clients[index].active === false) {
+                    ping_result = " has been disconnected.. - [No Respond]";
+                    remove_client(index);
+                } else {
+                    console.log(get_time(time) + ' ' + clients[index].user_name +' is active');
+                    clients[index].ping = true;
+                }
             }
         }, 10000);
     }
     
-    var remove_client = function() {
+    var remove_client = function(idx) {
         var json = JSON.stringify({
             type:'user-remove',
             time: (new Date()).getTime(),
-            msg: "<i><b>"+userName+"</b>"+ ping_result+"</i>",
+            msg: "<i><b>"+clients[idx].user_name+"</b>"+ ping_result+"</i>",
             author: "[server]",
         });
-        console.log(get_time(time) + ' ' + userName + ping_result);
-        clients.splice(index, 1);
+        console.log(get_time(time) + ' ' + clients[idx].user_name + ping_result);
+        clients.splice(idx, 1);
         for(var i in clients) {
-            if(clients[i].user_name !== null && active === true) {
+            if(clients[i].active === true) {
                 clients[i].connection.sendUTF(json);
             }
         }
-        userName = null;
-        userId = null;
-        index = get_index(userId);
     }
     
 });
