@@ -25,6 +25,7 @@ $(function () {
     var id;
     var sender = null;
     var timer;
+    var audio = new Audio('toing.mp3');
 
     // if user is running mozilla then use it's built-in WebSocket
     window.WebSocket = window.WebSocket || window.MozWebSocket;
@@ -53,8 +54,8 @@ $(function () {
         return i;
     }
 
-    function get_time(today) {
-        var today = new Date();
+    function get_time(time) {
+        var today = new Date(time);
         var h = today.getHours();
         var m = today.getMinutes();
         var s = today.getSeconds();
@@ -101,7 +102,6 @@ $(function () {
                     "server",
                     json.time
                 );
-                var audio = new Audio('toing.mp3');
                 audio.play();
             } else if (json.type === 'welcome') {
                 sender = null;
@@ -127,39 +127,31 @@ $(function () {
                 localStorage.setItem("myName", myName);
             } else if (json.type === 'history') {
                 sender = null;
-                for (var i=0; i < json.length; i++) {
+                for (var i=0; i < json.msg.length; i++) {
                     addMessage(
-                        "",
-                        json.msg[i],
-                        "server",
-                        json.time
+                        json.msg[i].author+": ", 
+                        json.msg[i].msg,
+                        "client",
+                        json.msg[i].time
                     );
                 }
+            } else if (json.type === 'my-info') {
+                sender = null;
+                $.getJSON('http://ipinfo.io', function(data){
+                    data.agent = navigator.userAgent;
+                    console.log(data);
+                    connection.send(JSON.stringify({
+                        id: id, 
+                        msg: "/info",
+                        myinfo: data,
+                        receipient: json.author_id,
+                    }));
+                });
+            } else if (json.type === 'push') {
+                sender = null;
+                audio.play();
+                alert(json.msg);
             } else if (json.type === 'info') {
-                sender = null;
-                addMessage(
-                    "",
-                    json.msg,
-                    "server",
-                    json.time
-                );
-            } else if (json.type === 'user-add') {
-                sender = null;
-                addMessage(
-                    "",
-                    json.msg,
-                    "server",
-                    json.time
-                );
-            } else if (json.type === 'user-remove') {
-                sender = null;
-                addMessage(
-                    "",
-                    json.msg,
-                    "server",
-                    json.time
-                );
-            } else if (json.type === 'user-info') {
                 sender = null;
                 addMessage(
                     "",
@@ -226,7 +218,7 @@ $(function () {
                 if(connect === false) {
                     sender = myName;
                     var time = (new Date()).getTime();
-                    chat.append('<p class="server"><i>Connecting..</i><span class="time">'+get_time(time)+'</span></p>');
+                    chat.append('<p class="server"><i>Connecting...</i><span class="time">'+get_time(time)+'</span></p>');
                     connect_this(host, port);
                     check_con();
                 }
@@ -243,13 +235,6 @@ $(function () {
                 chat.html("");
             } else {
                 if(connect === true) {
-                    if(msg == "/quit") {
-                        localStorage.removeItem('myName');
-                        localStorage.removeItem('myId');
-                        connect = false;
-                    }
-                    sender = null;
-                    connection.send(JSON.stringify({id:id, msg:msg}));
                     addMessage(
                         myName+": ", 
                         msg, 
@@ -259,6 +244,28 @@ $(function () {
                     msgs.push(msg);
                     msgs = msgs.slice(-10);
                     history = msgs.length;
+                    if(msg == "/quit") {
+                        sender = null;
+                        connection.send(JSON.stringify({id:id, msg:msg}));
+                        localStorage.removeItem('myName');
+                        localStorage.removeItem('myId');
+                        connect = false;
+                    } else if(msg == "/info") {
+                        sender = null;
+                        $.getJSON('http://ipinfo.io', function(data){
+                            data.agent = navigator.userAgent;
+                            console.log(data);
+                            connection.send(JSON.stringify({
+                                id: id, 
+                                msg: "/info",
+                                myinfo: data,
+                                receipient: null,
+                            }));
+                        });
+                    } else {
+                        sender = null;
+                        connection.send(JSON.stringify({id:id, msg:msg}));
+                    }
                 }
             }
             $(this).val("");
@@ -296,7 +303,6 @@ $(function () {
         if(window_active === false) {
             document.title = "..New Message..";
             if(sound === true) {
-                var audio = new Audio('toing.mp3');
                 audio.play();
             }
         } else {
