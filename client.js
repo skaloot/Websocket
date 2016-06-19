@@ -149,6 +149,7 @@ $(function () {
                 });
             } else if (json.type === 'push') {
                 sender = null;
+                connection.send(JSON.stringify({id:id, receipient:sender, msg:"/seen"}));
                 audio.play();
                 alert(json.msg);
             } else if (json.type === 'info') {
