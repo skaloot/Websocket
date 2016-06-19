@@ -96,8 +96,6 @@ wsServer.on('request', function(request) {
     var quit = false;
     var detail;
 
-    console.log(get_time(time) + ' Connection accepted. - ');
-
     connection.sendUTF(JSON.stringify({
         type: 'connected',
         time: (new Date()).getTime(),
