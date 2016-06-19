@@ -54,6 +54,8 @@ colors.sort(function(a,b) { return Math.random() > 0.5; } );
 var helps = ""
     +"<br><b>/nick</b> - to set or change nickname"
     +"<br><b>/users</b> - to get online users"
+    +"<br><b>/info</b> - to get your connection info"
+    +"<br><b>/history</b> - to get chat history"
     +"<br><b>/msg &lt;name&gt; &lt;your message&gt;</b> - for private message"
     +"<br><b>/alert</b> - to get your friend's attention"
     +"<br><b>/quit</b> - to close your connection"
@@ -93,10 +95,6 @@ wsServer.on('request', function(request) {
     var check = false;
     var quit = false;
     var detail;
-
-    if (history.length > 0) {
-        connection.sendUTF(JSON.stringify(history));
-    }
 
     console.log(get_time(time) + ' Connection accepted. - ');
 
@@ -148,6 +146,15 @@ wsServer.on('request', function(request) {
                                 return;
                             }
                         }
+                        if(clients[i].user_name == htmlEntities(msgs.msg.substring(6, msgs.msg.length)) && clients[i].user_id != msgs.id) {
+                            connection.sendUTF(JSON.stringify({
+                                type:'info',
+                                time: (new Date()).getTime(),
+                                msg: "<i>Oopss.. Nickname is not available.",
+                                author: "[Server]",
+                            }));
+                            return;
+                        }
                     }
                     if(reconnect === false) {
                         userName = htmlEntities(msgs.msg.substring(6, msgs.msg.length));
@@ -185,7 +192,7 @@ wsServer.on('request', function(request) {
                             nickname: userName,
                         }));
                         var json = JSON.stringify({
-                            type:'user-add',
+                            type:'info',
                             time: (new Date()).getTime(),
                             msg: "<i><b>"+userName+"</b> just connected..</i>",
                             author: "[Server]",
@@ -224,7 +231,15 @@ wsServer.on('request', function(request) {
                 } else if(msgs.msg == "/shutdown") {
                     wsServer.shutDown();
                     return;
-                } else if(msgs.msg == "/info") {
+                } else if(msgs.msg == "/history") {
+                    connection.sendUTF(JSON.stringify({
+                        type:'info',
+                        time: (new Date()).getTime(),
+                        msg: "<i>------------------<br>Chat History",
+                        author: "[Server]",
+                    }));
+                    connection.sendUTF(JSON.stringify(history));
+                } else if(msgs.msg == "/server") {
                     connection.sendUTF(JSON.stringify({
                         type:'info',
                         time: (new Date()).getTime(),
@@ -235,6 +250,86 @@ wsServer.on('request', function(request) {
                         +"<br>------------------</i>",
                         author: "[Server]",
                     }));
+                } else if(msgs.msg.substring(0, 6) == "/user ") {
+                    receipient = htmlEntities(msgs.msg.substring(6, msgs.msg.length));
+                    var found = false;
+                    var json = JSON.stringify({
+                        type: "my-info",
+                        author_id: userId,
+                    });
+                    for(var i=0, len=clients.length; i<len; i++) {
+                        if(clients[i].user_name == receipient) {
+                            clients[i].connection.sendUTF(json);
+                            found = true;
+                            return;
+                        }
+                    }
+                    if(found === false) {
+                        connection.sendUTF(JSON.stringify({
+                            type:'info',
+                            time: (new Date()).getTime(),
+                            msg: "<i>Oopss.. Nickname <b>"+receipient+"</b> is not here.</i>",
+                            author: "[Server]",
+                        }));
+                    }
+                } else if(msgs.msg.substring(0, 6) == "/push ") {
+                    var res = msgs.msg.split(" ");
+                    var receipient = res[1];
+                    res.splice(0,2);
+                    var the_msg = res.toString().replace(/,/g, " ");
+                    var json = JSON.stringify({
+                        type:'push',
+                        time: (new Date()).getTime(),
+                        msg: the_msg,
+                        author: userName,
+                    });
+                    var found = false;
+                    for(var i=0, len=clients.length; i<len; i++) {
+                        if(clients[i].user_name === receipient) {
+                            clients[i].connection.sendUTF(json);
+                            found = true;
+                            return;
+                        }
+                    }
+                    if(found === false) {
+                        connection.sendUTF(JSON.stringify({
+                            type:'info',
+                            time: (new Date()).getTime(),
+                            msg: "<i>Oopss.. Nickname <b>"+receipient+"</b> is not here.</i>",
+                            author: "[Server]",
+                        }));
+                    }
+                } else if(msgs.msg == "/info") {
+                    var myinfo = msgs.myinfo;
+                    var receipient = msgs.receipient;
+                    var idx = get_index(msgs.id);
+                    var json = JSON.stringify({
+                        type:'info',
+                        time: (new Date()).getTime(),
+                        msg: "<i>------------------<br>User Info"
+                        +"<br> - Nickname : "+clients[idx].user_name
+                        +"<br> - Origin : "+clients[idx].origin
+                        +"<br> - IP Address : "+myinfo.ip
+                        +"<br> - Location : "+myinfo.loc
+                        +"<br> - Region : "+myinfo.region
+                        +"<br> - City : "+myinfo.city
+                        +"<br> - Postal : "+myinfo.postal
+                        +"<br> - ISP : "+myinfo.org
+                        +"<br> - User Agent : "+myinfo.agent
+                        +"<br>------------------</i>",
+                        author: "[Server]",
+                    });
+                    if(receipient === null) {
+                        connection.sendUTF(json);
+                        return;
+                    }
+                    for(var i=0, len=clients.length; i<len; i++) {
+                        if(clients[i].user_id === receipient) {
+                            clients[i].connection.sendUTF(json);
+                            found = true;
+                            return;
+                        }
+                    }
                 } else if(msgs.msg.substring(0, 6) == "/nick ") {
                     var check = true;
                     var newNick = htmlEntities(msgs.msg.substring(6, msgs.msg.length));
@@ -247,7 +342,7 @@ wsServer.on('request', function(request) {
                         connection.sendUTF(JSON.stringify({
                             type:'info',
                             time: (new Date()).getTime(),
-                            msg: "<i>Oopss.. username <b>"+newNick+"</b> is not available.</i>",
+                            msg: "<i>Oopss.. Nsername <b>"+newNick+"</b> is not available.</i>",
                             author: "[Server]",
                         }));
                     } else {
@@ -260,12 +355,10 @@ wsServer.on('request', function(request) {
                             nickname: newNick,
                         }));
                         var json = JSON.stringify({
-                            type:'user-info',
+                            type:'info',
                             time: (new Date()).getTime(),
                             msg: "<i><b>"+userName+"</b> has changed nickname to <b>"+newNick+"</b></i>",
                             author: "[Server]",
-                            user: userName,
-                            newNick: newNick,
                         });
                         for(var i=0, len=clients.length; i<len; i++) {
                             if(userId !== clients[i].user_id && clients[i].active === true) {
@@ -279,9 +372,7 @@ wsServer.on('request', function(request) {
                     var users = "";
                     var n = 1;
                     for(var i=0, len=clients.length; i<len; i++) {
-                        if(clients[i].active === true) {
-                            users += "<br>"+(n++)+". "+clients[i].user_name;
-                        }
+                        users += "<br>"+(n++)+". "+clients[i].user_name;
                     }
                     connection.sendUTF(JSON.stringify({
                         type:'info',
@@ -302,6 +393,7 @@ wsServer.on('request', function(request) {
                             clients[i].seen = false;
                         }
                     }
+                    clients[index].seen = true;
                 } else if(msgs.msg.substring(0, 5) == "/msg ") {
                     var res = msgs.msg.split(" ");
                     var receipient = res[1];
@@ -325,7 +417,7 @@ wsServer.on('request', function(request) {
                         connection.sendUTF(JSON.stringify({
                             type:'info',
                             time: (new Date()).getTime(),
-                            msg: "<i>Oopss.. username <b>"+receipient+"</b> is not here.</i>",
+                            msg: "<i>Oopss.. Nikcname <b>"+receipient+"</b> is not here.</i>",
                             author: "[Server]",
                         }));
                     }
@@ -386,16 +478,16 @@ wsServer.on('request', function(request) {
                     }
                     flood = true;
                     var n = 0;
-                    var timer = setInterval(function() {
+                    var floodTimer = setInterval(function() {
                         n++;
-                        var json = JSON.stringify({type:'info', author: userName, msg:"you have just been flooded by "+userName+" - "+n});
+                        var json = JSON.stringify({type:'info', time: (new Date()).getTime(), author: userName, msg:"you have just been flooded by "+userName+" - "+n});
                         for(var i=0, len=clients.length; i<len; i++) {
                             if(userId !== clients[i].user_id && clients[i].active === true) {
                                 clients[i].connection.sendUTF(json);
                             }
                         }
                         if(i === 2000 || flood === false) {
-                            clearInterval(timer);
+                            clearInterval(floodTimer);
                             flood = false;
                         }
                     }, 70);
@@ -473,14 +565,14 @@ wsServer.on('request', function(request) {
     
     var ping = function(id) {
         setTimeout(function() {
-            index = get_index(id);
-            if(index !== null) {
-                if(clients[index].active === false) {
+            var idx = get_index(id);
+            if(idx !== null) {
+                if(clients[idx].active === false) {
                     ping_result = " has been disconnected.. - [No Respond]";
-                    remove_client(index);
+                    remove_client(idx);
                 } else {
-                    console.log(get_time(time) + ' ' + clients[index].user_name +' is active');
-                    clients[index].ping = true;
+                    console.log(get_time(time) + ' ' + clients[idx].user_name +' is active');
+                    clients[idx].ping = true;
                 }
             }
         }, 10000);
@@ -488,7 +580,7 @@ wsServer.on('request', function(request) {
     
     var remove_client = function(idx) {
         var json = JSON.stringify({
-            type:'user-remove',
+            type:'info',
             time: (new Date()).getTime(),
             msg: "<i><b>"+clients[idx].user_name+"</b>"+ ping_result+"</i>",
             author: "[server]",
@@ -500,6 +592,7 @@ wsServer.on('request', function(request) {
                 clients[i].connection.sendUTF(json);
             }
         }
+        index = get_index(userId);
     }
     
 });
