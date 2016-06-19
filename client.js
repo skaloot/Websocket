@@ -76,7 +76,9 @@ $(function () {
         connection.onopen = function () {
             console.log(connection);
             input.removeAttr('disabled');
-            input.focus();
+            if(window_active === true) {
+                input.focus();
+            }
         }
 
         connection.onerror = function (error) {
