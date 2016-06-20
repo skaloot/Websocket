@@ -16,6 +16,9 @@ $(function () {
     var host = location.host;
     // var port = 8080;
     var port = 3777;
+    // var app_id = "artinity";
+    // var app_id = "kpj";
+    var app_id = "ska_app";
     var connect = false;
     var window_active = true;
     var myName = "You";
@@ -26,6 +29,12 @@ $(function () {
     var sender = null;
     var timer;
     var audio = new Audio('toing.mp3');
+
+    if(localStorage.getItem("app_id")) {
+        app_id = localStorage.getItem("app_id");
+    } else {
+        localStorage.setItem("app_id", app_id);
+    }
 
     // if user is running mozilla then use it's built-in WebSocket
     window.WebSocket = window.WebSocket || window.MozWebSocket;
@@ -171,6 +180,7 @@ $(function () {
                     "server",
                     json.time
                 );
+                connection.send(JSON.stringify({id:id, msg:"/appid "+app_id}));
                 if(localStorage.getItem("myName") && localStorage.getItem("myId")) {
                     myName = localStorage.getItem("myName");
                     id = localStorage.getItem("myId");
