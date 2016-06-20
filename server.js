@@ -30,6 +30,17 @@ function originIsAllowed(origin) {
   return true;
 }
 
+var set_app = function(apps,app_list) {
+    for(var i=0, len=app_list.length; i<len; i++) {
+        console.log(app_list[i]);
+        if(!apps[app_list[i]]) {
+            apps[app_list[i]] = [];
+            apps[app_list[i]].total_user = 0;
+            apps[app_list[i]].history = {type: 'history',msg:[]};
+        }
+    }
+}
+
 
 // =========================================================================================================
 
@@ -39,16 +50,19 @@ process.title = 'node-chat';
 var webSocketsServerPort = 3777;
 var webSocketServer = require('websocket').server;
 var http = require('http');
-var history = {type: 'history',msg:[]};
-var clients = [];
+var app_list = [
+    "kpjselangor",
+    "artinity",
+    "ska_app",
+];
+var apps = [];
+var clients;
 var clients_count = 0;
 var msg_count = 0;
 var index = 0;
 var start_time = new Date();
 
-
-var colors = [ 'red', 'green', 'blue', 'magenta', 'purple', 'plum', 'orange' ];
-colors.sort(function(a,b) { return Math.random() > 0.5; } );
+set_app(apps,app_list);
 
 
 var helps = ""
@@ -87,6 +101,7 @@ wsServer.on('request', function(request) {
     var connection = request.accept(null, request.origin);
     var userName = null;
     var userId = null;
+    var appId = null;
     var ping = true;
     var ping_result = " has closed the connection";
     var flood = false;
@@ -108,9 +123,35 @@ wsServer.on('request', function(request) {
     connection.on('message', function(message) {
         var time = (new Date()).getTime();
         if (message.type === 'utf8') {
-            // ========================================== NO NICK ====================================================
             var msgs = JSON.parse(message.utf8Data);
             console.log(get_time(time) + ' Received Message : ' + msgs.msg);
+            // ========================================== NO APP ID ====================================================
+            if (appId === null) {
+                if(msgs.msg.substring(0, 7) == "/appid ") {
+                    var found = false;
+                    for(var i=0, len=app_list.length; i<len; i++) {
+                        if(app_list[i] == htmlEntities(msgs.msg.substring(7, msgs.msg.length))) {
+                            found = true;
+                            appId = htmlEntities(msgs.msg.substring(7, msgs.msg.length));
+                            clients = apps[app_list[i]];
+                            console.log("App ID - "+app_list[i]);
+                            return;
+                        }
+                    }
+                    if(found === false) {
+                        connection.sendUTF(JSON.stringify({
+                            type:'info',
+                            time: (new Date()).getTime(),
+                            msg: "<i>Your App ID is invalid!.",
+                            author: "[Server]",
+                        }));
+                        return;
+                    }
+                }
+                return;
+            }
+            // ========================================== NO NICK ====================================================
+            clients = apps[appId];
             if (userName === null) {
                 if(msgs.msg.substring(0, 6) == "/nick ") {
                     var reconnect = false;
@@ -121,7 +162,6 @@ wsServer.on('request', function(request) {
                                 userName = clients[i].user_name;
                                 userId = msgs.id;
                                 clients[i].connection = connection;
-                                clients[i].user_id = msgs.id;
                                 clients[i].active = true;
                                 clients[i].seen = false;
                                 active = true;
@@ -161,6 +201,7 @@ wsServer.on('request', function(request) {
                             connection: connection,
                             user_name: userName,
                             user_id: userId,
+                            app_id: appId,
                             origin: request.origin,
                             seen: false,
                             active: true,
@@ -168,8 +209,9 @@ wsServer.on('request', function(request) {
                             msg: [],
                         };
                         clients.push(detail);
-                        active = true;
                         index = clients.length-1;
+                        clients.total_user++;
+                        active = true;
                         clients_count++;
 
                         var users = "";
@@ -213,7 +255,7 @@ wsServer.on('request', function(request) {
                 }
             // ========================================== HAS NICK ====================================================
             } else {
-                index = get_index(userId);
+                index = get_index(userId,appId);
                 var msgs = JSON.parse(message.utf8Data);
                 if(msgs.msg == "/quit") {
                     ping_result = " has closed the connection";
@@ -236,15 +278,22 @@ wsServer.on('request', function(request) {
                         msg: "<i>------------------<br>Chat History",
                         author: "[Server]",
                     }));
-                    connection.sendUTF(JSON.stringify(history));
+                    connection.sendUTF(JSON.stringify(clients.history));
                 } else if(msgs.msg == "/server") {
+                    var Apps = "";
+                    for(var i=0, len=app_list.length; i<len; i++) {
+                        Apps += app_list[i]+", ";
+                    }
                     connection.sendUTF(JSON.stringify({
                         type:'info',
                         time: (new Date()).getTime(),
                         msg: "<i>------------------<br>Server Info"
                         +"<br> - Start Time : "+start_time
-                        +"<br> - Total Users : "+clients_count
+                        +"<br> - Total Users KPJ : "+apps.kpjselangor.total_user
+                        +"<br> - Total Users Artinity : "+apps.artinity.total_user
+                        +"<br> - Total Users SkaApp : "+apps.ska_app.total_user
                         +"<br> - Total Message : "+msg_count
+                        +"<br> - Apps : "+Apps
                         +"<br>------------------</i>",
                         author: "[Server]",
                     }));
@@ -267,6 +316,50 @@ wsServer.on('request', function(request) {
                             type:'info',
                             time: (new Date()).getTime(),
                             msg: "<i>Oopss.. Nickname <b>"+receipient+"</b> is not here.</i>",
+                            author: "[Server]",
+                        }));
+                    }
+                } else if(msgs.msg.substring(0, 9) == "/add-app ") {
+                    var app = htmlEntities(msgs.msg.substring(9, msgs.msg.length));
+                    if(app.length < 2 || app.length == " ") {
+                        return;
+                    }
+                    var ok = add_app(app);
+                    if(ok === true) {
+                        connection.sendUTF(JSON.stringify({
+                            type:'info',
+                            time: (new Date()).getTime(),
+                            msg: "<i>SUCCESS.. App <b>"+app+"</b> has been added.</i>",
+                            author: "[Server]",
+                        }));
+                    } else {
+                        connection.sendUTF(JSON.stringify({
+                            type:'info',
+                            time: (new Date()).getTime(),
+                            msg: "<i>Oopss.. App <b>"+app+"</b> is already exist.</i>",
+                            author: "[Server]",
+                        }));
+                    }
+                } else if(msgs.msg.substring(0, 12) == "/delete-app ") {
+                    var app = htmlEntities(msgs.msg.substring(12, msgs.msg.length));
+                    if(app.length < 2 || app.length == " ") {
+                        return;
+                    }
+                    if(!apps[app]) {
+                        connection.sendUTF(JSON.stringify({
+                            type:'info',
+                            time: (new Date()).getTime(),
+                            msg: "<i>Oopss.. App <b>"+app+"</b> is not here.</i>",
+                            author: "[Server]",
+                        }));
+                        return;
+                    }
+                    var ok = del_app(app);
+                    if(ok === true) {
+                        connection.sendUTF(JSON.stringify({
+                            type:'info',
+                            time: (new Date()).getTime(),
+                            msg: "<i>SUCCESS.. App <b>"+app+"</b> has been deleted.</i>",
                             author: "[Server]",
                         }));
                     }
@@ -300,13 +393,12 @@ wsServer.on('request', function(request) {
                 } else if(msgs.msg == "/info") {
                     var myinfo = msgs.myinfo;
                     var receipient = msgs.receipient;
-                    var idx = get_index(msgs.id);
                     var json = JSON.stringify({
                         type:'info',
                         time: (new Date()).getTime(),
                         msg: "<i>------------------<br>User Info"
-                        +"<br> - Nickname : "+clients[idx].user_name
-                        +"<br> - Origin : "+clients[idx].origin
+                        +"<br> - Nickname : "+clients[index].user_name
+                        +"<br> - Origin : "+clients[index].origin
                         +"<br> - IP Address : "+myinfo.ip
                         +"<br> - Location : "+myinfo.loc
                         +"<br> - Region : "+myinfo.region
@@ -508,8 +600,8 @@ wsServer.on('request', function(request) {
                         author: userName,
                     };
                     msg_count++;
-                    history['msg'].push(obj);
-                    history['msg'] = history['msg'].slice(-10);
+                    clients.history['msg'].push(obj);
+                    clients.history['msg'] = clients.history['msg'].slice(-20);
                     var json = JSON.stringify(obj);
                     for(var i=0, len=clients.length; i<len; i++) {
                         if(userId !== clients[i].user_id && clients[i].active === true) {
@@ -531,27 +623,31 @@ wsServer.on('request', function(request) {
     // ========================================== DISCONNECT ====================================================
 
     connection.on('close', function(connection) {
-        index = get_index(userId);
+        index = get_index(userId,appId);
+        clients = apps[appId];
         console.log("Index - "+index);
-        if(index !== null && userName !== null && clients[index].active === true && quit === false) {
+        if(index !== null && userName !== null && appId !== null && clients[index].active === true && quit === false) {
             clients[index].active = false;
             if(clients[index].ping === true) {
                 console.log(get_time(time) + ' ' + clients[index].user_name +' has closed connection - ping started');
                 clients[index].ping = false;
-                ping(clients[index].user_id);
+                ping(clients[index].user_id,clients[index].app_id);
             }
         }
         if(quit === true) {
-            remove_client(index);
+            remove_client(index,appId);
         }
     });
 
 
-    var get_index = function(id) {
-        for(var i=0, len=clients.length; i<len; i++) {
-           if(clients[i].user_id == id) {
-             return i;
-           }
+    var get_index = function(id,app) {
+        clients = apps[app];
+        if(clients) {
+            for(var i=0, len=clients.length; i<len; i++) {
+               if(clients[i].user_id == id) {
+                 return i;
+               }
+            }
         }
         return null;
     }
@@ -561,22 +657,24 @@ wsServer.on('request', function(request) {
 
     // ========================================== PING ====================================================
     
-    var ping = function(id) {
+    var ping = function(id,app) {
         setTimeout(function() {
-            var idx = get_index(id);
+            var idx = get_index(id,app);
+            clients = apps[app];
             if(idx !== null) {
                 if(clients[idx].active === false) {
                     ping_result = " has been disconnected.. - [No Respond]";
-                    remove_client(idx);
+                    remove_client(idx,app);
                 } else {
                     console.log(get_time(time) + ' ' + clients[idx].user_name +' is active');
                     clients[idx].ping = true;
                 }
             }
-        }, 10000);
+        }, 15000);
     }
     
-    var remove_client = function(idx) {
+    var remove_client = function(idx,app) {
+        clients = apps[app];
         var json = JSON.stringify({
             type:'info',
             time: (new Date()).getTime(),
@@ -590,7 +688,30 @@ wsServer.on('request', function(request) {
                 clients[i].connection.sendUTF(json);
             }
         }
-        index = get_index(userId);
+        index = get_index(userId,appId);
+    }
+
+    var add_app = function(app) {
+        if(apps[app]) {
+            return false;
+        }
+        app_list.push(app);
+        set_app(apps,app_list);
+        return true;
+    }
+
+    var del_app = function(app) {
+        if(app == "artinity" || app == "kpjselangor" || app == "ska_app") {
+            return false;
+        }
+        clients = apps[app];
+        for(var i=0, len=clients.length; i<len; i++) {
+            clients[i].connection.close();
+        }
+        delete apps[app];
+        console.log("App "+app+" deleted");
+        app_list.splice(app_list.indexOf(app),1);
+        return true;
     }
     
 });
