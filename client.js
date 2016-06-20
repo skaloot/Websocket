@@ -10,11 +10,15 @@ $(function () {
     var status = $('#status');
     var reconnect = $('#reconnect');
     // var host = "//127.0.0.1";
-    // var host = "//175.139.8.250";
+    // var host = "//localhost";
+    // var host = "//175.142.186.238";
     // var host = "//192.168.0.10";
     var host = location.host;
     // var port = 8080;
     var port = 3777;
+    // var app_id = "artinity";
+    // var app_id = "kpj";
+    var app_id = "ska_app";
     var connect = false;
     var window_active = true;
     var myName = "You";
@@ -24,6 +28,13 @@ $(function () {
     var id;
     var sender = null;
     var timer;
+    var audio = new Audio('toing.mp3');
+
+    if(localStorage.getItem("app_id")) {
+        app_id = localStorage.getItem("app_id");
+    } else {
+        localStorage.setItem("app_id", app_id);
+    }
 
     // if user is running mozilla then use it's built-in WebSocket
     window.WebSocket = window.WebSocket || window.MozWebSocket;
@@ -52,8 +63,8 @@ $(function () {
         return i;
     }
 
-    function get_time(today) {
-        var today = new Date();
+    function get_time(time) {
+        var today = new Date(time);
         var h = today.getHours();
         var m = today.getMinutes();
         var s = today.getSeconds();
@@ -70,25 +81,13 @@ $(function () {
         console.log("Connection start..");
         id = Math.random();
         connection = new WebSocket('ws:'+host+':'+port);
-        connect = true;
 
         connection.onopen = function () {
             console.log(connection);
             input.removeAttr('disabled');
-            input.focus();
-            // if(localStorage.getItem("myName") && localStorage.getItem("myId")) {
-            //     myName = localStorage.getItem("myName");
-            //     id = localStorage.getItem("myId");
-            //     connection.send(JSON.stringify({id:id, msg:"/nick "+myName}));
-            // } else {
-            //     sender = null;
-            //     addMessage(
-            //         "",
-            //         "<br><i>Please type in <b>/nick &lt;your name&gt;</b> to begin.</i>",
-            //         "server",
-            //         get_time((new Date()).getTime())
-            //     );
-            // }
+            if(window_active === true) {
+                input.focus();
+            }
         }
 
         connection.onerror = function (error) {
@@ -114,7 +113,6 @@ $(function () {
                     "server",
                     json.time
                 );
-                var audio = new Audio('toing.mp3');
                 audio.play();
             } else if (json.type === 'welcome') {
                 sender = null;
@@ -140,39 +138,32 @@ $(function () {
                 localStorage.setItem("myName", myName);
             } else if (json.type === 'history') {
                 sender = null;
-                for (var i=0; i < json.length; i++) {
+                for (var i=0; i < json.msg.length; i++) {
                     addMessage(
-                        "",
-                        json.msg[i],
-                        "server",
-                        json.time
+                        json.msg[i].author+": ", 
+                        json.msg[i].msg,
+                        "client",
+                        json.msg[i].time
                     );
                 }
+            } else if (json.type === 'my-info') {
+                sender = null;
+                $.getJSON('http://ipinfo.io', function(data){
+                    data.agent = navigator.userAgent;
+                    console.log(data);
+                    connection.send(JSON.stringify({
+                        id: id, 
+                        msg: "/info",
+                        myinfo: data,
+                        receipient: json.author_id,
+                    }));
+                });
+            } else if (json.type === 'push') {
+                sender = null;
+                connection.send(JSON.stringify({id:id, receipient:sender, msg:"/seen"}));
+                audio.play();
+                alert(json.msg);
             } else if (json.type === 'info') {
-                sender = null;
-                addMessage(
-                    "",
-                    json.msg,
-                    "server",
-                    json.time
-                );
-            } else if (json.type === 'user-add') {
-                sender = null;
-                addMessage(
-                    "",
-                    json.msg,
-                    "server",
-                    json.time
-                );
-            } else if (json.type === 'user-remove') {
-                sender = null;
-                addMessage(
-                    "",
-                    json.msg,
-                    "server",
-                    json.time
-                );
-            } else if (json.type === 'user-info') {
                 sender = null;
                 addMessage(
                     "",
@@ -182,21 +173,23 @@ $(function () {
                 );
             } else if (json.type === 'connected') {
                 sender = null;
+                connect = true;
                 addMessage(
                     "",
                     json.msg,
                     "server",
                     json.time
                 );
+                connection.send(JSON.stringify({id:id, msg:"/appid "+app_id}));
                 if(localStorage.getItem("myName") && localStorage.getItem("myId")) {
                     myName = localStorage.getItem("myName");
                     id = localStorage.getItem("myId");
-                    connection.send(JSON.stringify({id:id, msg:"/reconnect "+myName}));
+                    connection.send(JSON.stringify({id:id, msg:"/nick "+myName}));
                 } else {
                     sender = null;
                     addMessage(
                         "",
-                        "<br><i>Please type in <b>/nick &lt;your name&gt;</b> to begin.</i>",
+                        "<i>Please type in <b>/nick &lt;your name&gt;</b> to begin.</i>",
                         "server",
                         get_time((new Date()).getTime())
                     );
@@ -238,7 +231,7 @@ $(function () {
                 if(connect === false) {
                     sender = myName;
                     var time = (new Date()).getTime();
-                    chat.append('<p class="server"><i>Connecting..</i><span class="time">'+get_time(time)+'</span></p>');
+                    chat.append('<p class="server"><i>Connecting...</i><span class="time">'+get_time(time)+'</span></p>');
                     connect_this(host, port);
                     check_con();
                 }
@@ -255,13 +248,6 @@ $(function () {
                 chat.html("");
             } else {
                 if(connect === true) {
-                    if(msg == "/quit") {
-                        localStorage.removeItem('myName');
-                        localStorage.removeItem('myId');
-                        connect = false;
-                    }
-                    sender = null;
-                    connection.send(JSON.stringify({id:id, msg:msg}));
                     addMessage(
                         myName+": ", 
                         msg, 
@@ -271,6 +257,29 @@ $(function () {
                     msgs.push(msg);
                     msgs = msgs.slice(-10);
                     history = msgs.length;
+                    if(msg == "/quit") {
+                        sender = null;
+                        connection.send(JSON.stringify({id:id, msg:msg}));
+                        localStorage.removeItem('myName');
+                        localStorage.removeItem('myId');
+                        localStorage.removeItem('app_id');
+                        connect = false;
+                    } else if(msg == "/info") {
+                        sender = null;
+                        $.getJSON('http://ipinfo.io', function(data){
+                            data.agent = navigator.userAgent;
+                            console.log(data);
+                            connection.send(JSON.stringify({
+                                id: id, 
+                                msg: "/info",
+                                myinfo: data,
+                                receipient: null,
+                            }));
+                        });
+                    } else {
+                        sender = null;
+                        connection.send(JSON.stringify({id:id, msg:msg}));
+                    }
                 }
             }
             $(this).val("");
@@ -308,7 +317,6 @@ $(function () {
         if(window_active === false) {
             document.title = "..New Message..";
             if(sound === true) {
-                var audio = new Audio('toing.mp3');
                 audio.play();
             }
         } else {
@@ -328,7 +336,7 @@ $(function () {
                         connect_this(host, port);
                         var time = (new Date()).getTime();
                         chat.append('<p class="server"><i>You are not connected..</i><span class="time">'+get_time(time)+'</span></p>');
-                        chat.append('<p class="server"><i>Connecting..</i><span class="time">'+get_time(time)+'</span></p>');
+                        chat.append('<p class="server"><i>Connecting...</i><span class="time">'+get_time(time)+'</span></p>');
                         connect = false;
                     }
                 } else {
@@ -339,14 +347,10 @@ $(function () {
     }
 
 
-    if(localStorage.getItem("myName") && localStorage.getItem("myId")) {
-        connect_this(host, port);
-        check_con();
-    } else {
-        var time = (new Date()).getTime();
-        chat.append('<p class="server"><i>Please type <b>/connect</b> to start connection...</i><span class="time">'+get_time(time)+'</span></p>');
-        input.removeAttr('disabled');
-    }
+    var time = (new Date()).getTime();
+    chat.append('<p class="server"><i>Connecting...</i><span class="time">'+get_time(time)+'</span></p>');
+    connect_this(host, port);
+    check_con();
 
 
     window.onfocus = function() {
