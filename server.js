@@ -624,14 +624,14 @@ wsServer.on('request', function(request) {
 
     connection.on('close', function(connection) {
         index = get_index(userId,appId);
-        clients = apps[appId];
+        var client = apps[appId];
         console.log("Index - "+index);
-        if(index !== null && userName !== null && appId !== null && clients[index].active === true && quit === false) {
-            clients[index].active = false;
-            if(clients[index].ping === true) {
-                console.log(get_time(time) + ' ' + clients[index].user_name +' has closed connection - ping started');
-                clients[index].ping = false;
-                ping(clients[index].user_id,clients[index].app_id);
+        if(index !== null && userName !== null && appId !== null && client[index].active === true && quit === false) {
+            client[index].active = false;
+            if(client[index].ping === true) {
+                console.log(get_time(time) + ' ' + client[index].user_name +' has closed connection - ping started');
+                client[index].ping = false;
+                ping(client[index].user_id,client[index].app_id);
             }
         }
         if(quit === true) {
@@ -641,10 +641,10 @@ wsServer.on('request', function(request) {
 
 
     var get_index = function(id,app) {
-        clients = apps[app];
-        if(clients) {
-            for(var i=0, len=clients.length; i<len; i++) {
-               if(clients[i].user_id == id) {
+        var client = apps[app];
+        if(client) {
+            for(var i=0, len=client.length; i<len; i++) {
+               if(client[i].user_id == id) {
                  return i;
                }
             }
@@ -660,35 +660,35 @@ wsServer.on('request', function(request) {
     var ping = function(id,app) {
         setTimeout(function() {
             var idx = get_index(id,app);
-            clients = apps[app];
+            var client = apps[app];
             if(idx !== null) {
-                if(clients[idx].active === false) {
+                if(client[idx].active === false) {
                     ping_result = " has been disconnected.. - [No Respond]";
                     remove_client(idx,app);
                 } else {
-                    console.log(get_time(time) + ' ' + clients[idx].user_name +' is active');
-                    clients[idx].ping = true;
+                    console.log(get_time(time) + ' ' + client[idx].user_name +' is active');
+                    client[idx].ping = true;
                 }
             }
         }, 15000);
     }
     
     var remove_client = function(idx,app) {
-        clients = apps[app];
+        var client = apps[app];
         var json = JSON.stringify({
             type:'info',
             time: (new Date()).getTime(),
-            msg: "<i><b>"+clients[idx].user_name+"</b>"+ ping_result+"</i>",
+            msg: "<i><b>"+client[idx].user_name+"</b>"+ ping_result+"</i>",
             author: "[server]",
         });
-        console.log(get_time(time) + ' ' + clients[idx].user_name + ping_result);
-        clients.splice(idx, 1);
-        for(var i=0, len=clients.length; i<len; i++) {
-            if(clients[i].active === true) {
-                clients[i].connection.sendUTF(json);
+        console.log(get_time(time) + ' ' + client[idx].user_name + ping_result);
+        client.splice(idx, 1);
+        for(var i=0, len=client.length; i<len; i++) {
+            if(client[i].active === true) {
+                client[i].connection.sendUTF(json);
             }
         }
-        index = get_index(userId,appId);
+        index = get_index(idx,app);
     }
 
     var add_app = function(app) {
@@ -704,9 +704,9 @@ wsServer.on('request', function(request) {
         if(app == "artinity" || app == "kpjselangor" || app == "ska_app") {
             return false;
         }
-        clients = apps[app];
-        for(var i=0, len=clients.length; i<len; i++) {
-            clients[i].connection.close();
+        var client = apps[app];
+        for(var i=0, len=client.length; i<len; i++) {
+            client[i].connection.close();
         }
         delete apps[app];
         console.log("App "+app+" deleted");
