@@ -156,11 +156,11 @@ wsServer.on('request', function(request) {
                 if(msgs.msg.substring(0, 6) == "/nick ") {
                     var reconnect = false;
                     for(var i=0, len=clients.length; i<len; i++) {
-                        if(clients[i].user_id == msgs.id) {
+                        if(clients[i].user_id == msgs.id && clients[i].app_id == appId) {
                             if(clients[i].active === false) {
                                 console.log(get_time(time) + " Existing user! - "+ clients[i].user_name+" - "+clients[i].user_id);
                                 userName = clients[i].user_name;
-                                userId = msgs.id;
+                                userId = clients[i].user_id;
                                 clients[i].connection = connection;
                                 clients[i].active = true;
                                 clients[i].seen = false;
