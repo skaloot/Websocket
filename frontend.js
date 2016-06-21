@@ -1,21 +1,30 @@
-(function () {
+$(function () {
     "use strict";
 
-    // for better performance - to avoid searching in DOM
+    var connection;
+    var $this = window || this;
     var content = $('#content');
+    var chat = $('#chat');
+    var seentyping = $('#seen-typing');
     var input = $('#input');
     var status = $('#status');
-    var host = "//127.0.0.1";
-    // var host = "//175.139.8.26";
-    // var host = "//192.168.0.10";
-    var port = 8080;
+    var reconnect = $('#reconnect');
+    // var host = "//127.0.0.1";
+    // var host = "//artinity.dtdns.net";
+    var host = location.host;
+    var port = 3777;
+    var app_id = "utiis_website";
     var connect = false;
-    var window_active = "active";
-    var myColor = false;
+    var window_active = true;
     var myName = "You";
-    var sound = true;
+    var sound = false;
+    var msgs = [];
+    var history = 0;
+    var id;
+    var sender = null;
+    var timer;
+    var audio = new Audio('/websocket/toing.mp3');
 
-    // if user is running mozilla then use it's built-in WebSocket
     window.WebSocket = window.WebSocket || window.MozWebSocket;
 
 
@@ -23,174 +32,219 @@
     // ========================================== NOT SUPPORTED ====================================================
 
     if (!window.WebSocket) {
-        content.html($('<p>', { text: 'Sorry, but your browser doesn\'t support WebSockets.'} ));
-        input.hide();
-        $('span').hide();
+        console.log('Sorry, but your browser doesn\'t support WebSockets.');
         return;
     }
 
 
-
-    // ========================================== CONNECTING ====================================================
-
-    var connection = new WebSocket('ws:'+host+':'+port);
-
-
-    connection.onopen = function () {
-        input.removeAttr('disabled');
-        input.focus();
-        status.text('Choose name:');
+    var get_time2 = function(dt) {
+        var time = (dt.getHours() < 10 ? '0' + dt.getHours() : dt.getHours()) + ':' (dt.getMinutes() < 10 ? '0' + dt.getMinutes() : dt.getMinutes());
+        return time;
     }
 
-    connection.onerror = function (error) {
-        content.html($('<p>', { text: 'Sorry, but there\'s some problem with your connection or the server is down.' } ));
-        connect = false;
+    function checkTime(i) {
+        if (i < 10) {
+            i = "0" + i;
+        }
+        return i;
+    }
+
+    function get_time(today) {
+        var today = new Date();
+        var h = today.getHours();
+        var m = today.getMinutes();
+        var s = today.getSeconds();
+        h = checkTime(h);
+        m = checkTime(m);
+        s = checkTime(s);
+        // var time = h + ":" + m + ":" + s;
+        var time = h + ":" + m;
+        return time;
+    }
+
+    function makeid() {
+        var text = "";
+        var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        for( var i=0; i < 5; i++ ) {
+            text += possible.charAt(Math.floor(Math.random() * possible.length));
+        }
+        return text;
     }
 
 
+    function strip(html) {
+        var tmp = document.createElement("DIV");
+        tmp.innerHTML = html;
+        return tmp.textContent||tmp.innerText;
+    }
 
-    /// ========================================== GET MSG ====================================================
 
-    connection.onmessage = function (message) {
-        try {
-            var json = JSON.parse(message.data);
-        } catch (e) {
-            console.log('This doesn\'t look like a valid JSON: ', message.data);
-            return;
+    function executeFunctionByName(functionName, context, args) {
+        var args = [].slice.call(arguments).splice(2);
+        var namespaces = functionName.split(".");
+        var func = namespaces.pop();
+        for(var i = 0; i < namespaces.length; i++) {
+        context = context[namespaces[i]];
+        }
+        return context[func].apply(context, args);
+    }
+
+
+    function connect_this(host, port) {
+        console.log("Connection start..");
+        id = Math.random();
+        connection = new WebSocket('ws:'+host+':'+port);
+
+        connection.onopen = function () {
+            console.log(connection);
         }
 
-        if (json.type === 'ping') {
-            connection.send("/pong");
-        } else if (json.type === 'alert') {
-            addMessage(
-                json.data.author, 
-                json.data.msg, 
-                json.data.color, 
-                new Date(json.data.time)
-            );
-            var audio = new Audio('toing.mp3');
-            audio.play();
-        } else if (json.type === 'welcome') {
-            addMessage(
-                json.data.author, 
-                json.data.msg, 
-                json.data.color, 
-                new Date(json.data.time)
-            );
-            myName = json.data.nickname;
-            connect = true;
-        } else if (json.type === 'newNick') {
-            addMessage(
-                json.data.author, 
-                json.data.msg, 
-                json.data.color, 
-                new Date(json.data.time)
-            );
-            myName = json.data.nickname;
-        } else if (json.type === 'history') {
-            for (var i=0; i < json.data.length; i++) {
-                addMessage(json.data[i].author, json.data[i].msg,
-                           json.data[i].color, new Date(json.data[i].time));
-            }
-        } else if (json.type === 'message' || json.type === 'info') {
-            addMessage(
-                json.data.author, 
-                json.data.msg, 
-                json.data.color, 
-                new Date(json.data.time)
-            );
-            if(window_active == "blur") {
-                document.title = "..New Message..";
-                if(sound == true) {
-                    var audio = new Audio('toing.mp3');
-                    audio.play();
-                }
-            }
-        } else {
-            console.log('Hmm..., I\'ve never seen JSON like this: ', json);
-        }
-    }
-
-
-
-    // ========================================== SEND MSG ====================================================
-
-    input.keydown(function(e) {
-        if (e.keyCode === 13) {
-            var msg = $(this).val();
-            if (!msg) {
-                return;
-            }
-            var d = new Date();
-            if(msg == "/mute") {
-                addMessage("[server]", "<br><i>You just changed your sound to <b>mute</b></i>", "red", d);
-                sound = false;
-            } else if(msg == "/unmute") {
-                addMessage("[server]", "<br><i>You just changed your sound to <b>unmute</b></i>", "red", d);
-                sound = true;
-            } else {
-                connection.send(msg);
-                addMessage(myName, msg, "#333", d);
-            }
-            $(this).val('');
-        }
-    })
-
-
-
-
-    // ========================================== ADD MSG ====================================================
-
-    function addMessage(author, message, color, dt) {
-        content.append('<p><span style="color:' + color + '">' + author + '</span> <span style="color:#999;">@ ' +
-             + (dt.getHours() < 10 ? '0' + dt.getHours() : dt.getHours()) + ':'
-             + (dt.getMinutes() < 10 ? '0' + dt.getMinutes() : dt.getMinutes())+'</span>'
-             + ': ' + message + '</p>');
-        content.scrollTop(content[0].scrollHeight);
-    }
-
-    
-
-    // ========================================== NO RESPOND ====================================================
-
-    setInterval(function() {
-        if (connection.readyState !== 1) {
-            input.attr('disabled', 'disabled').val('Unable to comminucate with the WebSocket server.');
+        connection.onerror = function (error) {
+            console.log('Sorry, but there\'s some problem with your connection or the server is down.');
             connect = false;
         }
-    }, 3000);
 
+        connection.onmessage = function (message) {
+            try {
+                var json = JSON.parse(message.data);
+            } catch (e) {
+                console.log('This doesn\'t look like a valid JSON: ', message.msg);
+                return;
+            }
 
-
-    window.onbeforeunload = function() {
-        if(connect === false) {
-            return;
-        }
-        return("Please type quit to end your connection. Thank You.");
+            if (json.type === 'ping') {
+                connection.send(JSON.stringify({id:id, msg:"pong"}));
+            } else if (json.type === 'alert') {
+                sender = null;
+                audio.play();
+                console.log(json.author+": "+strip(json.msg));
+                connection.send(JSON.stringify({id:id, receipient:sender, msg:"/seen"}));
+            } else if (json.type === 'function') {
+                sender = null;
+                executeFunctionByName(json.function, window , json.arguments);
+                connection.send(JSON.stringify({id:id, receipient:sender, msg:"/seen"}));
+            } else if (json.type === 'chat') {
+                window.open("/websocket/", "Websocket", "status = 1, height = 400, width = 600, resizable = 1, left = 120px, scroll = 1");
+                connection.send(JSON.stringify({id:id, receipient:sender, msg:"/seen"}));
+            } else if (json.type === 'welcome') {
+                sender = null;
+                myName = json.nickname;
+                connect = true;
+                localStorage.setItem("myName", myName);
+                localStorage.setItem("myId", id);
+            } else if (json.type === 'my-info') {
+                sender = null;
+                $.getJSON('http://ipinfo.io', function(data){
+                    data.agent = navigator.userAgent;
+                    console.log(data);
+                    connection.send(JSON.stringify({
+                        id: id, 
+                        msg: "/info",
+                        myinfo: data,
+                        receipient: json.author_id,
+                    }));
+                });
+            } else if (json.type === 'push') {
+                sender = null;
+                connection.send(JSON.stringify({id:id, receipient:sender, msg:"/seen"}));
+                audio.play();
+                alert(json.msg);
+            } else if (json.type === 'info') {
+                sender = null;
+                addMessage(
+                    "",
+                    json.msg,
+                    "server",
+                    json.time
+                );
+                console.log(json.author+": "+strip(json.msg));
+            } else if (json.type === 'connected') {
+                connection.send(JSON.stringify({id:id, msg:"/appid", app_id:app_id}));
+                if(localStorage.getItem("myName") && localStorage.getItem("myId")) {
+                    myName = localStorage.getItem("myName");
+                    id = localStorage.getItem("myId");
+                } else {
+                    myName = "kpj-"+makeid();
+                    id = Math.random();
+                }
+                connection.send(JSON.stringify({id:id, msg:"/nick "+myName}));
+                connection.send(JSON.stringify({id:id, msg:"Page - "+document.title}));
+            } else if (json.type === 'typing') {
+                console.log(json.author+" is typing..");
+            } else if (json.type === 'seen') {
+                // console.log("seen by "+json.author);
+            } else if (json.type === 'message') {
+                if(json.msg == "/chat") {
+                    chat();
+                    return;
+                }
+                sender = json.author;
+                addMessage(
+                    json.author+": ", 
+                    json.msg, 
+                    "client",
+                    json.time
+                );
+                console.log(json.author+": "+strip(json.msg));
+                if(json.author !== "[server]") {
+                    connection.send(JSON.stringify({id:id, receipient:sender, msg:"/seen"}));
+                }
+            } else {
+                console.log('Hmm..., I\'ve never seen JSON like this: ', json);
+            }
+        }       
     }
 
-    window.onfocus = function() {
-        change_title();
-        window_active = "active";
-        // console.log("Window - focus");
+
+
+
+    var addMessage = function(author, message, textClass, time) {
+        
     }
 
-    window.onblur = function() {
-        window_active = "blur";
-        // console.log("Window - blur");
+
+    function check_con() {
+        var ska_inteval = setInterval(function() {
+            if (connection.readyState !== 1) {
+                if(localStorage.getItem("myName")) {
+                    if(connect === true) {
+                        connect_this(host, port);
+                        var time = (new Date()).getTime();
+                        console.log('You are not connected..');
+                        console.log('Connecting...');
+                        connect = false;
+                    }
+                } else {
+                    clearInterval(ska_inteval);
+                }
+            }
+        }, 3000);
     }
 
-    window.onclick = function() {
-        input.focus();
-    }
+
+    console.log('Connecting...');
+    connect_this(host, port);
+    check_con();
+
 
     function change_title() {
-        if(document.title != "Websocket") {
-            document.title = "Websocket";
-            // console.log("Window - title");
-        }
+
     }
 
-})();
+    console.log("\n"
+    +"==============================================================\n"
+    +"   __                               __       __    _________\n"
+    +"  /  \\  |  /      /\\      |        /  \\     /  \\       |\n"
+    +"  |     | /      /  \\     |       /    \\   /    \\      |\n"
+    +"   \\    |/      /    \\    |      |      | |      |     |\n"
+    +"    \\   |\\     /______\\   |      |      | |      |     |\n"
+    +"     |  | \\   /        \\  |       \\    /   \\    /      |\n"
+    +"  \\__/  |  \\ /          \\ |_____   \\__/     \\__/       |\n"
+    +"  \n"
+    +"==============================================================\n"
+    +"      -- https://www.facebook.com/skaloot --              \n");
+
+});
+
 
 

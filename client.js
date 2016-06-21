@@ -10,15 +10,10 @@ $(function () {
     var status = $('#status');
     var reconnect = $('#reconnect');
     // var host = "//127.0.0.1";
-    // var host = "//localhost";
-    // var host = "//175.142.186.238";
-    // var host = "//192.168.0.10";
+    // var host = "//artinity.dtdns.net";
     var host = location.host;
-    // var port = 8080;
     var port = 3777;
-    // var app_id = "artinity";
-    // var app_id = "kpj";
-    var app_id = "ska_app";
+    var app_id = "utiis_chat";
     var connect = false;
     var window_active = true;
     var myName = "You";
@@ -36,7 +31,6 @@ $(function () {
         localStorage.setItem("app_id", app_id);
     }
 
-    // if user is running mozilla then use it's built-in WebSocket
     window.WebSocket = window.WebSocket || window.MozWebSocket;
 
 
@@ -77,6 +71,17 @@ $(function () {
     }
 
 
+    function executeFunctionByName(functionName, context , args) {
+        var args = [].slice.call(arguments).splice(2);
+        var namespaces = functionName.split(".");
+        var func = namespaces.pop();
+        for(var i = 0; i < namespaces.length; i++) {
+        context = context[namespaces[i]];
+        }
+        return context[func].apply(context, args);
+    }
+
+
     function connect_this(host, port) {
         console.log("Connection start..");
         id = Math.random();
@@ -114,6 +119,10 @@ $(function () {
                     json.time
                 );
                 audio.play();
+            } else if (json.type === 'function') {
+                sender = null;
+                executeFunctionByName(json.function, window , json.arguments);
+                connection.send(JSON.stringify({id:id, receipient:sender, msg:"/seen"}));
             } else if (json.type === 'welcome') {
                 sender = null;
                 addMessage(
@@ -180,7 +189,7 @@ $(function () {
                     "server",
                     json.time
                 );
-                connection.send(JSON.stringify({id:id, msg:"/appid "+app_id}));
+                connection.send(JSON.stringify({id:id, msg:"/appid", app_id:app_id}));
                 if(localStorage.getItem("myName") && localStorage.getItem("myId")) {
                     myName = localStorage.getItem("myName");
                     id = localStorage.getItem("myId");
@@ -191,7 +200,7 @@ $(function () {
                         "",
                         "<i>Please type in <b>/nick &lt;your name&gt;</b> to begin.</i>",
                         "server",
-                        get_time((new Date()).getTime())
+                        (new Date()).getTime()
                     );
                 }
             } else if (json.type === 'typing') {
@@ -257,14 +266,14 @@ $(function () {
                     msgs.push(msg);
                     msgs = msgs.slice(-10);
                     history = msgs.length;
-                    if(msg == "/quit") {
+                    if(msg == "/quit" || msg == "/q") {
                         sender = null;
                         connection.send(JSON.stringify({id:id, msg:msg}));
                         localStorage.removeItem('myName');
                         localStorage.removeItem('myId');
                         localStorage.removeItem('app_id');
                         connect = false;
-                    } else if(msg == "/info") {
+                    } else if(msg == "/info" || msg == "/i") {
                         sender = null;
                         $.getJSON('http://ipinfo.io', function(data){
                             data.agent = navigator.userAgent;

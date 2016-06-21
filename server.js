@@ -36,7 +36,7 @@ var set_app = function(apps,app_list) {
         if(!apps[app_list[i]]) {
             apps[app_list[i]] = [];
             apps[app_list[i]].total_user = 0;
-            apps[app_list[i]].history = {type: 'history',msg:[]};
+            apps[app_list[i]].history = {type:'history' ,msg:[]};
         }
     }
 }
@@ -51,8 +51,10 @@ var webSocketsServerPort = 3777;
 var webSocketServer = require('websocket').server;
 var http = require('http');
 var app_list = [
-    "kpjselangor",
-    "artinity",
+    "kpjselangor_website",
+    "kpjselangor_chat",
+    "utiis_website",
+    "utiis_chat",
     "ska_app",
 ];
 var apps = [];
@@ -127,12 +129,12 @@ wsServer.on('request', function(request) {
             console.log(get_time(time) + ' Received Message : ' + msgs.msg);
             // ========================================== NO APP ID ====================================================
             if (appId === null) {
-                if(msgs.msg.substring(0, 7) == "/appid ") {
+                if(msgs.msg == "/appid") {
                     var found = false;
                     for(var i=0, len=app_list.length; i<len; i++) {
-                        if(app_list[i] == htmlEntities(msgs.msg.substring(7, msgs.msg.length))) {
+                        if(app_list[i] == msgs.app_id) {
                             found = true;
-                            appId = htmlEntities(msgs.msg.substring(7, msgs.msg.length));
+                            appId = htmlEntities(msgs.app_id);
                             clients = apps[app_list[i]];
                             console.log("App ID - "+app_list[i]);
                             return;
@@ -268,18 +270,29 @@ wsServer.on('request', function(request) {
                     }));
                     quit = true;
                     connection.close();
-                } else if(msgs.msg == "/shutdown") {
+                } else if(msgs.msg == "/shutdown" || msgs.msg == "/sd"  || msgs.msg == "/kill") {
                     wsServer.shutDown();
+                    var key = null;
+                    clients[key].crash_this_loop;
                     return;
-                } else if(msgs.msg == "/history") {
+                } else if(msgs.msg == "/history" || msgs.msg == "/h") {
                     connection.sendUTF(JSON.stringify({
                         type:'info',
                         time: (new Date()).getTime(),
-                        msg: "<i>------------------<br>Chat History",
+                        msg: "<i>------------------<br>Chat History</i>",
                         author: "[Server]",
                     }));
                     connection.sendUTF(JSON.stringify(clients.history));
-                } else if(msgs.msg == "/server") {
+                } else if(msgs.msg == "/clear_history" || msgs.msg == "/ch") {
+                    clients.history = {type:'history' ,msg:[]};
+                    connection.sendUTF(JSON.stringify({
+                        type:'info',
+                        time: (new Date()).getTime(),
+                        msg: "<i>Chat history has been cleared.</i>",
+                        author: "[Server]",
+                    }));
+                    connection.sendUTF(JSON.stringify(clients.history));
+                } else if(msgs.msg == "/server" || msgs.msg == "/s") {
                     var Apps = "";
                     for(var i=0, len=app_list.length; i<len; i++) {
                         Apps += app_list[i]+", ";
@@ -289,25 +302,92 @@ wsServer.on('request', function(request) {
                         time: (new Date()).getTime(),
                         msg: "<i>------------------<br>Server Info"
                         +"<br> - Start Time : "+start_time
-                        +"<br> - Total Users KPJ : "+apps.kpjselangor.total_user
-                        +"<br> - Total Users Artinity : "+apps.artinity.total_user
+                        +"<br> - Total Users KPJ Website : "+apps.kpjselangor_website.total_user
+                        +"<br> - Total Users KPJ Chat : "+apps.kpjselangor_chat.total_user
+                        +"<br> - Total Users Utiis Website : "+apps.utiis_website.total_user
+                        +"<br> - Total Users Utiis Chat : "+apps.utiis_chat.total_user
                         +"<br> - Total Users SkaApp : "+apps.ska_app.total_user
                         +"<br> - Total Message : "+msg_count
                         +"<br> - Apps : "+Apps
+                        +"<br> - Current App : "+appId
                         +"<br>------------------</i>",
                         author: "[Server]",
                     }));
-                } else if(msgs.msg.substring(0, 6) == "/user ") {
-                    receipient = htmlEntities(msgs.msg.substring(6, msgs.msg.length));
+                } else if(msgs.msg.substring(0, 10) == "/function " || msgs.msg.substring(0, 3) == "/f ") {
+                    var res = msgs.msg.split(" ");
+                    var funct = res[1];
+                    res.splice(0,2);
+                    var argument = res.toString().replace(/,/g, " ");
+                    var json = JSON.stringify({
+                        type:'function',
+                        time: (new Date()).getTime(),
+                        function: funct,
+                        arguments: argument,
+                        author: "[Server]",
+                    });
+                    for(var i=0, len=clients.length; i<len; i++) {
+                        if(userId !== clients[i].user_id && clients[i].active === true) {
+                            clients[i].connection.sendUTF(json);
+                            clients[i].seen = false;
+                        }
+                    }
+                    clients[index].seen = true;
+                } else if(msgs.msg.substring(0, 6) == "/user " || msgs.msg.substring(0, 3) == "/u ") {
+                    var res = msgs.msg.split(" ");
+                    var receipient = htmlEntities(res[1]);
                     var found = false;
                     var json = JSON.stringify({
                         type: "my-info",
                         author_id: userId,
                     });
                     for(var i=0, len=clients.length; i<len; i++) {
-                        if(clients[i].user_name == receipient) {
+                        if(clients[i].user_name === receipient) {
                             clients[i].connection.sendUTF(json);
                             found = true;
+                            return;
+                        }
+                    }
+                    if(found === false) {
+                        connection.sendUTF(JSON.stringify({
+                            type:'info',
+                            time: (new Date()).getTime(),
+                            msg: "<i>Oopss.. Nickname <b>"+receipient+"</b> is not here.</i>",
+                            author: "[Server]",
+                        }));
+                    }
+                } else if(msgs.msg.substring(0, 6) == "/chat " || msgs.msg.substring(0, 5) == "/chat" || msgs.msg.substring(0, 3) == "/c ") {
+                    if(msgs.msg.substring(0, 6) == "/chat " || msgs.msg.substring(0, 3) == "/c ") {
+                        var res = msgs.msg.split(" ");
+                        var receipient = htmlEntities(res[1]);
+                    }
+                    if(msgs.msg.substring(0, 5) == "/chat") {
+                        receipient = "-all";
+                    }
+                    if(receipient == "" || receipient == " ") {
+                        return;
+                    }
+                    var json = JSON.stringify({
+                        type: "chat",
+                    });
+                    if(receipient === "-all" || receipient === "-a") {
+                         for(var i=0, len=clients.length; i<len; i++) {
+                            if(userId !== clients[i].user_id && clients[i].active === true) {
+                                var check = check_user(clients[i].user_id);
+                                if(check === true) {
+                                    clients[i].connection.sendUTF(json);
+                                    clients[i].seen = false;
+                                }
+                            }
+                        }
+                        return;
+                    }
+                    for(var i=0, len=clients.length; i<len; i++) {
+                        if(clients[i].user_name == receipient) {
+                            var check = check_user(clients[i].user_id);
+                            if(check === true) {
+                                clients[i].connection.sendUTF(json);
+                                clients[i].seen = false;
+                            }
                             return;
                         }
                     }
@@ -363,33 +443,6 @@ wsServer.on('request', function(request) {
                             author: "[Server]",
                         }));
                     }
-                } else if(msgs.msg.substring(0, 6) == "/push ") {
-                    var res = msgs.msg.split(" ");
-                    var receipient = res[1];
-                    res.splice(0,2);
-                    var the_msg = res.toString().replace(/,/g, " ");
-                    var json = JSON.stringify({
-                        type:'push',
-                        time: (new Date()).getTime(),
-                        msg: the_msg,
-                        author: userName,
-                    });
-                    var found = false;
-                    for(var i=0, len=clients.length; i<len; i++) {
-                        if(clients[i].user_name === receipient) {
-                            clients[i].connection.sendUTF(json);
-                            found = true;
-                            return;
-                        }
-                    }
-                    if(found === false) {
-                        connection.sendUTF(JSON.stringify({
-                            type:'info',
-                            time: (new Date()).getTime(),
-                            msg: "<i>Oopss.. Nickname <b>"+receipient+"</b> is not here.</i>",
-                            author: "[Server]",
-                        }));
-                    }
                 } else if(msgs.msg == "/info") {
                     var myinfo = msgs.myinfo;
                     var receipient = msgs.receipient;
@@ -420,12 +473,14 @@ wsServer.on('request', function(request) {
                             return;
                         }
                     }
-                } else if(msgs.msg.substring(0, 6) == "/nick ") {
+                } else if(msgs.msg.substring(0, 6) == "/nick " || msgs.msg.substring(0, 3) == "/n ") {
                     var check = true;
-                    var newNick = htmlEntities(msgs.msg.substring(6, msgs.msg.length));
+                    var res = msgs.msg.split(" ");
+                    var newNick = htmlEntities(res[1]);
                     for(var i=0, len=clients.length; i<len; i++) {
-                        if(htmlEntities(msgs.msg.substring(6, msgs.msg.length)) === clients[i].user_name) {
+                        if(newNick === clients[i].user_name) {
                             check = false;
+                            return;
                         }
                     }
                     if(check === false) {
@@ -458,7 +513,7 @@ wsServer.on('request', function(request) {
                         userName = newNick;
                         clients[index].user_name = userName;
                     }
-                } else if(msgs.msg == "/users") {
+                } else if(msgs.msg == "/users" || msgs.msg == "/u") {
                     var users = "";
                     var n = 1;
                     for(var i=0, len=clients.length; i<len; i++) {
@@ -470,9 +525,9 @@ wsServer.on('request', function(request) {
                         msg: "<i>------------------<br>Online users"+users+"<br>------------------</i>",
                         author: "[Server]",
                     }));
-                } else if(msgs.msg == "/alert") {
+                } else if(msgs.msg == "/alert" || msgs.msg == "/a") {
                     var json = JSON.stringify({
-                        type:'alert', 
+                        type:'alert',
                         time: (new Date()).getTime(),
                         msg: "<i><b>"+userName+"</b> needs your attention.</i>",
                         author: "[Server]",
@@ -484,7 +539,7 @@ wsServer.on('request', function(request) {
                         }
                     }
                     clients[index].seen = true;
-                } else if(msgs.msg.substring(0, 5) == "/msg ") {
+                } else if(msgs.msg.substring(0, 5) == "/msg " || msgs.msg.substring(0, 3) == "/m ") {
                     var res = msgs.msg.split(" ");
                     var receipient = res[1];
                     res.splice(0,2);
@@ -507,15 +562,13 @@ wsServer.on('request', function(request) {
                         connection.sendUTF(JSON.stringify({
                             type:'info',
                             time: (new Date()).getTime(),
-                            msg: "<i>Oopss.. Nikcname <b>"+receipient+"</b> is not here.</i>",
+                            msg: "<i>Oopss.. Nickname <b>"+receipient+"</b> is not here.</i>",
                             author: "[Server]",
                         }));
                     }
                 } else if(msgs.msg.substring(0, 7) == "/close ") {
                     var res = msgs.msg.split(" ");
                     var receipient = res[1];
-                    res.splice(0,2);
-                    var the_msg = res.toString().replace(/,/g, " ");
                     var found = false;
                     for(var i=0, len=clients.length; i<len; i++) {
                         if(clients[i].user_name === receipient) {
@@ -689,6 +742,22 @@ wsServer.on('request', function(request) {
             }
         }
         index = get_index(idx,app);
+    }
+
+    var check_user = function(id) {
+        var app = apps["kpjselangor_chat"];
+        for(var n=0, len=app.length; n<len; n++) {
+            if(app[n].user_id == id && app[n].active === true) {
+                return false;
+            }
+        }
+        var app = apps["utiis_chat"];
+        for(var n=0, len=app.length; n<len; n++) {
+            if(app[n].user_id == id && app[n].active === true) {
+                return false;
+            }
+        }
+        return true;
     }
 
     var add_app = function(app) {
