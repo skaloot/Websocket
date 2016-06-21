@@ -135,6 +135,7 @@ $(function () {
                 connect = true;
                 localStorage.setItem("myName", myName);
                 localStorage.setItem("myId", id);
+                localStorage.setItem("app_id", app_id);
             } else if (json.type === 'newNick') {
                 sender = null;
                 addMessage(
@@ -273,6 +274,7 @@ $(function () {
                         localStorage.removeItem('myId');
                         localStorage.removeItem('app_id');
                         connect = false;
+                        chat.html(null);
                     } else if(msg == "/info" || msg == "/i") {
                         sender = null;
                         $.getJSON('http://ipinfo.io', function(data){
