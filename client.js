@@ -268,7 +268,7 @@ $(function () {
                     history = msgs.length;
                     if(msg == "/quit" || msg == "/q") {
                         sender = null;
-                        connection.send(JSON.stringify({id:id, msg:msg}));
+                        connection.send(JSON.stringify({id:id, msg:"/quit"}));
                         localStorage.removeItem('myName');
                         localStorage.removeItem('myId');
                         localStorage.removeItem('app_id');

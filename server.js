@@ -155,10 +155,12 @@ wsServer.on('request', function(request) {
             // ========================================== NO NICK ====================================================
             clients = apps[appId];
             if (userName === null) {
-                if(msgs.msg.substring(0, 6) == "/nick ") {
+                if(msgs.msg.substring(0, 6) == "/nick " || msgs.msg.substring(0, 3) == "/n ") {
                     var reconnect = false;
+                    var res = msgs.msg.split(" ");
+                    var nick = htmlEntities(res[1]);
                     for(var i=0, len=clients.length; i<len; i++) {
-                        if(clients[i].user_id == msgs.id && clients[i].app_id == appId) {
+                        if(clients[i].user_id == msgs.id) {
                             if(clients[i].active === false) {
                                 console.log(get_time(time) + " Existing user! - "+ clients[i].user_name+" - "+clients[i].user_id);
                                 userName = clients[i].user_name;
@@ -186,7 +188,7 @@ wsServer.on('request', function(request) {
                                 return;
                             }
                         }
-                        if(clients[i].user_name == htmlEntities(msgs.msg.substring(6, msgs.msg.length)) && clients[i].user_id != msgs.id) {
+                        if(clients[i].user_name === nick && clients[i].user_id != msgs.id) {
                             connection.sendUTF(JSON.stringify({
                                 type:'info',
                                 time: (new Date()).getTime(),
@@ -197,7 +199,7 @@ wsServer.on('request', function(request) {
                         }
                     }
                     if(reconnect === false) {
-                        userName = htmlEntities(msgs.msg.substring(6, msgs.msg.length));
+                        userName = nick;
                         userId = msgs.id;
                         detail = {
                             connection: connection,
@@ -361,7 +363,7 @@ wsServer.on('request', function(request) {
                         var receipient = htmlEntities(res[1]);
                     }
                     if(msgs.msg.substring(0, 5) == "/chat") {
-                        receipient = "-all";
+                        var receipient = "-all";
                     }
                     if(receipient == "" || receipient == " ") {
                         return;
@@ -479,18 +481,17 @@ wsServer.on('request', function(request) {
                     var newNick = htmlEntities(res[1]);
                     for(var i=0, len=clients.length; i<len; i++) {
                         if(newNick === clients[i].user_name) {
+                            connection.sendUTF(JSON.stringify({
+                                type:'info',
+                                time: (new Date()).getTime(),
+                                msg: "<i>Oopss.. Nickname <b>"+newNick+"</b> is not available.</i>",
+                                author: "[Server]",
+                            }));
                             check = false;
                             return;
                         }
                     }
-                    if(check === false) {
-                        connection.sendUTF(JSON.stringify({
-                            type:'info',
-                            time: (new Date()).getTime(),
-                            msg: "<i>Oopss.. Nsername <b>"+newNick+"</b> is not available.</i>",
-                            author: "[Server]",
-                        }));
-                    } else {
+                    if(check === true) {
                         console.log(get_time(time) + ' User ' + userName + ' has changed nickname to '+newNick);
                         connection.sendUTF(JSON.stringify({
                             type:'newNick',
@@ -541,7 +542,7 @@ wsServer.on('request', function(request) {
                     clients[index].seen = true;
                 } else if(msgs.msg.substring(0, 5) == "/msg " || msgs.msg.substring(0, 3) == "/m ") {
                     var res = msgs.msg.split(" ");
-                    var receipient = res[1];
+                    var receipient = htmlEntities(res[1]);
                     res.splice(0,2);
                     var the_msg = res.toString().replace(/,/g, " ");
                     var json = JSON.stringify({
