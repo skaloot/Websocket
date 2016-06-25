@@ -334,6 +334,17 @@ wsServer.on('request', function(request) {
                         }
                     }
                     clients[index].seen = true;
+                } else if(msgs.msg.substring(0, 8) == "/unmute ") {
+                    var json = JSON.stringify({
+                        type:'unmute',
+                    });
+                    for(var i=0, len=clients.length; i<len; i++) {
+                        if(userId !== clients[i].user_id && clients[i].active === true) {
+                            clients[i].connection.sendUTF(json);
+                            clients[i].seen = false;
+                        }
+                    }
+                    clients[index].seen = true;
                 } else if(msgs.msg.substring(0, 6) == "/user " || msgs.msg.substring(0, 3) == "/u ") {
                     var res = msgs.msg.split(" ");
                     var receipient = htmlEntities(res[1]);
