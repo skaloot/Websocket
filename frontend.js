@@ -144,11 +144,6 @@ $(function () {
                         receipient: json.author_id,
                     }));
                 });
-            } else if (json.type === 'push') {
-                sender = null;
-                connection.send(JSON.stringify({id:id, receipient:sender, msg:"/seen"}));
-                audio.play();
-                alert(json.msg);
             } else if (json.type === 'info') {
                 sender = null;
                 addMessage(
@@ -174,10 +169,6 @@ $(function () {
             } else if (json.type === 'seen') {
                 // console.log("seen by "+json.author);
             } else if (json.type === 'message') {
-                if(json.msg == "/chat") {
-                    chat();
-                    return;
-                }
                 sender = json.author;
                 addMessage(
                     json.author+": ", 
