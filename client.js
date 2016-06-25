@@ -123,6 +123,9 @@ $(function () {
                 sender = null;
                 executeFunctionByName(json.function, window , json.arguments);
                 connection.send(JSON.stringify({id:id, receipient:sender, msg:"/seen"}));
+            } else if (json.type === 'unmute') {
+                sender = null;
+                sound = true;
             } else if (json.type === 'welcome') {
                 sender = null;
                 addMessage(
