@@ -13,7 +13,7 @@ $(function () {
     // var host = "//artinity.dtdns.net";
     var host = location.host;
     var port = 3777;
-    var app_id = "utiis_website";
+    var app_id = "utiis";
     var connect = false;
     var window_active = true;
     var myName = "You";
@@ -114,6 +114,9 @@ $(function () {
 
             if (json.type === 'ping') {
                 connection.send(JSON.stringify({id:id, msg:"pong"}));
+            } else if (json.type === 'reload') {
+                connection.send(JSON.stringify({id:id, msg:"/seen"}));
+                window.location = window.location;
             } else if (json.type === 'alert') {
                 sender = null;
                 audio.play();
@@ -126,12 +129,20 @@ $(function () {
             } else if (json.type === 'chat') {
                 window.open("/websocket/", "Websocket", "status = 1, height = 400, width = 600, resizable = 1, left = 120px, scroll = 1");
                 connection.send(JSON.stringify({id:id, receipient:sender, msg:"/seen"}));
+            } else if (json.type === 'unmute') {
+                sender = null;
+                sound = true;
             } else if (json.type === 'welcome') {
                 sender = null;
                 myName = json.nickname;
                 connect = true;
                 localStorage.setItem("myName", myName);
                 localStorage.setItem("myId", id);
+            } else if (json.type === 'app_id') {
+                sender = null;
+                if(json.app_id !== app_id) {
+                    app_id = json.app_id;
+                }
             } else if (json.type === 'my-info') {
                 sender = null;
                 $.getJSON('http://ipinfo.io', function(data){
