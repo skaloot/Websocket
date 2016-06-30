@@ -13,6 +13,18 @@ function get_time(today) {
     return time;
 }
 
+function get_date(today) {
+    var today = new Date();
+    var y = today.getFullYear();
+    var m = today.getMonth()+1;
+    var d = today.getDate();
+    var h = today.getHours();
+    var mt = today.getMinutes();
+    var s = today.getSeconds();
+    var date = m + "-" + d + "-" + y + "-" + h + "-" + mt + "-" + s;
+    return date;
+}
+
 function checkTime(i) {
     if (i < 10) {
         i = "0" + i;
@@ -69,6 +81,35 @@ function PostThis(msg, appid, url) {
 }
 
 
+function DateDiff(time1, time2) {
+    console.log(time1);
+    console.log(time2);
+
+    var str1 = time1.split('-');
+    var str2 = time2.split('-');
+
+    var t1 = new Date(str1[2], str1[0]-1, str1[1], str1[3], str1[4], str1[5]);
+    var t2 = new Date(str2[2], str2[0]-1, str2[1], str2[3], str2[4], str2[5]);
+
+    var diffMS = t1 - t2;    
+    console.log(diffMS + ' ms');
+
+    var diffS = Math.round(diffMS / 1000);    
+    console.log(diffS + ' seconds');
+
+    var diffM = Math.round(diffS / 60);
+    console.log(diffM + ' minutes');
+
+    var diffH = Math.round(diffM / 60);
+    console.log(diffH + ' hours');
+
+    var diffD = Math.round(diffH / 24);
+    console.log(diffD + ' days');
+    
+    return diffD+' days, '+diffH+' hours, '+diffM+' minutes, '+diffS+' seconds';
+}
+
+
 // =========================================================================================================
 
 
@@ -93,7 +134,7 @@ var clients;
 var clients_count = 0;
 var msg_count = 0;
 var index = 0;
-var start_time = new Date();
+var start_time = get_date();
 
 set_app(apps,app_list);
 
@@ -117,6 +158,7 @@ var server = http.createServer(function(request, response) {
 });
 var time = (new Date()).getTime();
 server.listen(webSocketsServerPort, function() {
+    console.log("Start Time : "+start_time);
     console.log(get_time(time) + " Server is listening on port " + webSocketsServerPort);
 });
 
@@ -409,7 +451,7 @@ wsServer.on('request', function(request) {
                         type:'info',
                         time: (new Date()).getTime(),
                         msg: "<i>------------------<br>Server Info"
-                        +"<br> - Start Time : "+start_time
+                        +"<br> - Up Time : "+DateDiff(get_date(), start_time)
                         +"<br> - Total Users KPJ Website : "+apps.kpj.total_user
                         +"<br> - Total Users KPJ Chat : "+apps.kpjchat.total_user
                         +"<br> - Total Users Utiis Website : "+apps.utiis.total_user
