@@ -888,12 +888,12 @@ wsServer.on('request', function(request) {
                     clients.history['msg'] = clients.history['msg'].slice(-20);
                     var json = JSON.stringify(obj);
                     for(var i=0, len=clients.length; i<len; i++) {
-                        if(userId !== clients[i].user_id && clients[i].active === true) {
-                            clients[i].connection.sendUTF(json);
-                            clients[i].seen = false;
-                        }
-                        if(userId !== clients[i].user_id && clients[i].active === false) {
-                            clients[i].msg.push(json);
+                        if(userId !== clients[i].user_id) {
+                            if(clients[i].active === true) {
+                                clients[i].connection.sendUTF(json);
+                            } else {
+                                clients[i].msg.push(json);
+                            }
                             clients[i].seen = false;
                         }
                     }
