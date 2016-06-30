@@ -22,6 +22,7 @@ $(function () {
     var history = 0;
     var id = null;
     var sender = null;
+    var dblclick = false;
     var timer;
     var audio = new Audio('toing.mp3');
 
@@ -320,8 +321,10 @@ $(function () {
                             }));
                         });
                     } else {
-                        sender = null;
-                        connection.send(JSON.stringify({id:id, msg:msg}));
+                        if(id !== null) {
+                            sender = null;
+                            connection.send(JSON.stringify({id:id, msg:msg}));
+                        }
                     }
                 }
             }
