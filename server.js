@@ -40,7 +40,7 @@ var set_app = function(apps,app_list) {
 }
 
 
-function PostThis(msg, appid) {
+function PostThis(msg, appid, url) {
     var post_data = querystring.stringify({
         'msg': msg,
         'app_id': appid,
@@ -49,7 +49,7 @@ function PostThis(msg, appid) {
     var post_options = {
       host: 'localhost',
       port: '80',
-      path: '/websocket/msgs.php',
+      path: url,
       method: 'POST',
       headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -59,8 +59,8 @@ function PostThis(msg, appid) {
 
     var post_req = http.request(post_options, function(res) {
       res.setEncoding('utf8');
-      res.on('data', function (chunk) {
-          // console.log('Response: ' + chunk);
+      res.on('data', function (data) {
+          console.log('Response: ' + data);
       });
     });
 
@@ -321,10 +321,7 @@ wsServer.on('request', function(request) {
                                 users += "<br>"+(n++)+". "+clients[i].user_name;
                             }
                         }
-                        var url = null;
-                        if(appId === "ladiesfotochat") {
-                            url = 'http://www.ladiesfoto.com/websocket/login_mail.php?username='+userName;
-                        }
+                        PostThis(userName, appId, "/websocket/login_mail.php?username="+userName+"&app_id="+appId);
                         connection.sendUTF(JSON.stringify({
                             type:'welcome', 
                             time: (new Date()).getTime(),
@@ -334,7 +331,7 @@ wsServer.on('request', function(request) {
                             +"<br>Online users"+users+"<br>------------------</i>",
                             author: "[Server]",
                             nickname: userName,
-                            url: url,
+                            url: null,
                         }));
                         var json = JSON.stringify({
                             type:'info',
@@ -819,7 +816,7 @@ wsServer.on('request', function(request) {
                         }
                     }
                     clients[index].seen = true;
-                    PostThis(htmlEntities(msgs.msg), appId);
+                    PostThis(htmlEntities(msgs.msg), appId, "/websocket/msgs.php");
                 }
             }
         }
