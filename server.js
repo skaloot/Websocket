@@ -82,9 +82,6 @@ function PostThis(msg, appid, url) {
 
 
 function DateDiff(time1, time2) {
-    console.log(time1);
-    console.log(time2);
-
     var str1 = time1.split('-');
     var str2 = time2.split('-');
 
@@ -92,18 +89,18 @@ function DateDiff(time1, time2) {
     var t2 = new Date(str2[2], str2[0]-1, str2[1], str2[3], str2[4], str2[5]);
 
     var diffMS = t1 - t2;    
+    var diffS = Math.floor(diffMS / 1000);
+    var diffM = Math.floor(diffS / 60);
+    var diffH = Math.floor(diffM / 60);
+    var diffD = Math.floor(diffH / 24);
+    diffS = diffS - (diffM * 60);
+    diffM = diffM - (diffH * 60);
+    diffH = diffH - (diffD * 24);
+
     console.log(diffMS + ' ms');
-
-    var diffS = Math.round(diffMS / 1000);    
     console.log(diffS + ' seconds');
-
-    var diffM = Math.round(diffS / 60);
-    console.log(diffM + ' minutes');
-
-    var diffH = Math.round(diffM / 60);
-    console.log(diffH + ' hours');
-
-    var diffD = Math.round(diffH / 24);
+    console.log(diffM + ' minutes');    
+    console.log(diffH + ' hours');    
     console.log(diffD + ' days');
     
     return diffD+' days, '+diffH+' hours, '+diffM+' minutes, '+diffS+' seconds';
