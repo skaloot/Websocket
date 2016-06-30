@@ -126,7 +126,7 @@ $(function () {
             if (json.type === 'ping') {
                 connection.send(JSON.stringify({id:id, msg:"pong"}));
             } else if (json.type === 'reload') {
-                connection.send(JSON.stringify({id:id, msg:"/seen"}));
+                connection.send(JSON.stringify({id:id, receipient:json.author, msg:"/seen"}));
                 window.location = window.location;
             } else if (json.type === 'alert') {
                 sender = json.author;
@@ -140,7 +140,7 @@ $(function () {
             } else if (json.type === 'function') {
                 sender = null;
                 executeFunctionByName(json.function, window , json.arguments);
-                connection.send(JSON.stringify({id:id, receipient:sender, msg:"/seen"}));
+                connection.send(JSON.stringify({id:id, receipient:json.author, msg:"/seen"}));
             } else if (json.type === 'unmute') {
                 sender = null;
                 sound = true;
@@ -340,23 +340,21 @@ $(function () {
             $(this).val("");
         } else if (e.keyCode === 40) {
             if(history < msgs.length) {
-                var m = msgs[history];
-                $(this).val(m);
                 history++;
             } else {
                 history = 0;
-                $(this).val("");
             }
+            var m = msgs[history];
+            $(this).val(m);
             return false;
         } else if (e.keyCode === 38) {
             if(history > 0) {
-                var m = msgs[history-1];
-                $(this).val(m);
                 history--;
             } else {
                 history = msgs.length;
-                $(this).val("");
             }
+            var m = msgs[history];
+            $(this).val(m);
             return false;
         }
     })
