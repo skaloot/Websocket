@@ -20,7 +20,7 @@ $(function () {
     var sound = false;
     var msgs = [];
     var history = 0;
-    var id;
+    var id = null;
     var sender = null;
     var dblclick = false;
     var timer;
@@ -83,23 +83,8 @@ $(function () {
     }
 
 
-    function isTextSelected(input){
-        var startPos = input.selectionStart;
-        var endPos = input.selectionEnd;
-        var doc = document.selection;
-
-        if(doc && doc.createRange().text.length != 0){
-            return true;
-        // } else if (!doc && input.value.substring(startPos,endPos).length != 0){
-        //     return true;
-        }
-        return false;
-    }
-
-
     function connect_this(host, port) {
         console.log("Connection start..");
-        id = Math.random();
         connection = new WebSocket('ws:'+host+':'+port);
 
         connection.onopen = function () {
@@ -144,24 +129,6 @@ $(function () {
             } else if (json.type === 'unmute') {
                 sender = null;
                 sound = true;
-            } else if (json.type === 'welcome') {
-                sender = null;
-                addMessage(
-                    "",
-                    json.msg,
-                    "server",
-                    json.time
-                );
-                myName = json.nickname;
-                connect = true;
-                if(json.url !== null) {
-                    $.getJSON(json.url, function(data) {
-                        console.log(data);
-                    });
-                }
-                localStorage.setItem("myName", myName);
-                localStorage.setItem("myId", id);
-                localStorage.setItem("app_id", app_id);
             } else if (json.type === 'app_id') {
                 sender = null;
                 if(json.app_id !== app_id) {
@@ -229,7 +196,7 @@ $(function () {
                     "server",
                     json.time
                 );
-                connection.send(JSON.stringify({id:id, msg:"/appid", app_id:app_id}));
+                connection.send(JSON.stringify({msg:"/appid", app_id:app_id}));
                 if(localStorage.getItem("myName") && localStorage.getItem("myId")) {
                     myName = localStorage.getItem("myName");
                     id = localStorage.getItem("myId");
@@ -243,6 +210,24 @@ $(function () {
                         (new Date()).getTime()
                     );
                 }
+            } else if (json.type === 'welcome') {
+                sender = null;
+                addMessage(
+                    "",
+                    json.msg,
+                    "server",
+                    json.time
+                );
+                myName = json.nickname;
+                connect = true;
+                if(json.url !== null) {
+                    $.getJSON(json.url, function(data) {
+                        console.log(data);
+                    });
+                }
+                localStorage.setItem("myName", myName);
+                localStorage.setItem("myId", id);
+                localStorage.setItem("app_id", app_id);
             } else if (json.type === 'typing') {
                 seentyping.html("<i>"+json.author+" is typing..</i>");
                 content.scrollTop(content[0].scrollHeight);
@@ -332,8 +317,10 @@ $(function () {
                             }));
                         });
                     } else {
-                        sender = null;
-                        connection.send(JSON.stringify({id:id, msg:msg}));
+                        if(id !== null) {
+                            sender = null;
+                            connection.send(JSON.stringify({id:id, msg:msg}));
+                        }
                     }
                 }
             }
@@ -404,8 +391,12 @@ $(function () {
 
     var time = (new Date()).getTime();
     chat.append('<p class="server"><i>Connecting...</i><span class="time">'+get_time(time)+'</span></p>');
-    connect_this(host, port);
-    check_con();
+    $.getJSON("user_id.php?user_id", function(data) {
+        id = data.user_id;
+        console.log(id);
+        connect_this(host, port);
+        check_con();
+    });
 
 
     window.onfocus = function() {
