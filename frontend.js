@@ -13,14 +13,14 @@ $(function () {
     // var host = "//artinity.dtdns.net";
     var host = location.host;
     var port = 3777;
-    var app_id = "utiis_website";
+    var app_id = "utiis";
     var connect = false;
     var window_active = true;
     var myName = "You";
     var sound = false;
     var msgs = [];
     var history = 0;
-    var id;
+    var id = null;
     var sender = null;
     var timer;
     var audio = new Audio('/websocket/toing.mp3');
@@ -92,7 +92,6 @@ $(function () {
 
     function connect_this(host, port) {
         console.log("Connection start..");
-        id = Math.random();
         connection = new WebSocket('ws:'+host+':'+port);
 
         connection.onopen = function () {
@@ -113,25 +112,36 @@ $(function () {
             }
 
             if (json.type === 'ping') {
-                connection.send(JSON.stringify({id:id, msg:"pong"}));
+                connection.send(JSON.stringify({id:id, receipient:json.author, msg:"pong"}));
+            } else if (json.type === 'reload') {
+                connection.send(JSON.stringify({id:id, receipient:json.author, msg:"/seen"}));
+                window.location = window.location;
             } else if (json.type === 'alert') {
                 sender = null;
                 audio.play();
                 console.log(json.author+": "+strip(json.msg));
-                connection.send(JSON.stringify({id:id, receipient:sender, msg:"/seen"}));
+                connection.send(JSON.stringify({id:id, receipient:json.author, msg:"/seen"}));
             } else if (json.type === 'function') {
                 sender = null;
                 executeFunctionByName(json.function, window , json.arguments);
-                connection.send(JSON.stringify({id:id, receipient:sender, msg:"/seen"}));
+                connection.send(JSON.stringify({id:id, receipient:json.author, msg:"/seen"}));
             } else if (json.type === 'chat') {
                 window.open("/websocket/", "Websocket", "status = 1, height = 400, width = 600, resizable = 1, left = 120px, scroll = 1");
-                connection.send(JSON.stringify({id:id, receipient:sender, msg:"/seen"}));
+                connection.send(JSON.stringify({id:id, receipient:json.author, msg:"/seen"}));
+            } else if (json.type === 'unmute') {
+                sender = null;
+                sound = true;
             } else if (json.type === 'welcome') {
                 sender = null;
                 myName = json.nickname;
                 connect = true;
                 localStorage.setItem("myName", myName);
                 localStorage.setItem("myId", id);
+            } else if (json.type === 'app_id') {
+                sender = null;
+                if(json.app_id !== app_id) {
+                    app_id = json.app_id;
+                }
             } else if (json.type === 'my-info') {
                 sender = null;
                 $.getJSON('http://ipinfo.io', function(data){
@@ -144,11 +154,6 @@ $(function () {
                         receipient: json.author_id,
                     }));
                 });
-            } else if (json.type === 'push') {
-                sender = null;
-                connection.send(JSON.stringify({id:id, receipient:sender, msg:"/seen"}));
-                audio.play();
-                alert(json.msg);
             } else if (json.type === 'info') {
                 sender = null;
                 addMessage(
@@ -164,8 +169,7 @@ $(function () {
                     myName = localStorage.getItem("myName");
                     id = localStorage.getItem("myId");
                 } else {
-                    myName = "kpj-"+makeid();
-                    id = Math.random();
+                    myName = makeid();
                 }
                 connection.send(JSON.stringify({id:id, msg:"/nick "+myName}));
                 connection.send(JSON.stringify({id:id, msg:"Page - "+document.title}));
@@ -174,10 +178,6 @@ $(function () {
             } else if (json.type === 'seen') {
                 // console.log("seen by "+json.author);
             } else if (json.type === 'message') {
-                if(json.msg == "/chat") {
-                    chat();
-                    return;
-                }
                 sender = json.author;
                 addMessage(
                     json.author+": ", 
@@ -223,8 +223,12 @@ $(function () {
 
 
     console.log('Connecting...');
-    connect_this(host, port);
-    check_con();
+    $.getJSON("user_id.php?user_id", function(data) {
+        id = data.user_id;
+        console.log(id);
+        connect_this(host, port);
+        check_con();
+    });
 
 
     function change_title() {

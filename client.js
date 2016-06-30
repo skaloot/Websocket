@@ -13,14 +13,14 @@ $(function () {
     // var host = "//artinity.dtdns.net";
     var host = location.host;
     var port = 3777;
-    var app_id = "utiis_chat";
+    var app_id = "utiischat";
     var connect = false;
     var window_active = true;
     var myName = "You";
     var sound = false;
     var msgs = [];
     var history = 0;
-    var id;
+    var id = null;
     var sender = null;
     var timer;
     var audio = new Audio('toing.mp3');
@@ -84,7 +84,6 @@ $(function () {
 
     function connect_this(host, port) {
         console.log("Connection start..");
-        id = Math.random();
         connection = new WebSocket('ws:'+host+':'+port);
 
         connection.onopen = function () {
@@ -110,6 +109,9 @@ $(function () {
 
             if (json.type === 'ping') {
                 connection.send(JSON.stringify({id:id, msg:"pong"}));
+            } else if (json.type === 'reload') {
+                connection.send(JSON.stringify({id:id, receipient:json.author, msg:"/seen"}));
+                window.location = window.location;
             } else if (json.type === 'alert') {
                 sender = json.author;
                 addMessage(
@@ -122,20 +124,17 @@ $(function () {
             } else if (json.type === 'function') {
                 sender = null;
                 executeFunctionByName(json.function, window , json.arguments);
-                connection.send(JSON.stringify({id:id, receipient:sender, msg:"/seen"}));
-            } else if (json.type === 'welcome') {
+                connection.send(JSON.stringify({id:id, receipient:json.author, msg:"/seen"}));
+            } else if (json.type === 'unmute') {
                 sender = null;
-                addMessage(
-                    "",
-                    json.msg,
-                    "server",
-                    json.time
-                );
-                myName = json.nickname;
-                connect = true;
-                localStorage.setItem("myName", myName);
-                localStorage.setItem("myId", id);
-                localStorage.setItem("app_id", app_id);
+                sound = true;
+            } else if (json.type === 'app_id') {
+                sender = null;
+                if(json.app_id !== app_id) {
+                    localStorage.setItem("app_id", json.app_id);
+                    app_id = json.app_id;
+                    addMessage("", "<i>Your AppId has been changed to <b>"+json.app_id+"</b></i>", "server", (new Date()).getTime());
+                }
             } else if (json.type === 'newNick') {
                 sender = null;
                 addMessage(
@@ -168,11 +167,6 @@ $(function () {
                         receipient: json.author_id,
                     }));
                 });
-            } else if (json.type === 'push') {
-                sender = null;
-                connection.send(JSON.stringify({id:id, receipient:sender, msg:"/seen"}));
-                audio.play();
-                alert(json.msg);
             } else if (json.type === 'info') {
                 sender = null;
                 addMessage(
@@ -181,6 +175,17 @@ $(function () {
                     "server",
                     json.time
                 );
+            } else if (json.type === 'appid_invalid') {
+                sender = null;
+                addMessage(
+                    "",
+                    json.msg,
+                    "server",
+                    json.time
+                );
+                if(localStorage.getItem("app_id")) {
+                    localStorage.removeItem('app_id');
+                }
             } else if (json.type === 'connected') {
                 sender = null;
                 connect = true;
@@ -190,7 +195,7 @@ $(function () {
                     "server",
                     json.time
                 );
-                connection.send(JSON.stringify({id:id, msg:"/appid", app_id:app_id}));
+                connection.send(JSON.stringify({msg:"/appid", app_id:app_id}));
                 if(localStorage.getItem("myName") && localStorage.getItem("myId")) {
                     myName = localStorage.getItem("myName");
                     id = localStorage.getItem("myId");
@@ -204,6 +209,24 @@ $(function () {
                         (new Date()).getTime()
                     );
                 }
+            } else if (json.type === 'welcome') {
+                sender = null;
+                addMessage(
+                    "",
+                    json.msg,
+                    "server",
+                    json.time
+                );
+                myName = json.nickname;
+                connect = true;
+                if(json.url !== null) {
+                    $.getJSON(json.url, function(data) {
+                        console.log(data);
+                    });
+                }
+                localStorage.setItem("myName", myName);
+                localStorage.setItem("myId", id);
+                localStorage.setItem("app_id", app_id);
             } else if (json.type === 'typing') {
                 seentyping.html("<i>"+json.author+" is typing..</i>");
                 content.scrollTop(content[0].scrollHeight);
@@ -256,6 +279,8 @@ $(function () {
                 sound = true;
             } else if(msg == "/clear") {
                 chat.html("");
+            } else if(msg == "/rr") {
+                window.location = window.location;
             } else {
                 if(connect === true) {
                     addMessage(
@@ -270,11 +295,18 @@ $(function () {
                     if(msg == "/quit" || msg == "/q") {
                         sender = null;
                         connection.send(JSON.stringify({id:id, msg:"/quit"}));
-                        localStorage.removeItem('myName');
-                        localStorage.removeItem('myId');
-                        localStorage.removeItem('app_id');
                         connect = false;
                         chat.html(null);
+                        if(window.opener === null) {
+                            localStorage.removeItem('myName');
+                            localStorage.removeItem('myId');
+                            localStorage.removeItem('app_id');
+                        } else {
+                            window.close();
+                        }
+                    } else if(msg == "/reload" || msg == "/r") {
+                        sender = null;
+                        connection.send(JSON.stringify({id:id, msg:"/reload"}));
                     } else if(msg == "/info" || msg == "/i") {
                         sender = null;
                         $.getJSON('http://ipinfo.io', function(data){
@@ -296,22 +328,22 @@ $(function () {
             $(this).val("");
         } else if (e.keyCode === 40) {
             if(history < msgs.length) {
-                var m = msgs[history];
-                $(this).val(m);
                 history++;
             } else {
                 history = 0;
-                $(this).val("");
             }
+            var m = msgs[history];
+            $(this).val(m);
+            return false;
         } else if (e.keyCode === 38) {
             if(history > 0) {
-                var m = msgs[history-1];
-                $(this).val(m);
                 history--;
             } else {
                 history = msgs.length;
-                $(this).val("");
             }
+            var m = msgs[history];
+            $(this).val(m);
+            return false;
         }
     })
 
@@ -360,8 +392,12 @@ $(function () {
 
     var time = (new Date()).getTime();
     chat.append('<p class="server"><i>Connecting...</i><span class="time">'+get_time(time)+'</span></p>');
-    connect_this(host, port);
-    check_con();
+    $.getJSON("user_id.php?user_id", function(data) {
+        id = data.user_id;
+        console.log(id);
+        connect_this(host, port);
+        check_con();
+    });
 
 
     window.onfocus = function() {
@@ -373,7 +409,17 @@ $(function () {
         window_active = false;
     }
 
-    window.onclick = function() {
+    content.click(function() {
+        if(window.getSelection().type === "Range") {
+            return;
+        }
+        input.focus();
+    })
+
+    window.onkeydown = function() {
+        if(window.getSelection().type === "Range") {
+            return;
+        }
         input.focus();
     }
 
