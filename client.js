@@ -13,8 +13,10 @@ $(function () {
     // var host = "//artinity.dtdns.net";
     var host = location.host;
     var port = 3777;
-    var app_id = "utiischat";
+    // var app_id = "utiischat";
+    var app_id = "ska";
     var connect = false;
+    var online = false;
     var window_active = true;
     var myName = "You";
     var sound = false;
@@ -218,7 +220,7 @@ $(function () {
                     json.time
                 );
                 myName = json.nickname;
-                connect = true;
+                online = true;
                 if(json.url !== null) {
                     $.getJSON(json.url, function(data) {
                         console.log(data);
@@ -256,7 +258,8 @@ $(function () {
     input.keydown(function(e) {
         var msg = $(this).val();
         if (e.keyCode === 13) {
-            if (!msg) {
+            msg.trim();
+            if (!msg || msg.trim().length == 0) {
                 return;
             }
             var d = new Date();
@@ -289,13 +292,11 @@ $(function () {
                         "client",
                         (new Date()).getTime()
                     );
-                    msgs.push(msg);
-                    msgs = msgs.slice(-10);
-                    history = msgs.length;
                     if(msg == "/quit" || msg == "/q") {
                         sender = null;
                         connection.send(JSON.stringify({id:id, msg:"/quit"}));
                         connect = false;
+                        online = false;
                         chat.html(null);
                         if(window.opener === null) {
                             localStorage.removeItem('myName');
@@ -321,10 +322,13 @@ $(function () {
                         });
                     } else {
                         sender = null;
-                        connection.send(JSON.stringify({id:id, msg:msg}));
+                        connection.send(JSON.stringify({id:id, msg:msg.trim()}));
                     }
                 }
             }
+            msgs.push(msg);
+            msgs = msgs.slice(-10);
+            history = msgs.length;
             $(this).val("");
         } else if (e.keyCode === 40) {
             if(history < msgs.length) {
@@ -349,7 +353,7 @@ $(function () {
 
     input.keyup(function(e) {
         var msg = $(this).val();
-        if(msg.length === 1 && msg !== "/" && myName !== "You" && connect === true) {
+        if(msg.length === 1 && msg !== "/" && myName !== "You" && connect === true && online === true) {
             connection.send(JSON.stringify({id:id, msg:"/typing"}));
         }
     })
@@ -381,6 +385,7 @@ $(function () {
                         chat.append('<p class="server"><i>You are not connected..</i><span class="time">'+get_time(time)+'</span></p>');
                         chat.append('<p class="server"><i>Connecting...</i><span class="time">'+get_time(time)+'</span></p>');
                         connect = false;
+                        online = false;
                     }
                 } else {
                     clearInterval(ska_inteval);

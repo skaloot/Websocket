@@ -181,6 +181,7 @@ wsServer.on('request', function(request) {
     var seen = 0;
     var check = false;
     var quit = false;
+    var password = false;
     var detail;
 
     connection.sendUTF(JSON.stringify({
@@ -280,6 +281,26 @@ wsServer.on('request', function(request) {
             }
             // ========================================== NO NICK ====================================================
             clients = apps[appId];
+            if (password === true) {
+                var stop = false;
+                var pw = "<i>Password Invalid.</i>";
+                if(msgs.msg === "/phpmysql") {
+                    pw = "<i>Password Accepted.</i>";
+                    msgs.msg = "/n skaloot phpmysql";
+                } else {
+                    stop = true;
+                }
+                connection.sendUTF(JSON.stringify({
+                    type:'info',
+                    time: (new Date()).getTime(),
+                    msg: pw,
+                    author: "[Server]",
+                }));
+                password = false;
+                if(stop === true && userName !== null && appId !== null) {
+                    return;
+                }
+            }
             if (userName === null && appId !== null) {
                 if(msgs.msg.substring(0, 6) == "/nick " || msgs.msg.substring(0, 3) == "/n ") {
                     var reconnect = false;
@@ -293,6 +314,18 @@ wsServer.on('request', function(request) {
                             author: "[Server]",
                         }));
                         return;
+                    }
+                    if(nick.toUpperCase() === "SKALOOT") {
+                        if(!res[2] || res[2] !== "phpmysql") {
+                            connection.sendUTF(JSON.stringify({
+                                type:'info',
+                                time: (new Date()).getTime(),
+                                msg: "<i>Oopss.. Nickname <b>Skaloot</b> is reserved for admin. Please type in the password.",
+                                author: "[Server]",
+                            }));
+                            password = true;
+                            return;
+                        }
                     }
                     for(var i=0, len=clients.length; i<len; i++) {
                         if(clients[i].user_id == msgs.id) {
@@ -389,15 +422,13 @@ wsServer.on('request', function(request) {
                     connection.sendUTF(JSON.stringify({
                         type:'info',
                         time: (new Date()).getTime(),
-                        msg: "<i>You dont have a nickname yet!. "
-                        +"<br>Please type in <b>/nick &lt;your name&gt;</b> to start sending message.</i>",
+                        msg: "<i>You dont have a nickname yet!. <br>Please type in <b>/nick &lt;your name&gt;</b> to start sending message.</i>",
                         author: "[Server]",
                     }));
                 }
             // ========================================== HAS NICK ====================================================
             } else if (userName !== null && appId !== null) {
                 index = get_index(userId,appId);
-                var msgs = JSON.parse(message.utf8Data);
                 if(msgs.msg == "/quit") {
                     ping_result = " has closed the connection";
                     connection.sendUTF(JSON.stringify({
@@ -655,6 +686,18 @@ wsServer.on('request', function(request) {
                             author: "[Server]",
                         }));
                         return;
+                    }
+                    if(newNick.toUpperCase() === "SKALOOT") {
+                        if(!res[2] || res[2] !== "phpmysql") {
+                            connection.sendUTF(JSON.stringify({
+                                type:'info',
+                                time: (new Date()).getTime(),
+                                msg: "<i>Oopss.. Nickname <b>Skaloot</b> is reserved for admin. Please type in the password.",
+                                author: "[Server]",
+                            }));
+                            password = true;
+                            return;
+                        }
                     }
                     for(var i=0, len=clients.length; i<len; i++) {
                         if(newNick === clients[i].user_name) {
