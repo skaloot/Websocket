@@ -5,9 +5,9 @@ date_default_timezone_set("Asia/Kuala_lumpur");
 ini_set("error_reporting", E_ALL);
 
 
-if(isset($_GET["username"]) && isset($_GET["app_id"])) {
-	$username = $_GET['username'];
-	if($_GET["app_id"] === "ladiesfotochat") {
+if(isset($_POST["username"]) && isset($_POST["app_id"])) {
+	$username = $_POST['username'];
+	if($_POST["app_id"] === "ladiesfotochat") {
 		if($username == "skaloot" || $username == "ska" || $username == "hudajamal" || $username == "admin" || $username == "huda") {
 			exit;
 		}

@@ -40,47 +40,6 @@ function originIsAllowed(origin) {
   return true;
 }
 
-var set_app = function(apps,app_list) {
-    for(var i=0, len=app_list.length; i<len; i++) {
-        console.log(app_list[i]);
-        if(!apps[app_list[i]]) {
-            apps[app_list[i]] = [];
-            apps[app_list[i]].total_user = 0;
-            apps[app_list[i]].history = {type:'history' ,msg:[]};
-        }
-    }
-}
-
-
-function PostThis(msg, appid, url) {
-    var post_data = querystring.stringify({
-        'msg': msg,
-        'app_id': appid,
-    });
-
-    var post_options = {
-      host: 'localhost',
-      port: '80',
-      path: url,
-      method: 'POST',
-      headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Content-Length': Buffer.byteLength(post_data)
-      }
-    };
-
-    var post_req = http.request(post_options, function(res) {
-      res.setEncoding('utf8');
-      res.on('data', function (data) {
-          console.log('Response: ' + data);
-      });
-    });
-
-    post_req.write(post_data);
-    post_req.end();
-}
-
-
 function DateDiff(time1, time2) {
     var str1 = time1.split('-');
     var str2 = time2.split('-');
@@ -106,6 +65,53 @@ function DateDiff(time1, time2) {
     return diffD+' days, '+diffH+' hours, '+diffM+' minutes, '+diffS+' seconds';
 }
 
+var set_app = function(apps,app_list) {
+    for(var i=0, len=app_list.length; i<len; i++) {
+        console.log(app_list[i]);
+        if(!apps[app_list[i]]) {
+            apps[app_list[i]] = [];
+            apps[app_list[i]].total_user = 0;
+            apps[app_list[i]].history = {type:'history' ,msg:[]};
+        }
+    }
+}
+
+function PostThis(obj, type, url) {
+    var post_data = querystring.stringify(obj);
+    var post_options = {
+      host: 'localhost',
+      port: '80',
+      path: url,
+      method: 'POST',
+      headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Content-Length': Buffer.byteLength(post_data)
+      }
+    };
+    var result = null;
+    var post_req = http.request(post_options, function(res) {
+        res.setEncoding('utf8');
+        res.on('data', function (data) {
+            console.log('Post Result: ' + data);
+            result = data;
+            if(type === "admin") {
+                data = data.split(",");
+                for(var i=0, len=data.length; i<len; i++) {
+                    data[i] = data[i].split("-");
+                    obj.push({username: data[i][0], password: data[i][1]});
+                }
+            }
+        });
+    });
+    post_req.write(post_data);
+    post_req.end();
+}
+
+
+
+
+
+
 
 // =========================================================================================================
 
@@ -126,6 +132,7 @@ var app_list = [
     "ladiesfotochat",
     "ska",
 ];
+var admins = [];
 var apps = [];
 var clients;
 var clients_count = 0;
@@ -134,7 +141,7 @@ var index = 0;
 var start_time = get_date();
 
 set_app(apps,app_list);
-
+PostThis(admins, "admin", "/websocket/admin.php");
 
 var helps = ""
     +"<br><b>/nick</b> - to set or change nickname"
@@ -182,6 +189,7 @@ wsServer.on('request', function(request) {
     var check = false;
     var quit = false;
     var password = false;
+    var password_user = null;
     var detail;
 
     connection.sendUTF(JSON.stringify({
@@ -284,22 +292,20 @@ wsServer.on('request', function(request) {
             if (password === true) {
                 var stop = false;
                 var pw = "<i>Password Invalid.</i>";
-                if(msgs.msg === "/phpmysql") {
-                    pw = "<i>Password Accepted.</i>";
-                    msgs.msg = "/n skaloot phpmysql";
+                if(msgs.msg.substring(0, 3) == "/p ") {
+                    var res = msgs.msg.split(" ");
+                    msgs.msg = "/n "+password_user+" "+htmlEntities(res[1]);
                 } else {
-                    stop = true;
-                }
-                connection.sendUTF(JSON.stringify({
-                    type:'info',
-                    time: (new Date()).getTime(),
-                    msg: pw,
-                    author: "[Server]",
-                }));
-                password = false;
-                if(stop === true && userName !== null && appId !== null) {
+                    connection.sendUTF(JSON.stringify({
+                        type:'info',
+                        time: (new Date()).getTime(),
+                        msg: "<i>Password is empty. Please type in the password.</i>",
+                        author: "[Server]",
+                    }));
                     return;
                 }
+                password = false;
+                password_user = null;
             }
             if (userName === null && appId !== null) {
                 if(msgs.msg.substring(0, 6) == "/nick " || msgs.msg.substring(0, 3) == "/n ") {
@@ -310,21 +316,41 @@ wsServer.on('request', function(request) {
                         connection.sendUTF(JSON.stringify({
                             type:'info',
                             time: (new Date()).getTime(),
-                            msg: "<i>Oopss.. Your nickname is empty.",
+                            msg: "<i>Oopss.. Your nickname is empty.</i>",
                             author: "[Server]",
                         }));
                         return;
                     }
-                    if(nick.toUpperCase() === "SKALOOT") {
-                        if(!res[2] || res[2] !== "phpmysql") {
+                    var admin = check_admin(nick.toUpperCase());
+                    if(admin === true) {
+                        if(!res[2]) {
                             connection.sendUTF(JSON.stringify({
                                 type:'info',
                                 time: (new Date()).getTime(),
-                                msg: "<i>Oopss.. Nickname <b>Skaloot</b> is reserved for admin. Please type in the password.",
+                                msg: "<i>Oopss.. Nickname <b>"+nick+"</b> is reserved for admin. Please type in <b>/p &lt;password&gt;</b>.</i>",
                                 author: "[Server]",
                             }));
                             password = true;
+                            password_user = nick;
                             return;
+                        } else {
+                            var verified = check_password(nick.toUpperCase(), res[2]);
+                            if(verified === false) {
+                                connection.sendUTF(JSON.stringify({
+                                    type:'info',
+                                    time: (new Date()).getTime(),
+                                    msg: "<i>Oopss..Invalid password.</i>",
+                                    author: "[Server]",
+                                }));
+                                return;
+                            } else {
+                                connection.sendUTF(JSON.stringify({
+                                    type:'info',
+                                    time: (new Date()).getTime(),
+                                    msg: "<i>Verified..</i>",
+                                    author: "[Server]",
+                                }));
+                            }
                         }
                     }
                     for(var i=0, len=clients.length; i<len; i++) {
@@ -350,7 +376,7 @@ wsServer.on('request', function(request) {
                                 connection.sendUTF(JSON.stringify({
                                     type:'info',
                                     time: (new Date()).getTime(),
-                                    msg: "<i>Oopss.. You are already connected.",
+                                    msg: "<i>Oopss.. You are already connected.</i>",
                                     author: "[Server]",
                                 }));
                                 return;
@@ -393,7 +419,8 @@ wsServer.on('request', function(request) {
                                 users += "<br>"+(n++)+". "+clients[i].user_name;
                             }
                         }
-                        PostThis(userName, appId, "/websocket/login_mail.php?username="+userName+"&app_id="+appId);
+                        var obj = {username: userName, app_id: appId};
+                        PostThis(obj, "login", "/websocket/login_mail.php");
                         connection.sendUTF(JSON.stringify({
                             type:'welcome', 
                             time: (new Date()).getTime(),
@@ -687,16 +714,36 @@ wsServer.on('request', function(request) {
                         }));
                         return;
                     }
-                    if(newNick.toUpperCase() === "SKALOOT") {
-                        if(!res[2] || res[2] !== "phpmysql") {
+                    var admin = check_admin(newNick.toUpperCase());
+                    if(admin === true) {
+                        if(!res[2]) {
                             connection.sendUTF(JSON.stringify({
                                 type:'info',
                                 time: (new Date()).getTime(),
-                                msg: "<i>Oopss.. Nickname <b>Skaloot</b> is reserved for admin. Please type in the password.",
+                                msg: "<i>Oopss.. Nickname <b>"+newNick+"</b> is reserved for admin. Please type in <b>/p &lt;password&gt;</b>.</i>",
                                 author: "[Server]",
                             }));
                             password = true;
+                            password_user = newNick;
                             return;
+                        } else {
+                            var verified = check_password(newNick.toUpperCase(), res[2]);
+                            if(verified === false) {
+                                connection.sendUTF(JSON.stringify({
+                                    type:'info',
+                                    time: (new Date()).getTime(),
+                                    msg: "<i>Oopss..Invalid password.</i>",
+                                    author: "[Server]",
+                                }));
+                                return;
+                            } else {
+                                connection.sendUTF(JSON.stringify({
+                                    type:'info',
+                                    time: (new Date()).getTime(),
+                                    msg: "<i>Verified..</i>",
+                                    author: "[Server]",
+                                }));
+                            }
                         }
                     }
                     for(var i=0, len=clients.length; i<len; i++) {
@@ -941,7 +988,8 @@ wsServer.on('request', function(request) {
                         }
                     }
                     clients[index].seen = true;
-                    PostThis(htmlEntities(msgs.msg), appId, "/websocket/msgs.php");
+                    var obj = {msg: htmlEntities(msgs.msg), app_id: appId};
+                    PostThis(obj, "history", "/websocket/msgs.php");
                 }
             }
         }
@@ -1039,6 +1087,24 @@ wsServer.on('request', function(request) {
             }
         }
         return true;
+    }
+
+    var check_admin = function(username) {
+        for(var i=0, len=admins.length; i<len; i++) {
+            if(admins[i].username === username) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    var check_password = function(username, password) {
+        for(var i=0, len=admins.length; i<len; i++) {
+            if(admins[i].password === password && admins[i].username === username) {
+                return true;
+            }
+        }
+        return false;
     }
 
     var add_app = function(app) {
