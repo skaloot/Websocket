@@ -76,6 +76,10 @@ var set_app = function(apps,app_list) {
     }
 }
 
+var set_apps = function() {
+    set_app(apps,app_list);
+}
+
 function PostThis(obj, type, url) {
     var post_data = querystring.stringify(obj);
     var post_options = {
@@ -101,6 +105,13 @@ function PostThis(obj, type, url) {
                     obj.push({username: data[i][0], password: data[i][1]});
                 }
             }
+            if(type === "app_list") {
+                data = data.split(",");
+                for(var i=0, len=data.length; i<len; i++) {
+                    obj.push(data[i]);
+                }
+                set_apps();
+            }
         });
     });
     post_req.write(post_data);
@@ -117,21 +128,13 @@ function PostThis(obj, type, url) {
 
 
 process.title = 'node-chat';
-// var webSocketsServerPort = 8080;
-var webSocketsServerPort = 3777;
+// var port = 8080;
+var port = 3777;
 var webSocketServer = require('websocket').server;
 var http = require('http');
 var querystring = require('querystring');
 var fs = require('fs');
-var app_list = [
-    "kpj",
-    "kpjchat",
-    "utiis",
-    "utiischat",
-    "ladiesfoto",
-    "ladiesfotochat",
-    "ska",
-];
+var app_list = [];
 var admins = [];
 var apps = [];
 var clients;
@@ -139,9 +142,6 @@ var clients_count = 0;
 var msg_count = 0;
 var index = 0;
 var start_time = get_date();
-
-set_app(apps,app_list);
-PostThis(admins, "admin", "/websocket/admin.php");
 
 var helps = ""
     +"<br><b>/nick</b> - to set or change nickname"
@@ -157,19 +157,32 @@ var helps = ""
     +"<br>arrow <b>up</b> - and <b>down</b> for your messages history";
 
 
-var server = http.createServer(function(request, response) {
-// CREATE SERVER
-});
-var time = (new Date()).getTime();
-server.listen(webSocketsServerPort, function() {
-    console.log("Start Time : "+start_time);
-    console.log(get_time(time) + " Server is listening on port " + webSocketsServerPort);
-});
+// ========================================= CREATE SERVER ====================================================
 
+var options = {
+    // key: fs.readFileSync('key.pem'),
+    // cert: fs.readFileSync('cert.pem')
+};
+
+// var server = https.createServer(options, function(request, response) {
+var server = http.createServer(function(request, response) {
+
+}); 
+
+var time = (new Date()).getTime();
+server.listen(port, function() {
+    console.log("Start Time : "+start_time);
+    console.log(get_time(time) + " Server is listening on port " + port);
+});
 
 var wsServer = new webSocketServer({
     httpServer: server
 });
+
+
+// set_app(apps,app_list);
+PostThis(app_list, "app_list", "/websocket/apps.php");
+PostThis(admins, "admin", "/websocket/admin.php");
 
 
 // ========================================== CONNECT ====================================================
