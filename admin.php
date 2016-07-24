@@ -17,4 +17,3 @@ foreach($admins as $admin) {
 	}
 	echo $admin["username"]."-".$admin["password"].$comma;
 }
-

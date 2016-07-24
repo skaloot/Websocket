@@ -1,17 +1,10 @@
 <?php
 
-// http://www.xvideos.com/video20978187/japanese_massage_fuck_free_massage_fuck_hd_porn_bomcams.net
-// http://www.xvideos.com/video6696417/the_dreamers_2003_full_movie_
-// http://www.xvideos.com/video20335681/korean_movie_-_bao_to_tinh_oi
-// http://www.xvideos.com/video20860921/strange_hair_salon_2015
-// http://www.xvideos.com/video13774103/http_av69hd.net_-_korean_sexy_girl_chat_sex_new_2015
-
 class Database {
 
     private $db_host = "localhost";  
 	private $db_user = "skaloot";  
 	private $db_pass = "phpmysql";  
-	// private $db_name = "ladiesfoto"; 
     private $db_name = "websocket";
 	
 
@@ -256,5 +249,3 @@ class Database {
 // $db->select('admin'); // Table name, Column Names, JOIN, WHERE conditions, ORDER BY conditions
 // $res = $db->getResult();
 // print_r($res);
-	
-
