@@ -13,8 +13,7 @@ $(function () {
     // var host = "//artinity.dtdns.net";
     var host = location.host;
     var port = 3777;
-    // var app_id = "utiischat";
-    var app_id = "ska";
+    var app_id = "utiischat";
     var connect = false;
     var online = false;
     var window_active = true;
@@ -397,12 +396,19 @@ $(function () {
 
     var time = (new Date()).getTime();
     chat.append('<p class="server"><i>Connecting...</i><span class="time">'+get_time(time)+'</span></p>');
-    $.getJSON("user_id.php?user_id", function(data) {
-        id = data.user_id;
-        console.log(id);
+    if(localStorage.getItem("myId")) {
+        id = localStorage.getItem("myId");
+        console.log("Existing Id - "+id);
         connect_this(host, port);
         check_con();
-    });
+    } else {
+        $.getJSON("user_id.php?user_id", function(data) {
+            id = data.user_id;
+            console.log("New Id - "+id);
+            connect_this(host, port);
+            check_con();
+        });
+    }
 
 
     window.onfocus = function() {
