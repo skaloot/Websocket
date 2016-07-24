@@ -223,12 +223,19 @@ $(function () {
 
 
     console.log('Connecting...');
-    $.getJSON("user_id.php?user_id", function(data) {
-        id = data.user_id;
-        console.log(id);
+    if(localStorage.getItem("myId")) {
+        id = localStorage.getItem("myId");
+        console.log("Existing Id - "+id);
         connect_this(host, port);
         check_con();
-    });
+    } else {
+        $.getJSON("/websocket/user_id.php?user_id", function(data) {
+            id = data.user_id;
+            console.log("New Id - "+id);
+            connect_this(host, port);
+            check_con();
+        });
+    }
 
 
     function change_title() {
