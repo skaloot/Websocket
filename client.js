@@ -197,7 +197,7 @@ $(function () {
                     json.time
                 );
                 connection.send(JSON.stringify({msg:"/appid", app_id:app_id}));
-                if(localStorage.getItem("myName") && localStorage.getItem("myId")) {
+                if(localStorage.getItem("myName")) {
                     myName = localStorage.getItem("myName");
                     id = localStorage.getItem("myId");
                     connection.send(JSON.stringify({id:id, msg:"/nick "+myName}));
@@ -226,8 +226,6 @@ $(function () {
                     });
                 }
                 localStorage.setItem("myName", myName);
-                localStorage.setItem("myId", id);
-                localStorage.setItem("app_id", app_id);
             } else if (json.type === 'typing') {
                 seentyping.html("<i>"+json.author+" is typing..</i>");
                 content.scrollTop(content[0].scrollHeight);
@@ -404,6 +402,8 @@ $(function () {
     } else {
         $.getJSON("user_id.php?user_id", function(data) {
             id = data.user_id;
+            localStorage.setItem("myId", id);
+            localStorage.setItem("app_id", app_id);
             console.log("New Id - "+id);
             connect_this(host, port);
             check_con();
