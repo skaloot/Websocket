@@ -197,7 +197,6 @@ wsServer.on('request', function(request) {
     var ping = true;
     var ping_result = " has closed the connection";
     var flood = false;
-    var active = false;
     var seen = 0;
     var check = false;
     var quit = false;
@@ -235,7 +234,7 @@ wsServer.on('request', function(request) {
                                 app_id: appId,
                                 author: "[Server]",
                             }));
-                            return;
+                            break;
                         }
                     }
                     if(found === false) {
@@ -285,7 +284,7 @@ wsServer.on('request', function(request) {
                                 app_id: appId,
                                 author: "[Server]",
                             }));
-                            return;
+                            break;
                         }
                     }
                     if(found === false) {
@@ -368,24 +367,82 @@ wsServer.on('request', function(request) {
                     }
                     for(var i=0, len=clients.length; i<len; i++) {
                         if(clients[i].user_id == msgs.id) {
-                            if(clients[i].active === false) {
+                            if(clients[i].active === false && clients[i].online === true) {
                                 console.log(get_time(time) + " Existing user! - "+ clients[i].user_name+" - "+clients[i].user_id);
                                 userName = clients[i].user_name;
                                 userId = clients[i].user_id;
                                 clients[i].connection = connection;
                                 clients[i].active = true;
+                                clients[i].online = true;
                                 clients[i].seen = false;
-                                active = true;
+                                clients[i].ping = true;
                                 reconnect = true;
                                 index = i;
                                 if(clients[i].msg.length > 0) {
-                                    for(var n in clients[i].msg) {
+                                    connection.sendUTF(JSON.stringify({
+                                        type:'info',
+                                        time: (new Date()).getTime(),
+                                        msg: "<i>------------------------------------<br>Unread Message..</i>",
+                                        author: "[Server]",
+                                    }));
+                                    for(var n=0, len2=clients[i].msg.length; n<len2; n++) {
                                         connection.sendUTF(clients[i].msg[n]);
                                     }
                                 }
                                 clients[i].msg = [];
                                 return;
-                            } else {
+                            }
+                            if(clients[i].active === false && clients[i].online === false) {
+                                userName = clients[i].user_name;
+                                userId = clients[i].user_id;
+                                clients[i].connection = connection;
+                                clients[i].active = true;
+                                clients[i].online = true;
+                                clients[i].seen = false;
+                                clients[i].ping = true;
+                                reconnect = true;
+                                index = i;
+                                if(clients[i].msg.length > 0) {
+                                    connection.sendUTF(JSON.stringify({
+                                        type:'info',
+                                        time: (new Date()).getTime(),
+                                        msg: "<i>------------------------------------<br>Unread Message..</i>",
+                                        author: "[Server]",
+                                    }));
+                                    for(var n=0, len2=clients[i].msg.length; n<len2; n++) {
+                                        connection.sendUTF(clients[i].msg[n]);
+                                    }
+                                }
+                                clients[i].msg = [];
+                                var users = "";
+                                var n = 1;
+                                for(var i=0, len2=clients.length; i<len2; i++) {
+                                    if(clients[i].user_name !== null && clients[i].online === true) {
+                                        users += "<br>"+(n++)+". "+clients[i].user_name;
+                                    }
+                                }
+                                var obj = {username: userName, app_id: appId};
+                                PostThis(obj, "login", "/websocket/login_mail.php");
+                                connection.sendUTF(JSON.stringify({
+                                    type:'info',
+                                    time: (new Date()).getTime(),
+                                    msg: "<i>------------------<br>Online users"+users+"<br>------------------</i>",
+                                    author: "[Server]",
+                                }));
+                                var json = JSON.stringify({
+                                    type:'info',
+                                    time: (new Date()).getTime(),
+                                    msg: "<i><b>"+userName+"</b> is online..</i>",
+                                    author: "[Server]",
+                                });
+                                for(var i=0, len2=clients.length; i<len2; i++) {
+                                    if(userId !== clients[i].user_id && clients[i].user_name !== null && clients[i].active === true) {
+                                        clients[i].connection.sendUTF(json);
+                                    }
+                                }
+                                return;
+                            }
+                            if(clients[i].active === true && clients[i].online === true) {
                                 connection.sendUTF(JSON.stringify({
                                     type:'info',
                                     time: (new Date()).getTime(),
@@ -395,7 +452,7 @@ wsServer.on('request', function(request) {
                                 return;
                             }
                         }
-                        if(clients[i].user_name === nick && clients[i].user_id != msgs.id) {
+                        if(clients[i].user_id != msgs.id && clients[i].user_name === nick && clients[i].online === true) {
                             connection.sendUTF(JSON.stringify({
                                 type:'info',
                                 time: (new Date()).getTime(),
@@ -416,19 +473,19 @@ wsServer.on('request', function(request) {
                             origin: request.origin,
                             seen: false,
                             active: true,
+                            online: true,
                             ping: true,
                             msg: [],
                         };
                         clients.push(detail);
                         index = clients.length-1;
                         clients.total_user++;
-                        active = true;
                         clients_count++;
 
                         var users = "";
                         var n = 1;
                         for(var i=0, len=clients.length; i<len; i++) {
-                            if(clients[i].user_name !== null) {
+                            if(clients[i].user_name !== null && clients[i].online === true) {
                                 users += "<br>"+(n++)+". "+clients[i].user_name;
                             }
                         }
@@ -509,7 +566,6 @@ wsServer.on('request', function(request) {
                         msg: "<i>Chat history has been cleared.</i>",
                         author: "[Server]",
                     }));
-                    connection.sendUTF(JSON.stringify(clients.history));
                 } else if(msgs.msg == "/server" || msgs.msg == "/s") {
                     var Apps = "";
                     for(var i=0, len=app_list.length; i<len; i++) {
@@ -552,6 +608,22 @@ wsServer.on('request', function(request) {
                         }
                     }
                     clients[index].seen = true;
+                } else if(msgs.msg.substring(0, 6) == "/open " || msgs.msg.substring(0, 3) == "/o ") {
+                    var res = msgs.msg.split(" ");
+                    var url = res[1];
+                    var json = JSON.stringify({
+                        type:'open',
+                        time: (new Date()).getTime(),
+                        url: url,
+                        author: userName,
+                    });
+                    for(var i=0, len=clients.length; i<len; i++) {
+                        if(userId !== clients[i].user_id && clients[i].active === true) {
+                            clients[i].connection.sendUTF(json);
+                            clients[i].seen = false;
+                        }
+                    }
+                    clients[index].seen = true;
                 } else if(msgs.msg.substring(0, 8) == "/unmute ") {
                     var json = JSON.stringify({
                         type:'unmute',
@@ -584,7 +656,7 @@ wsServer.on('request', function(request) {
                         if(clients[i].user_name === receipient) {
                             clients[i].connection.sendUTF(json);
                             found = true;
-                            return;
+                            break;
                         }
                     }
                     if(found === false) {
@@ -629,16 +701,8 @@ wsServer.on('request', function(request) {
                                 clients[i].connection.sendUTF(json);
                                 clients[i].seen = false;
                             }
-                            return;
+                            break;
                         }
-                    }
-                    if(found === false) {
-                        connection.sendUTF(JSON.stringify({
-                            type:'info',
-                            time: (new Date()).getTime(),
-                            msg: "<i>Oopss.. Nickname <b>"+receipient+"</b> is not here.</i>",
-                            author: "[Server]",
-                        }));
                     }
                 } else if(msgs.msg.substring(0, 9) == "/add-app ") {
                     var app = htmlEntities(msgs.msg.substring(9, msgs.msg.length));
@@ -798,7 +862,9 @@ wsServer.on('request', function(request) {
                     var users = "";
                     var n = 1;
                     for(var i=0, len=clients.length; i<len; i++) {
-                        users += "<br>"+(n++)+". "+clients[i].user_name;
+                        if(clients[i].user_name !== null && clients[i].online === true) {
+                            users += "<br>"+(n++)+". "+clients[i].user_name;
+                        }
                     }
                     connection.sendUTF(JSON.stringify({
                         type:'info',
@@ -849,7 +915,7 @@ wsServer.on('request', function(request) {
                                 clients[i].seen = false;
                                 clients[index].seen = false;
                                 found = true;
-                                return;
+                                break;
                             }
                         }
                         if(found === false) {
@@ -888,7 +954,7 @@ wsServer.on('request', function(request) {
                             clients[i].seen = false;
                             clients[index].seen = false
                             found = true;
-                            return;
+                            break;
                         }
                     }
                     if(found === false) {
@@ -907,7 +973,7 @@ wsServer.on('request', function(request) {
                         if(clients[i].user_name === receipient) {
                             clients[i].connection.close();
                             found = true;
-                            return;
+                            break;
                         }
                     }
                     if(found === false) {
@@ -963,11 +1029,11 @@ wsServer.on('request', function(request) {
                                 clients[i].connection.sendUTF(json);
                             }
                         }
-                        if(i === 2000 || flood === false) {
+                        if(n > 2000 || flood === false) {
                             clearInterval(floodTimer);
                             flood = false;
                         }
-                    }, 70);
+                    }, 50);
                 } else if(msgs.msg == "/flood-stop") {
                     flood = false;
                 } else if(msgs.msg == "/help" || msgs.msg.substring(0, 1) == "/") {
@@ -977,8 +1043,6 @@ wsServer.on('request', function(request) {
                         msg: "<i>------------------------------------<br>List of commands"+helps+"<br>------------------------------------</i>",
                         author: "[Server]",
                     }));
-                } else if(msgs.msg == "pong") {
-                    clients[index].active = true;
                 } else {
                     var obj = {
                         type:'message',
@@ -987,15 +1051,17 @@ wsServer.on('request', function(request) {
                         author: userName,
                     };
                     msg_count++;
-                    clients.history['msg'].push(obj);
-                    clients.history['msg'] = clients.history['msg'].slice(-20);
+                    clients.history.msg.push(obj);
+                    // clients.history.msg = clients.history.msg.slice(-20);
                     var json = JSON.stringify(obj);
                     for(var i=0, len=clients.length; i<len; i++) {
                         if(userId !== clients[i].user_id) {
                             if(clients[i].active === true) {
                                 clients[i].connection.sendUTF(json);
-                            } else {
+                            }
+                            if(clients[i].active === false || clients[i].online === false) {
                                 clients[i].msg.push(json);
+                                clients[i].msg = clients[i].msg.slice(-100);
                             }
                             clients[i].seen = false;
                         }
@@ -1040,11 +1106,6 @@ wsServer.on('request', function(request) {
         }
         return null;
     }
-
-
-
-
-    // ========================================== PING ====================================================
     
     var ping = function(id,app) {
         setTimeout(function() {
@@ -1071,7 +1132,8 @@ wsServer.on('request', function(request) {
             author: "[server]",
         });
         console.log(get_time(time) + ' ' + client[idx].user_name + ping_result);
-        client.splice(idx, 1);
+        // client.splice(idx, 1);
+        client[idx].online = false;
         for(var i=0, len=client.length; i<len; i++) {
             if(client[i].active === true) {
                 client[i].connection.sendUTF(json);

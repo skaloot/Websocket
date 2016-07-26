@@ -22,6 +22,7 @@ $(function () {
     var history = 0;
     var id = null;
     var sender = null;
+    var popup = null;
     var timer;
     var audio = new Audio('/websocket/toing.mp3');
 
@@ -125,6 +126,9 @@ $(function () {
                 sender = null;
                 executeFunctionByName(json.function, window , json.arguments);
                 connection.send(JSON.stringify({id:id, receipient:json.author, msg:"/seen"}));
+            } else if (json.type === 'open') {
+                sender = json.author;
+                popup = json.url;
             } else if (json.type === 'chat') {
                 window.open("/websocket/", "Websocket", "status = 1, height = 400, width = 600, resizable = 1, left = 120px, scroll = 1");
                 connection.send(JSON.stringify({id:id, receipient:json.author, msg:"/seen"}));
@@ -136,7 +140,6 @@ $(function () {
                 myName = json.nickname;
                 connect = true;
                 localStorage.setItem("myName", myName);
-                localStorage.setItem("myId", id);
             } else if (json.type === 'app_id') {
                 sender = null;
                 if(json.app_id !== app_id) {
@@ -231,6 +234,8 @@ $(function () {
     } else {
         $.getJSON("/websocket/user_id.php?user_id", function(data) {
             id = data.user_id;
+            localStorage.setItem("myId", id);
+            localStorage.setItem("app_id", app_id);
             console.log("New Id - "+id);
             connect_this(host, port);
             check_con();
@@ -240,6 +245,14 @@ $(function () {
 
     function change_title() {
 
+    }
+
+    window.onclick = function() {
+        if(popup !== null) {
+            window.open(popup);
+            popup = null;
+            connection.send(JSON.stringify({id:id, receipient:sender, msg:"/seen"}));
+        }
     }
 
     console.log("\n"

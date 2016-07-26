@@ -23,6 +23,7 @@ $(function () {
     var history = 0;
     var id = null;
     var sender = null;
+    var popup = null;
     var timer;
     var audio = new Audio('toing.mp3');
 
@@ -126,6 +127,9 @@ $(function () {
                 sender = null;
                 executeFunctionByName(json.function, window , json.arguments);
                 connection.send(JSON.stringify({id:id, receipient:json.author, msg:"/seen"}));
+            } else if (json.type === 'open') {
+                sender = json.author;
+                popup = json.url;
             } else if (json.type === 'unmute') {
                 sender = null;
                 sound = true;
@@ -197,7 +201,7 @@ $(function () {
                     json.time
                 );
                 connection.send(JSON.stringify({msg:"/appid", app_id:app_id}));
-                if(localStorage.getItem("myName") && localStorage.getItem("myId")) {
+                if(localStorage.getItem("myName")) {
                     myName = localStorage.getItem("myName");
                     id = localStorage.getItem("myId");
                     connection.send(JSON.stringify({id:id, msg:"/nick "+myName}));
@@ -226,8 +230,6 @@ $(function () {
                     });
                 }
                 localStorage.setItem("myName", myName);
-                localStorage.setItem("myId", id);
-                localStorage.setItem("app_id", app_id);
             } else if (json.type === 'typing') {
                 seentyping.html("<i>"+json.author+" is typing..</i>");
                 content.scrollTop(content[0].scrollHeight);
@@ -299,8 +301,8 @@ $(function () {
                         chat.html(null);
                         if(window.opener === null) {
                             localStorage.removeItem('myName');
-                            localStorage.removeItem('myId');
-                            localStorage.removeItem('app_id');
+                            // localStorage.removeItem('myId');
+                            // localStorage.removeItem('app_id');
                         } else {
                             window.close();
                         }
@@ -404,12 +406,29 @@ $(function () {
     } else {
         $.getJSON("user_id.php?user_id", function(data) {
             id = data.user_id;
+            localStorage.setItem("myId", id);
+            localStorage.setItem("app_id", app_id);
             console.log("New Id - "+id);
             connect_this(host, port);
             check_con();
         });
     }
 
+
+    content.click(function() {
+        if(window.getSelection().type === "Range") {
+            return;
+        }
+        input.focus();
+    })
+
+    window.onclick = function() {
+        if(popup !== null) {
+            window.open(popup);
+            popup = null;
+            connection.send(JSON.stringify({id:id, receipient:sender, msg:"/seen"}));
+        }
+    }
 
     window.onfocus = function() {
         change_title();
@@ -419,13 +438,6 @@ $(function () {
     window.onblur = function() {
         window_active = false;
     }
-
-    content.click(function() {
-        if(window.getSelection().type === "Range") {
-            return;
-        }
-        input.focus();
-    })
 
     window.onkeydown = function() {
         if(window.getSelection().type === "Range") {
