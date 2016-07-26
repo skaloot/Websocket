@@ -20,6 +20,7 @@ if(isset($_GET["username"])) {
 }
 
 
+<<<<<<< HEAD
 if(isset($_POST["username"]) && isset($_POST["app_id"])) {
 	$username = $_POST['username'];
 	if($_POST["app_id"] === "ladiesfotochat") {
@@ -29,3 +30,10 @@ if(isset($_POST["username"]) && isset($_POST["app_id"])) {
 		echo file_get_contents("http://www.ladiesfoto.com/websocket/login_mail.php?username=".$username);
 	}
 }
+=======
+if(isset($_POST["username"])) {
+	$username = $_POST['username'];
+	// echo file_get_contents("//ladiesfoto.com/websocket/login_mail?username=".$username);
+	echo $username;
+}
+>>>>>>> origin/master
