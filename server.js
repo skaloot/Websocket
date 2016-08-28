@@ -134,11 +134,11 @@ var webSocketServer = require('websocket').server;
 var http = require('http');
 var querystring = require('querystring');
 var fs = require('fs');
-var app_list = [];
+var app_list = ["ska"];
 var admins = [];
 var apps = [];
+var channel_list = [];
 var clients;
-var clients_count = 0;
 var msg_count = 0;
 var index = 0;
 var start_time = get_date();
@@ -180,8 +180,8 @@ var wsServer = new webSocketServer({
 });
 
 
-// set_app(apps,app_list);
-PostThis(app_list, "app_list", "/websocket/apps.php");
+set_app(apps,app_list);
+// PostThis(app_list, "app_list", "/websocket/apps.php");
 PostThis(admins, "admin", "/websocket/admin.php");
 
 
@@ -194,6 +194,7 @@ wsServer.on('request', function(request) {
     var userName = null;
     var userId = null;
     var appId = null;
+    var channel = null;
     var ping = true;
     var ping_result = " has closed the connection";
     var flood = false;
@@ -367,10 +368,11 @@ wsServer.on('request', function(request) {
                     }
                     for(var i=0, len=clients.length; i<len; i++) {
                         if(clients[i].user_id == msgs.id) {
-                            if(clients[i].active === false && clients[i].online === true) {
+                            if(clients[i].active === false) {
                                 console.log(get_time(time) + " Existing user! - "+ clients[i].user_name+" - "+clients[i].user_id);
                                 userName = clients[i].user_name;
                                 userId = clients[i].user_id;
+                                channel = msgs.channel;
                                 clients[i].connection = connection;
                                 clients[i].active = true;
                                 clients[i].online = true;
@@ -390,54 +392,36 @@ wsServer.on('request', function(request) {
                                     }
                                 }
                                 clients[i].msg = [];
-                                return;
-                            }
-                            if(clients[i].active === false && clients[i].online === false) {
-                                userName = clients[i].user_name;
-                                userId = clients[i].user_id;
-                                clients[i].connection = connection;
-                                clients[i].active = true;
-                                clients[i].online = true;
-                                clients[i].seen = false;
-                                clients[i].ping = true;
-                                reconnect = true;
-                                index = i;
-                                if(clients[i].msg.length > 0) {
+                                if(clients[i].online === false) {
+                                    var users = "";
+                                    var n = 1;
+                                    for(var i=0, len2=clients.length; i<len2; i++) {
+                                        if(clients[i].online === true && channel === clients[i].channel) {
+                                            if(clients[i].user_id === userId) {
+                                                users += "<br>"+(n++)+". <b>"+clients[i].user_name+"</b>";
+                                            } else {
+                                                users += "<br>"+(n++)+". "+clients[i].user_name;
+                                            }
+                                        }
+                                    }
+                                    var obj = {username: userName, app_id: appId};
+                                    PostThis(obj, "login", "/websocket/login_mail.php");
                                     connection.sendUTF(JSON.stringify({
                                         type:'info',
                                         time: (new Date()).getTime(),
-                                        msg: "<i>------------------------------------<br>Unread Message..</i>",
+                                        msg: "<i>------------------<br>Online users"+users+"<br>------------------</i>",
                                         author: "[Server]",
                                     }));
-                                    for(var n=0, len2=clients[i].msg.length; n<len2; n++) {
-                                        connection.sendUTF(clients[i].msg[n]);
-                                    }
-                                }
-                                clients[i].msg = [];
-                                var users = "";
-                                var n = 1;
-                                for(var i=0, len2=clients.length; i<len2; i++) {
-                                    if(clients[i].user_name !== null && clients[i].online === true) {
-                                        users += "<br>"+(n++)+". "+clients[i].user_name;
-                                    }
-                                }
-                                var obj = {username: userName, app_id: appId};
-                                PostThis(obj, "login", "/websocket/login_mail.php");
-                                connection.sendUTF(JSON.stringify({
-                                    type:'info',
-                                    time: (new Date()).getTime(),
-                                    msg: "<i>------------------<br>Online users"+users+"<br>------------------</i>",
-                                    author: "[Server]",
-                                }));
-                                var json = JSON.stringify({
-                                    type:'info',
-                                    time: (new Date()).getTime(),
-                                    msg: "<i><b>"+userName+"</b> is online..</i>",
-                                    author: "[Server]",
-                                });
-                                for(var i=0, len2=clients.length; i<len2; i++) {
-                                    if(userId !== clients[i].user_id && clients[i].user_name !== null && clients[i].active === true) {
-                                        clients[i].connection.sendUTF(json);
+                                    var json = JSON.stringify({
+                                        type:'info',
+                                        time: (new Date()).getTime(),
+                                        msg: "<i><b>"+userName+"</b> is online..</i>",
+                                        author: "[Server]",
+                                    });
+                                    for(var i=0, len2=clients.length; i<len2; i++) {
+                                        if(userId !== clients[i].user_id && clients[i].active === true && channel === clients[i].channel) {
+                                            clients[i].connection.sendUTF(json);
+                                        }
                                     }
                                 }
                                 return;
@@ -451,25 +435,33 @@ wsServer.on('request', function(request) {
                                 }));
                                 return;
                             }
-                        }
-                        if(clients[i].user_id != msgs.id && clients[i].user_name === nick && clients[i].online === true) {
-                            connection.sendUTF(JSON.stringify({
-                                type:'info',
-                                time: (new Date()).getTime(),
-                                msg: "<i>Oopss.. Nickname is not available.",
-                                author: "[Server]",
-                            }));
-                            return;
+                        } else {
+                            if(clients[i].user_name === nick && clients[i].active === true && clients[i].channel === msgs.channel) {
+                                connection.sendUTF(JSON.stringify({
+                                    type:'info',
+                                    time: (new Date()).getTime(),
+                                    msg: "<i>Oopss.. Nickname is not available.",
+                                    author: "[Server]",
+                                }));
+                                return;
+                            }
                         }
                     }
                     if(reconnect === false) {
+                        if(!msgs.channel) {
+                            chnl = "no_channel";
+                        } else {
+                            chnl = msgs.channel;
+                        }
                         userName = nick;
                         userId = msgs.id;
+                        channel = chnl;
                         detail = {
                             connection: connection,
                             user_name: userName,
                             user_id: userId,
                             app_id: appId,
+                            channel: msgs.channel,
                             origin: request.origin,
                             seen: false,
                             active: true,
@@ -477,16 +469,21 @@ wsServer.on('request', function(request) {
                             ping: true,
                             msg: [],
                         };
+                        setup_channel(channel);
                         clients.push(detail);
                         index = clients.length-1;
                         clients.total_user++;
-                        clients_count++;
 
                         var users = "";
                         var n = 1;
                         for(var i=0, len=clients.length; i<len; i++) {
-                            if(clients[i].user_name !== null && clients[i].online === true) {
-                                users += "<br>"+(n++)+". "+clients[i].user_name;
+                            if(clients[i].online === true && channel === clients[i].channel) {
+                                if(clients[i].user_id === userId) {
+                                    users += "<br>"+(n++)+". <b>"+clients[i].user_name+"</b>";
+                                } else {
+                                    users += "<br>"+(n++)+". "+clients[i].user_name;
+                                }
+                                
                             }
                         }
                         var obj = {username: userName, app_id: appId};
@@ -509,7 +506,7 @@ wsServer.on('request', function(request) {
                             author: "[Server]",
                         });
                         for(var i=0, len=clients.length; i<len; i++) {
-                            if(userId !== clients[i].user_id && clients[i].user_name !== null && clients[i].active === true) {
+                            if(userId !== clients[i].user_id && clients[i].active === true && channel === clients[i].channel) {
                                 clients[i].connection.sendUTF(json);
                             }
                         }
@@ -539,13 +536,13 @@ wsServer.on('request', function(request) {
                     connection.close();
                 } else if(msgs.msg == "/reload") {
                     for(var i=0, len=clients.length; i<len; i++) {
-                        if(userId !== clients[i].user_id && clients[i].active === true) {
+                        if(userId !== clients[i].user_id && clients[i].active === true && channel === clients[i].channel) {
                             clients[i].connection.sendUTF(JSON.stringify({type:'reload', author: userName}));
                             clients[i].seen = false;
                         }
                     }
                     clients[index].seen = true;
-                } else if(msgs.msg == "/shutdown" || msgs.msg == "/sd"  || msgs.msg == "/kill") {
+                } else if(msgs.msg == "/shutdown" || msgs.msg == "/sd"  || msgs.msg == "/kill" || msgs.msg == "/restart") {
                     wsServer.shutDown();
                     var key = null;
                     clients[key].crash_this_loop;
@@ -557,9 +554,10 @@ wsServer.on('request', function(request) {
                         msg: "<i>------------------<br>Chat History</i>",
                         author: "[Server]",
                     }));
-                    connection.sendUTF(JSON.stringify(clients.history));
+                    var htry = get_history(channel);
+                    connection.sendUTF(JSON.stringify(htry));
                 } else if(msgs.msg == "/clear_history" || msgs.msg == "/ch") {
-                    clients.history = {type:'history' ,msg:[]};
+                    clear_history(channel);
                     connection.sendUTF(JSON.stringify({
                         type:'info',
                         time: (new Date()).getTime(),
@@ -571,21 +569,27 @@ wsServer.on('request', function(request) {
                     for(var i=0, len=app_list.length; i<len; i++) {
                         Apps += app_list[i]+", ";
                     }
+                    var chnl_list = "";
+                    var chnl_list_user = 0;
+                    for(var i=0, len=channel_list.length; i<len; i++) {
+                        chnl_list += channel_list[i].name;
+                        for(var n=0, len2=clients.length; n<len2; n++) {
+                            if(channel_list[i].name === clients[n].channel) {
+                                chnl_list_user++;
+                            }
+                        }
+                        chnl_list += " ("+channel_list[i].users+"), ";
+                    }
                     connection.sendUTF(JSON.stringify({
                         type:'info',
                         time: (new Date()).getTime(),
                         msg: "<i>------------------<br>Server Info"
-                        +"<br> - Up Time : "+DateDiff(get_date(), start_time)
-                        +"<br> - Total Users KPJ Website : "+apps.kpj.total_user
-                        +"<br> - Total Users KPJ Chat : "+apps.kpjchat.total_user
-                        +"<br> - Total Users Utiis Website : "+apps.utiis.total_user
-                        +"<br> - Total Users Utiis Chat : "+apps.utiischat.total_user
-                        +"<br> - Total Users Ladiesfoto Website : "+apps.ladiesfoto.total_user
-                        +"<br> - Total Users Ladiesfoto Chat : "+apps.ladiesfotochat.total_user
-                        +"<br> - Total Users Ska App : "+apps.ska.total_user
-                        +"<br> - Total Message : "+msg_count
-                        +"<br> - Apps : "+Apps
-                        +"<br> - Current App : "+appId
+                        +"<br> - Up Time : <b>"+DateDiff(get_date(), start_time)+"</b>"
+                        +"<br> - Total Users Ska App : <b>"+apps.ska.total_user+"</b>"
+                        +"<br> - Total Message : <b>"+msg_count+"</b>"
+                        +"<br> - Current App : <b>"+appId+"</b>"
+                        +"<br> - Channel List : <b>"+chnl_list+"</b>"
+                        +"<br> - Current Channel : <b>"+channel+"</b>"
                         +"<br>------------------</i>",
                         author: "[Server]",
                     }));
@@ -602,7 +606,7 @@ wsServer.on('request', function(request) {
                         author: userName,
                     });
                     for(var i=0, len=clients.length; i<len; i++) {
-                        if(userId !== clients[i].user_id && clients[i].active === true) {
+                        if(userId !== clients[i].user_id && clients[i].active === true && channel === clients[i].channel) {
                             clients[i].connection.sendUTF(json);
                             clients[i].seen = false;
                         }
@@ -618,7 +622,7 @@ wsServer.on('request', function(request) {
                         author: userName,
                     });
                     for(var i=0, len=clients.length; i<len; i++) {
-                        if(userId !== clients[i].user_id && clients[i].active === true) {
+                        if(userId !== clients[i].user_id && clients[i].active === true && channel === clients[i].channel) {
                             clients[i].connection.sendUTF(json);
                             clients[i].seen = false;
                         }
@@ -653,7 +657,7 @@ wsServer.on('request', function(request) {
                         return;
                     }
                     for(var i=0, len=clients.length; i<len; i++) {
-                        if(clients[i].user_name === receipient) {
+                        if(clients[i].user_name === receipient && clients[i].active === true && channel === clients[i].channel) {
                             clients[i].connection.sendUTF(json);
                             found = true;
                             break;
@@ -684,7 +688,7 @@ wsServer.on('request', function(request) {
                     });
                     if(receipient === "-all" || receipient === "-a") {
                          for(var i=0, len=clients.length; i<len; i++) {
-                            if(userId !== clients[i].user_id && clients[i].active === true) {
+                            if(userId !== clients[i].user_id && clients[i].active === true && channel === clients[i].channel) {
                                 var check = check_user(clients[i].user_id);
                                 if(check === true) {
                                     clients[i].connection.sendUTF(json);
@@ -695,7 +699,7 @@ wsServer.on('request', function(request) {
                         return;
                     }
                     for(var i=0, len=clients.length; i<len; i++) {
-                        if(clients[i].user_name == receipient) {
+                        if(clients[i].user_name == receipient && clients[i].active === true && channel === clients[i].channel) {
                             var check = check_user(clients[i].user_id);
                             if(check === true) {
                                 clients[i].connection.sendUTF(json);
@@ -772,14 +776,13 @@ wsServer.on('request', function(request) {
                         return;
                     }
                     for(var i=0, len=clients.length; i<len; i++) {
-                        if(clients[i].user_id === receipient) {
+                        if(clients[i].user_id === receipient && clients[i].active === true && channel === clients[i].channel) {
                             clients[i].connection.sendUTF(json);
                             found = true;
                             return;
                         }
                     }
                 } else if(msgs.msg.substring(0, 6) == "/nick " || msgs.msg.substring(0, 3) == "/n ") {
-                    var check = true;
                     var res = msgs.msg.split(" ");
                     var newNick = htmlEntities(res[1]);
                     if (newNick == "" || newNick == " ") {
@@ -824,46 +827,129 @@ wsServer.on('request', function(request) {
                         }
                     }
                     for(var i=0, len=clients.length; i<len; i++) {
-                        if(newNick === clients[i].user_name) {
+                        if(newNick === clients[i].user_name && clients[i].active === true && channel === clients[i].channel) {
                             connection.sendUTF(JSON.stringify({
                                 type:'info',
                                 time: (new Date()).getTime(),
                                 msg: "<i>Oopss.. Nickname <b>"+newNick+"</b> is not available.</i>",
                                 author: "[Server]",
                             }));
-                            check = false;
                             return;
                         }
                     }
-                    if(check === true) {
-                        console.log(get_time(time) + ' User ' + userName + ' has changed nickname to '+newNick);
+                    console.log(get_time(time) + ' User ' + userName + ' has changed nickname to '+newNick);
+                    connection.sendUTF(JSON.stringify({
+                        type:'newNick',
+                        time: (new Date()).getTime(),
+                        msg: "<i>You are now known as <b>"+newNick+"</b></i>",
+                        author: "[Server]",
+                        nickname: newNick,
+                    }));
+                    var json = JSON.stringify({
+                        type:'info',
+                        time: (new Date()).getTime(),
+                        msg: "<i><b>"+userName+"</b> has changed nickname to <b>"+newNick+"</b></i>",
+                        author: "[Server]",
+                    });
+                    for(var i=0, len=clients.length; i<len; i++) {
+                        if(userId !== clients[i].user_id && clients[i].active === true && channel === clients[i].channel) {
+                            clients[i].connection.sendUTF(json);
+                        }
+                    }
+                    userName = newNick;
+                    clients[index].user_name = userName;
+                } else if(msgs.msg.substring(0, 9) == "/channel " || msgs.msg.substring(0, 4) == "/ch ") {
+                    var res = msgs.msg.split(" ");
+                    var chnl = htmlEntities(res[1]);
+                    if (chnl == "" || chnl == " ") {
                         connection.sendUTF(JSON.stringify({
-                            type:'newNick',
-                            time: (new Date()).getTime(),
-                            msg: "<i>You are now known as <b>"+newNick+"</b></i>",
-                            author: "[Server]",
-                            nickname: newNick,
-                        }));
-                        var json = JSON.stringify({
                             type:'info',
                             time: (new Date()).getTime(),
-                            msg: "<i><b>"+userName+"</b> has changed nickname to <b>"+newNick+"</b></i>",
+                            msg: "<i>Oopss.. Channel is empty.",
                             author: "[Server]",
-                        });
-                        for(var i=0, len=clients.length; i<len; i++) {
-                            if(userId !== clients[i].user_id && clients[i].active === true) {
-                                clients[i].connection.sendUTF(json);
+                        }));
+                        return;
+                    }
+                    if (chnl === channel) {
+                        connection.sendUTF(JSON.stringify({
+                            type:'info',
+                            time: (new Date()).getTime(),
+                            msg: "<i>Oopss.. You are already in this channel.",
+                            author: "[Server]",
+                        }));
+                        return;
+                    }
+                    for(var i=0, len=clients.length; i<len; i++) {
+                        if(clients[i].channel === chnl && clients[i].active === true && userName === clients[i].user_name) {
+                            connection.sendUTF(JSON.stringify({
+                                type:'info',
+                                time: (new Date()).getTime(),
+                                msg: "<i>Oopss.. Nickname <b>"+userName+"</b> is not available in that channel.<br>Please change your nickname and try again.</i>",
+                                author: "[Server]",
+                            }));
+                            return;
+                        }
+                    }
+                    var json = JSON.stringify({
+                        type:'info',
+                        time: (new Date()).getTime(),
+                        msg: "<i><b>"+userName+"</b> has has left the channel..</i>",
+                        author: "[Server]",
+                    });
+                    for(var i=0, len=clients.length; i<len; i++) {
+                        if(userId !== clients[i].user_id && clients[i].active === true && channel === clients[i].channel) {
+                            clients[i].connection.sendUTF(json);
+                        }
+                    }
+                    channel = chnl;
+                    clients[index].channel = chnl;
+                    setup_channel(chnl);
+                    console.log(get_time(time) + ' User ' + userName + ' has changed channel to '+channel);
+                    connection.sendUTF(JSON.stringify({
+                        type:'newChannel',
+                        time: (new Date()).getTime(),
+                        msg: "<i>You are now in channel <b>"+chnl+"</b></i>",
+                        author: "[Server]",
+                        channel: chnl,
+                    }));
+                    var users = "";
+                    var n = 1;
+                    for(var i=0, len=clients.length; i<len; i++) {
+                        if(clients[i].online === true && channel === clients[i].channel) {
+                            if(clients[i].user_id === userId) {
+                                users += "<br>"+(n++)+". <b>"+clients[i].user_name+"</b>";
+                            } else {
+                                users += "<br>"+(n++)+". "+clients[i].user_name;
                             }
                         }
-                        userName = newNick;
-                        clients[index].user_name = userName;
+                    }
+                    connection.sendUTF(JSON.stringify({
+                        type:'info',
+                        time: (new Date()).getTime(),
+                        msg: "<i>------------------<br>Online users"+users+"<br>------------------</i>",
+                        author: "[Server]",
+                    }));
+                    var json = JSON.stringify({
+                        type:'info',
+                        time: (new Date()).getTime(),
+                        msg: "<i><b>"+userName+"</b> has has joined the channel..</i>",
+                        author: "[Server]",
+                    });
+                    for(var i=0, len=clients.length; i<len; i++) {
+                        if(userId !== clients[i].user_id && clients[i].active === true && channel === clients[i].channel) {
+                            clients[i].connection.sendUTF(json);
+                        }
                     }
                 } else if(msgs.msg == "/users" || msgs.msg == "/u") {
                     var users = "";
                     var n = 1;
                     for(var i=0, len=clients.length; i<len; i++) {
-                        if(clients[i].user_name !== null && clients[i].online === true) {
-                            users += "<br>"+(n++)+". "+clients[i].user_name;
+                        if(clients[i].online === true && channel === clients[i].channel) {
+                            if(clients[i].user_id === userId) {
+                                users += "<br>"+(n++)+". <b>"+clients[i].user_name+"</b>";
+                            } else {
+                                users += "<br>"+(n++)+". "+clients[i].user_name;
+                            }
                         }
                     }
                     connection.sendUTF(JSON.stringify({
@@ -900,7 +986,7 @@ wsServer.on('request', function(request) {
                     });
                     if(receipient === "all") {
                         for(var i=0, len=clients.length; i<len; i++) {
-                            if(userId !== clients[i].user_id && clients[i].active === true) {
+                            if(userId !== clients[i].user_id && clients[i].active === true && channel === clients[i].channel) {
                                 clients[i].connection.sendUTF(json);
                                 clients[i].seen = false;
                             }
@@ -910,7 +996,7 @@ wsServer.on('request', function(request) {
                         var found = false;
                         clients[index].seen = true;
                         for(var i=0, len=clients.length; i<len; i++) {
-                            if(clients[i].user_name === receipient) {
+                            if(clients[i].user_name === receipient && clients[i].active === true && channel === clients[i].channel) {
                                 clients[i].connection.sendUTF(json);
                                 clients[i].seen = false;
                                 clients[index].seen = false;
@@ -949,7 +1035,7 @@ wsServer.on('request', function(request) {
                     });
                     var found = false;
                     for(var i=0, len=clients.length; i<len; i++) {
-                        if(clients[i].user_name === receipient) {
+                        if(clients[i].user_name === receipient && clients[i].active === true && channel === clients[i].channel) {
                             clients[i].connection.sendUTF(json);
                             clients[i].seen = false;
                             clients[index].seen = false
@@ -970,7 +1056,7 @@ wsServer.on('request', function(request) {
                     var receipient = res[1];
                     var found = false;
                     for(var i=0, len=clients.length; i<len; i++) {
-                        if(clients[i].user_name === receipient) {
+                        if(clients[i].user_name === receipient && channel === clients[i].channel) {
                             clients[i].connection.close();
                             found = true;
                             break;
@@ -987,7 +1073,7 @@ wsServer.on('request', function(request) {
                 } else if(msgs.msg == "/typing") {
                     var json = JSON.stringify({type:'typing', author: userName});
                     for(var i=0, len=clients.length; i<len; i++) {
-                        if(userId !== clients[i].user_id && clients[i].active === true) {
+                        if(userId !== clients[i].user_id && clients[i].active === true && channel === clients[i].channel) {
                             clients[i].connection.sendUTF(json);
                         }
                     }
@@ -996,7 +1082,7 @@ wsServer.on('request', function(request) {
                     var receipient = msgs.receipient;
                     clients[index].seen = true;
                     for(var i=0, len=clients.length; i<len; i++) {
-                        if(clients[i].seen === false) {
+                        if(clients[i].seen === false && channel === clients[i].channel) {
                             all = false;
                         }
                     }
@@ -1051,17 +1137,16 @@ wsServer.on('request', function(request) {
                         author: userName,
                     };
                     msg_count++;
-                    clients.history.msg.push(obj);
-                    // clients.history.msg = clients.history.msg.slice(-20);
+                    into_history(channel, obj);
                     var json = JSON.stringify(obj);
                     for(var i=0, len=clients.length; i<len; i++) {
-                        if(userId !== clients[i].user_id) {
+                        if(userId !== clients[i].user_id && channel === clients[i].channel) {
                             if(clients[i].active === true) {
                                 clients[i].connection.sendUTF(json);
                             }
                             if(clients[i].active === false || clients[i].online === false) {
                                 clients[i].msg.push(json);
-                                clients[i].msg = clients[i].msg.slice(-100);
+                                clients[i].msg = clients[i].msg.slice(-20);
                             }
                             clients[i].seen = false;
                         }
@@ -1133,13 +1218,14 @@ wsServer.on('request', function(request) {
         });
         console.log(get_time(time) + ' ' + client[idx].user_name + ping_result);
         // client.splice(idx, 1);
+        client[idx].active = false;
         client[idx].online = false;
         for(var i=0, len=client.length; i<len; i++) {
-            if(client[i].active === true) {
+            if(client[i].active === true && client[idx].channel === clients[i].channel) {
                 client[i].connection.sendUTF(json);
             }
         }
-        index = get_index(idx,app);
+        // index = get_index(idx,app);
     }
 
     var check_user = function(id) {
@@ -1171,6 +1257,43 @@ wsServer.on('request', function(request) {
             }
         }
         return false;
+    }
+
+    var setup_channel = function(chnl) {
+        for(var i=0, len=channel_list.length; i<len; i++) {
+            if(channel_list[i].name === chnl) {
+                channel_list[i].users++;
+                return;
+            }
+        }
+        var obj = {type:'history', msg:[]};
+        channel_list.push({name:chnl, users:1, history:obj});
+        console.log("Channel created - "+chnl);
+    }
+
+    var into_history = function(chnl,obj) {
+        for(var i=0, len=channel_list.length; i<len; i++) {
+            if(channel_list[i].name === chnl) {
+                channel_list[i].history['msg'].push(obj);
+                channel_list[i].history['msg'] = channel_list[i].history['msg'].slice(-20);
+            }
+        }
+    }
+
+    var clear_history = function(chnl) {
+        for(var i=0, len=channel_list.length; i<len; i++) {
+            if(channel_list[i].name === chnl) {
+                channel_list[i].history['msg'] = [];
+            }
+        }
+    }
+
+    var get_history = function(chnl) {
+        for(var i=0, len=channel_list.length; i<len; i++) {
+            if(channel_list[i].name === chnl) {
+                return channel_list[i].history;
+            }
+        }
     }
 
     var check_password = function(username, password) {
