@@ -14,10 +14,10 @@ $(function () {
     var host = location.host;
     var port = 3777;
     var app_id = "ska";
-    var channel = "skachat";
+    var channel = "utiis";
     var connect = false;
     var online = false;
-    var window_active = true;
+    var window_active = null;
     var myName = "You";
     var sound = false;
     var msgs = [];
@@ -27,12 +27,6 @@ $(function () {
     var popup = null;
     var timer;
     var audio = new Audio('toing.mp3');
-
-    if(localStorage.getItem("app_id")) {
-        app_id = localStorage.getItem("app_id");
-    } else {
-        localStorage.setItem("app_id", app_id);
-    }
 
     if(localStorage.getItem("channel")) {
         channel = localStorage.getItem("channel");
@@ -104,7 +98,7 @@ $(function () {
         }
 
         connection.onerror = function (error) {
-            content.html($('<p>', { text: 'Sorry, but there\'s some problem with your connection or the server is down.' } ));
+            content.html($('<p>', { text: 'Sorry, but there\'s some problem with your connection or the server is down. \n Please try again in a bit. Thank You.' } ));
             connect = false;
         }
 
@@ -140,13 +134,6 @@ $(function () {
             } else if (json.type === 'unmute') {
                 sender = null;
                 sound = true;
-            } else if (json.type === 'app_id') {
-                sender = null;
-                if(json.app_id !== app_id) {
-                    localStorage.setItem("app_id", json.app_id);
-                    app_id = json.app_id;
-                    addMessage("", "<i>Your AppId has been changed to <b>"+json.app_id+"</b></i>", "server", (new Date()).getTime());
-                }
             } else if (json.type === 'newNick') {
                 sender = null;
                 addMessage(
@@ -208,6 +195,13 @@ $(function () {
                 if(localStorage.getItem("app_id")) {
                     localStorage.removeItem('app_id');
                 }
+            } else if (json.type === 'app_id') {
+                sender = null;
+                if(json.app_id !== app_id) {
+                    localStorage.setItem("app_id", json.app_id);
+                    app_id = json.app_id;
+                    addMessage("", "<i>Your AppId has been changed to <b>"+json.app_id+"</b></i>", "server", (new Date()).getTime());
+                }
             } else if (json.type === 'connected') {
                 sender = null;
                 connect = true;
@@ -217,10 +211,9 @@ $(function () {
                     "server",
                     json.time
                 );
-                connection.send(JSON.stringify({msg:"/appid", channel:channel, app_id:app_id}));
+                connection.send(JSON.stringify({msg:"/appid", app_id:app_id}));
                 if(localStorage.getItem("myName")) {
                     myName = localStorage.getItem("myName");
-                    id = localStorage.getItem("myId");
                     connection.send(JSON.stringify({id:id, channel:channel, msg:"/nick "+myName}));
                 } else {
                     sender = null;
@@ -247,6 +240,15 @@ $(function () {
                     });
                 }
                 localStorage.setItem("myName", myName);
+            } else if (json.type === 'online') {
+                online = true;
+                sender = null;
+                addMessage(
+                    "",
+                    json.msg,
+                    "server",
+                    json.time
+                );
             } else if (json.type === 'typing') {
                 seentyping.html("<i>"+json.author+" is typing..</i>");
                 content.scrollTop(content[0].scrollHeight);
@@ -259,7 +261,7 @@ $(function () {
                 seentyping.html("<i>seen by "+json.author+" "+get_time((new Date()).getTime())+"</i>");
                 content.scrollTop(content[0].scrollHeight);
             } else if (json.type === 'message') {
-                sender = json.author;
+                sender = json.author_id;
                 addMessage(
                     json.author+": ", 
                     json.msg, 
@@ -287,9 +289,7 @@ $(function () {
                     var time = (new Date()).getTime();
                     chat.append('<p class="server"><i>Connecting...</i><span class="time">'+get_time(time)+'</span></p>');
                     connect_this(host, port);
-                    check_con();
                 }
-                $(this).val("");
             } else if(msg == "/mute") {
                 sender = null;
                 addMessage("", "<i>You just changed your sound to <b>mute</b></i>", "server", (new Date()).getTime());
@@ -311,19 +311,19 @@ $(function () {
                         (new Date()).getTime()
                     );
                     if(msg == "/quit" || msg == "/q") {
-                        sender = null;
-                        connection.send(JSON.stringify({id:id, msg:"/quit"}));
-                        connect = false;
-                        online = false;
-                        chat.html(null);
-                        if(window.opener === null) {
+                        if(online === true) {
+                            sender = null;
+                            connection.send(JSON.stringify({id:id, msg:"/quit"}));
+                            connect = false;
+                            online = false;
+                            chat.html(null);
                             localStorage.removeItem('myName');
                             localStorage.removeItem('myId');
-                            // localStorage.removeItem('app_id');
-                        } else {
-                            window.close();
+                            localStorage.removeItem('channel');
+                            if(window.opener !== null) {
+                                window.close();
+                            }
                         }
-                        connection.close();
                     } else if(msg == "/reload" || msg == "/r") {
                         sender = null;
                         connection.send(JSON.stringify({id:id, msg:"/reload"}));
@@ -394,42 +394,11 @@ $(function () {
     }
 
 
-    function check_con() {
-        var ska_inteval = setInterval(function() {
-            if (connection.readyState !== 1) {
-                if(localStorage.getItem("myName")) {
-                    if(connect === true) {
-                        connect_this(host, port);
-                        var time = (new Date()).getTime();
-                        chat.append('<p class="server"><i>You are not connected..</i><span class="time">'+get_time(time)+'</span></p>');
-                        chat.append('<p class="server"><i>Connecting...</i><span class="time">'+get_time(time)+'</span></p>');
-                        connect = false;
-                        online = false;
-                    }
-                } else {
-                    clearInterval(ska_inteval);
-                }
-            }
-        }, 3000);
-    }
-
-
-    var time = (new Date()).getTime();
-    chat.append('<p class="server"><i>Connecting...</i><span class="time">'+get_time(time)+'</span></p>');
-    if(localStorage.getItem("myId")) {
-        id = localStorage.getItem("myId");
-        console.log("Existing Id - "+id);
-        connect_this(host, port);
-        check_con();
-    } else {
-        $.getJSON("user_id.php?user_id", function(data) {
-            id = data.user_id;
-            localStorage.setItem("myId", id);
-            localStorage.setItem("app_id", app_id);
-            console.log("New Id - "+id);
-            connect_this(host, port);
-            check_con();
-        });
+    function create_id() {
+        var S4 = function() {
+           return (((1+Math.random())*0x10000)|0).toString(16).substring(1);
+        };
+        return S4()+S4()+"-"+S4()+"-"+S4()+"-"+S4()+"-"+S4()+S4()+S4();
     }
 
 
@@ -477,6 +446,10 @@ $(function () {
         }
     }
 
+
+    // ==================================================================================================
+
+
     console.log("\n"
     +"==============================================================\n"
     +"   __                               __       __    _________\n"
@@ -489,6 +462,35 @@ $(function () {
     +"  \n"
     +"==============================================================\n"
     +"      -- https://www.facebook.com/skaloot --              \n");
+
+
+
+
+
+    var time = (new Date()).getTime();
+    chat.append('<p class="server"><i>Connecting...</i><span class="time">'+get_time(time)+'</span></p>');
+    if(localStorage.getItem("myId")) {
+        id = localStorage.getItem("myId");
+        console.log("Existing Id - "+id);
+    } else {
+        id = create_id();
+        localStorage.setItem("myId", id);
+        localStorage.setItem("app_id", app_id);
+        console.log("New Id - "+id);
+    }
+
+    connect_this(host, port);
+
+    setInterval(function() {
+        if(connect === true && connection.readyState !== 1) {
+            connect = false;
+            online = false;
+            connect_this(host, port);
+            var time = (new Date()).getTime();
+            chat.append('<p class="server"><i>You are not connected..</i><span class="time">'+get_time(time)+'</span></p>');
+            chat.append('<p class="server"><i>Connecting...</i><span class="time">'+get_time(time)+'</span></p>');
+        }
+    }, 3000);
 
 });
 
