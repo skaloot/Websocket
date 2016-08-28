@@ -13,7 +13,8 @@ $(function () {
     // var host = "//artinity.dtdns.net";
     var host = location.host;
     var port = 3777;
-    var app_id = "utiischat";
+    var app_id = "ska";
+    var channel = "skachat";
     var connect = false;
     var online = false;
     var window_active = true;
@@ -31,6 +32,12 @@ $(function () {
         app_id = localStorage.getItem("app_id");
     } else {
         localStorage.setItem("app_id", app_id);
+    }
+
+    if(localStorage.getItem("channel")) {
+        channel = localStorage.getItem("channel");
+    } else {
+        localStorage.setItem("channel", channel);
     }
 
     window.WebSocket = window.WebSocket || window.MozWebSocket;
@@ -150,6 +157,16 @@ $(function () {
                 );
                 myName = json.nickname;
                 localStorage.setItem("myName", myName);
+            } else if (json.type === 'newChannel') {
+                sender = null;
+                addMessage(
+                    "",
+                    json.msg,
+                    "server",
+                    json.time
+                );
+                channel = json.channel;
+                localStorage.setItem("channel", channel);
             } else if (json.type === 'history') {
                 sender = null;
                 for (var i=0; i < json.msg.length; i++) {
@@ -200,11 +217,11 @@ $(function () {
                     "server",
                     json.time
                 );
-                connection.send(JSON.stringify({msg:"/appid", app_id:app_id}));
+                connection.send(JSON.stringify({msg:"/appid", channel:channel, app_id:app_id}));
                 if(localStorage.getItem("myName")) {
                     myName = localStorage.getItem("myName");
                     id = localStorage.getItem("myId");
-                    connection.send(JSON.stringify({id:id, msg:"/nick "+myName}));
+                    connection.send(JSON.stringify({id:id, channel:channel, msg:"/nick "+myName}));
                 } else {
                     sender = null;
                     addMessage(
@@ -301,11 +318,12 @@ $(function () {
                         chat.html(null);
                         if(window.opener === null) {
                             localStorage.removeItem('myName');
-                            // localStorage.removeItem('myId');
+                            localStorage.removeItem('myId');
                             // localStorage.removeItem('app_id');
                         } else {
                             window.close();
                         }
+                        connection.close();
                     } else if(msg == "/reload" || msg == "/r") {
                         sender = null;
                         connection.send(JSON.stringify({id:id, msg:"/reload"}));
@@ -323,7 +341,7 @@ $(function () {
                         });
                     } else {
                         sender = null;
-                        connection.send(JSON.stringify({id:id, msg:msg.trim()}));
+                        connection.send(JSON.stringify({id:id, channel:channel, msg:msg.trim()}));
                     }
                 }
             }
