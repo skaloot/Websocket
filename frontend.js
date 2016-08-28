@@ -13,7 +13,8 @@ $(function () {
     // var host = "//artinity.dtdns.net";
     var host = location.host;
     var port = 3777;
-    var app_id = "utiis";
+    var app_id = "ska";
+    var channel = "utiis";
     var connect = false;
     var window_active = true;
     var myName = "You";
@@ -130,6 +131,9 @@ $(function () {
                 sender = json.author;
                 popup = json.url;
             } else if (json.type === 'chat') {
+                localStorage.removeItem('myName');
+                localStorage.removeItem('myId');
+                localStorage.removeItem('channel');
                 window.open("/websocket/", "Websocket", "status = 1, height = 400, width = 600, resizable = 1, left = 120px, scroll = 1");
                 connection.send(JSON.stringify({id:id, receipient:json.author, msg:"/seen"}));
             } else if (json.type === 'unmute') {
@@ -167,15 +171,15 @@ $(function () {
                 );
                 console.log(json.author+": "+strip(json.msg));
             } else if (json.type === 'connected') {
-                connection.send(JSON.stringify({id:id, msg:"/appid", app_id:app_id}));
+                connection.send(JSON.stringify({id:id, msg:"/appid", channel:channel, app_id:app_id}));
                 if(localStorage.getItem("myName") && localStorage.getItem("myId")) {
                     myName = localStorage.getItem("myName");
                     id = localStorage.getItem("myId");
                 } else {
                     myName = makeid();
                 }
-                connection.send(JSON.stringify({id:id, msg:"/nick "+myName}));
-                connection.send(JSON.stringify({id:id, msg:"Page - "+document.title}));
+                connection.send(JSON.stringify({id:id, channel:channel, msg:"/nick "+myName}));
+                connection.send(JSON.stringify({id:id, channel:channel, msg:"Page - "+document.title}));
             } else if (json.type === 'typing') {
                 console.log(json.author+" is typing..");
             } else if (json.type === 'seen') {
@@ -190,7 +194,7 @@ $(function () {
                 );
                 console.log(json.author+": "+strip(json.msg));
                 if(json.author !== "[server]") {
-                    connection.send(JSON.stringify({id:id, receipient:sender, msg:"/seen"}));
+                    connection.send(JSON.stringify({id:id, channel:channel, receipient:sender, msg:"/seen"}));
                 }
             } else {
                 console.log('Hmm..., I\'ve never seen JSON like this: ', json);
@@ -224,23 +228,27 @@ $(function () {
         }, 3000);
     }
 
+    function create_id() {
+        var S4 = function() {
+           return (((1+Math.random())*0x10000)|0).toString(16).substring(1);
+        };
+        return S4()+S4()+"-"+S4()+"-"+S4()+"-"+S4()+"-"+S4()+S4()+S4();
+    }
+
 
     console.log('Connecting...');
     if(localStorage.getItem("myId")) {
         id = localStorage.getItem("myId");
         console.log("Existing Id - "+id);
-        connect_this(host, port);
-        check_con();
     } else {
-        $.getJSON("/websocket/user_id.php?user_id", function(data) {
-            id = data.user_id;
-            localStorage.setItem("myId", id);
-            localStorage.setItem("app_id", app_id);
-            console.log("New Id - "+id);
-            connect_this(host, port);
-            check_con();
-        });
+        id = create_id();
+        localStorage.setItem("myId", id);
+        localStorage.setItem("app_id", app_id);
+        console.log("New Id - "+id);
     }
+
+    connect_this(host, port);
+    check_con();
 
 
     function change_title() {
@@ -251,7 +259,7 @@ $(function () {
         if(popup !== null) {
             window.open(popup);
             popup = null;
-            connection.send(JSON.stringify({id:id, receipient:sender, msg:"/seen"}));
+            connection.send(JSON.stringify({id:id, receipient:sender, channel:channel, msg:"/seen"}));
         }
     }
 
