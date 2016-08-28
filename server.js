@@ -56,11 +56,11 @@ function DateDiff(time1, time2) {
     diffM = diffM - (diffH * 60);
     diffH = diffH - (diffD * 24);
 
-    console.log(diffMS + ' ms');
-    console.log(diffS + ' seconds');
-    console.log(diffM + ' minutes');    
-    console.log(diffH + ' hours');    
-    console.log(diffD + ' days');
+    // console.log(diffMS + ' ms');
+    // console.log(diffS + ' seconds');
+    // console.log(diffM + ' minutes');    
+    // console.log(diffH + ' hours');    
+    // console.log(diffD + ' days');
     
     return diffD+' days, '+diffH+' hours, '+diffM+' minutes, '+diffS+' seconds';
 }
@@ -367,7 +367,7 @@ wsServer.on('request', function(request) {
                         }
                     }
                     for(var i=0, len=clients.length; i<len; i++) {
-                        if(clients[i].user_id == msgs.id) {
+                        if(clients[i].user_id === msgs.id) {
                             if(clients[i].active === false) {
                                 console.log(get_time(time) + " Existing user! - "+ clients[i].user_name+" - "+clients[i].user_id);
                                 userName = clients[i].user_name;
@@ -392,41 +392,27 @@ wsServer.on('request', function(request) {
                                     }
                                 }
                                 clients[i].msg = [];
-                                if(clients[i].online === false) {
-                                    var users = "";
-                                    var n = 1;
-                                    for(var i=0, len2=clients.length; i<len2; i++) {
-                                        if(clients[i].online === true && channel === clients[i].channel) {
-                                            if(clients[i].user_id === userId) {
-                                                users += "<br>"+(n++)+". <b>"+clients[i].user_name+"</b>";
-                                            } else {
-                                                users += "<br>"+(n++)+". "+clients[i].user_name;
-                                            }
-                                        }
-                                    }
-                                    var obj = {username: userName, app_id: appId};
-                                    PostThis(obj, "login", "/websocket/login_mail.php");
-                                    connection.sendUTF(JSON.stringify({
-                                        type:'info',
-                                        time: (new Date()).getTime(),
-                                        msg: "<i>------------------<br>Online users"+users+"<br>------------------</i>",
-                                        author: "[Server]",
-                                    }));
-                                    var json = JSON.stringify({
-                                        type:'info',
-                                        time: (new Date()).getTime(),
-                                        msg: "<i><b>"+userName+"</b> is online..</i>",
-                                        author: "[Server]",
-                                    });
-                                    for(var i=0, len2=clients.length; i<len2; i++) {
-                                        if(userId !== clients[i].user_id && clients[i].active === true && channel === clients[i].channel) {
-                                            clients[i].connection.sendUTF(json);
+                                var users = "";
+                                var n = 1;
+                                for(var x=0, len2=clients.length; x<len2; x++) {
+                                    if(clients[x].online === true && channel === clients[x].channel) {
+                                        if(clients[x].user_id === userId) {
+                                            users += "<br>"+(n++)+". <b>"+clients[x].user_name+"</b>";
+                                        } else {
+                                            users += "<br>"+(n++)+". "+clients[x].user_name;
                                         }
                                     }
                                 }
-                                return;
-                            }
-                            if(clients[i].active === true && clients[i].online === true) {
+                                var obj = {username: userName, app_id: appId};
+                                // PostThis(obj, "login", "/websocket/login_mail.php");
+                                connection.sendUTF(JSON.stringify({
+                                    type:'info',
+                                    time: (new Date()).getTime(),
+                                    msg: "<i>------------------<br>Online users"+users+"<br>------------------</i>",
+                                    author: "[Server]",
+                                }));
+                                break;
+                            } else {
                                 connection.sendUTF(JSON.stringify({
                                     type:'info',
                                     time: (new Date()).getTime(),
@@ -570,15 +556,14 @@ wsServer.on('request', function(request) {
                         Apps += app_list[i]+", ";
                     }
                     var chnl_list = "";
-                    var chnl_list_user = 0;
                     for(var i=0, len=channel_list.length; i<len; i++) {
-                        chnl_list += channel_list[i].name;
+                        var chnl_list_user = 0;
                         for(var n=0, len2=clients.length; n<len2; n++) {
-                            if(channel_list[i].name === clients[n].channel) {
+                            if(channel_list[i].name === clients[n].channel && clients[n].online === true) {
                                 chnl_list_user++;
                             }
                         }
-                        chnl_list += " ("+channel_list[i].users+"), ";
+                        chnl_list += channel_list[i].name+" ("+chnl_list_user+"), ";
                     }
                     connection.sendUTF(JSON.stringify({
                         type:'info',
@@ -1217,15 +1202,12 @@ wsServer.on('request', function(request) {
             author: "[server]",
         });
         console.log(get_time(time) + ' ' + client[idx].user_name + ping_result);
-        // client.splice(idx, 1);
-        client[idx].active = false;
-        client[idx].online = false;
+        client.splice(idx, 1);
         for(var i=0, len=client.length; i<len; i++) {
-            if(client[i].active === true && client[idx].channel === clients[i].channel) {
+            if(client[i].active === true && client[i].channel === channel) {
                 client[i].connection.sendUTF(json);
             }
         }
-        // index = get_index(idx,app);
     }
 
     var check_user = function(id) {
