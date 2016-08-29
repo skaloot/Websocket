@@ -86,25 +86,19 @@ function PostThis(obj, type, url) {
           'Content-Length': Buffer.byteLength(post_data)
       }
     };
-    var result = null;
     var post_req = http.request(post_options, function(res) {
         res.setEncoding('utf8');
         res.on('data', function (data) {
-            console.log('Post Result: ' + data);
-            result = data;
-            if(type === "admin") {
-                data = data.split(",");
-                for(var i=0, len=data.length; i<len; i++) {
-                    data[i] = data[i].split("-");
-                    obj.push({username: data[i][0], password: data[i][1]});
-                }
+            try {
+                data = JSON.parse(data);
+            } catch (e) {
+                console.log('This doesn\'t look like a valid JSON: ', data);
+                return;
             }
-            if(type === "app_list") {
-                data = data.split(",");
+            if(type === "admin") {
                 for(var i=0, len=data.length; i<len; i++) {
-                    obj.push(data[i]);
+                    obj.push({username: data[i].username, password: data[i].password});
                 }
-                set_apps();
             }
         });
     });
@@ -464,7 +458,7 @@ wsServer.on('request', function(request) {
                                 
                             }
                         }
-                        var obj = {username: userName, app_id: appId};
+                        var obj = {username: userName, channel: channel};
                         PostThis(obj, "login", "/websocket/login_mail.php");
                         connection.sendUTF(JSON.stringify({
                             type:'welcome', 
@@ -608,7 +602,7 @@ wsServer.on('request', function(request) {
                         }
                     }
                     clients[index].seen = true;
-                } else if(msgs.msg.substring(0, 8) == "/unmute ") {
+                } else if(msgs.msg.substring(0, 11) == "/unmute all") {
                     var json = JSON.stringify({
                         type:'unmute',
                     });
