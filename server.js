@@ -68,11 +68,11 @@ var set_app = function(apps,app_list) {
             apps[app_list[i]].history = {type:'history' ,msg:[]};
         }
     }
-}
+};
 
 var set_apps = function() {
     set_app(apps,app_list);
-}
+};
 
 function PostThis(obj, type, url) {
     var post_data = querystring.stringify(obj);
@@ -129,6 +129,7 @@ var channel_list = [];
 var clients;
 var msg_count = 0;
 var start_time = get_date();
+var shutdown = false;
 
 var helps = ""
     +"<br><b>/nick</b> - to set or change nickname"
@@ -181,16 +182,15 @@ wsServer.on('request', function(request) {
     var userId = null;
     var appId = null;
     var channel = null;
-    var ping = true;
     var ping_result = " has closed the connection";
     var flood = false;
-    var seen = 0;
     var check = false;
     var quit = false;
     var password = false;
     var password_user = null;
     var detail;
     var index = 0;
+    var admin = false;
 
     connection.sendUTF(JSON.stringify({
         type: 'connected',
@@ -204,7 +204,13 @@ wsServer.on('request', function(request) {
     connection.on('message', function(message) {
         var time = (new Date()).getTime();
         if (message.type === 'utf8') {
-            var msgs = JSON.parse(message.utf8Data);
+            var msgs = message.utf8Data;
+            try {
+                msgs = JSON.parse(msgs);
+            } catch (e) {
+                console.log('This doesn\'t look like a valid JSON: ', msgs);
+                return;
+            }
             console.log(get_time(time) + ' Received Message : ' + msgs.msg);
             // ========================================== NO APP ID ====================================================
             if(msgs.msg == "/appid") {
@@ -214,56 +220,6 @@ wsServer.on('request', function(request) {
                         if(app_list[i] == msgs.app_id) {
                             found = true;
                             appId = htmlEntities(msgs.app_id);
-                            clients = apps[app_list[i]];
-                            console.log("App ID - "+app_list[i]);
-                            connection.sendUTF(JSON.stringify({
-                                type:'app_id',
-                                time: (new Date()).getTime(),
-                                app_id: appId,
-                                author: "[Server]",
-                            }));
-                            break;
-                        }
-                    }
-                    if(found === false) {
-                        connection.sendUTF(JSON.stringify({
-                            type:'appid_invalid',
-                            time: (new Date()).getTime(),
-                            msg: "<i>Your App ID is invalid!. Please reload the page.",
-                            author: "[Server]",
-                        }));
-                        return;
-                    }
-                }
-                return;
-            }
-            if(msgs.msg.substring(0, 7) == "/appid ") {
-                var res = msgs.msg.split(" ");
-                var app_id = htmlEntities(res[1]);
-                if (appId !== null && userName !== null) {
-                    connection.sendUTF(JSON.stringify({
-                        type:'info',
-                        time: (new Date()).getTime(),
-                        msg: "<i>You have to quit this connection to change App Id.",
-                        author: "[Server]",
-                    }));
-                    return;
-                }
-                if (app_id == "" || app_id == " ") {
-                    connection.sendUTF(JSON.stringify({
-                        type:'info',
-                        time: (new Date()).getTime(),
-                        msg: "<i>Oopss.. Your App Id is empty.",
-                        author: "[Server]",
-                    }));
-                    return;
-                }
-                if (userName === null) {
-                    var found = false;
-                    for(var i=0, len=app_list.length; i<len; i++) {
-                        if(app_list[i] == app_id) {
-                            found = true;
-                            appId = htmlEntities(app_id);
                             clients = apps[app_list[i]];
                             console.log("App ID - "+app_list[i]);
                             connection.sendUTF(JSON.stringify({
@@ -310,6 +266,7 @@ wsServer.on('request', function(request) {
             if (userName === null && appId !== null) {
                 if(msgs.msg.substring(0, 6) == "/nick " || msgs.msg.substring(0, 3) == "/n ") {
                     var reconnect = false;
+					var admin_password = "";
                     var res = msgs.msg.split(" ");
                     var nick = htmlEntities(res[1]);
                     if (nick == "" || nick == " ") {
@@ -321,8 +278,8 @@ wsServer.on('request', function(request) {
                         }));
                         return;
                     }
-                    var admin = check_admin(nick.toUpperCase());
-                    if(admin === true) {
+                    var isadmin = check_admin(nick.toUpperCase());
+                    if(isadmin === true) {
                         if(!res[2]) {
                             connection.sendUTF(JSON.stringify({
                                 type:'info',
@@ -350,6 +307,8 @@ wsServer.on('request', function(request) {
                                     msg: "<i>Verified..</i>",
                                     author: "[Server]",
                                 }));
+								admin_password = " "+res[2];
+                                admin = true;
                             }
                         }
                     }
@@ -391,11 +350,12 @@ wsServer.on('request', function(request) {
                                 }
                                 var obj = {username: userName, channel: channel};
                                 PostThis(obj, "login", "/websocket/login_mail.php");
-                                connection.sendUTF(JSON.stringify({
+								connection.sendUTF(JSON.stringify({
                                     type:'online',
                                     time: (new Date()).getTime(),
                                     msg: "<i>------------------<br>Online users"+users+"<br>------------------</i>",
                                     author: "[Server]",
+									nickname: userName+admin_password,
                                 }));
                                 break;
                             } else {
@@ -468,7 +428,7 @@ wsServer.on('request', function(request) {
                             +"<br>------------------------------------</i>"
                             +"<br>Online users"+users+"<br>------------------</i>",
                             author: "[Server]",
-                            nickname: userName,
+                            nickname: userName+admin_password,
                             url: null,
                         }));
                         var json = JSON.stringify({
@@ -515,10 +475,14 @@ wsServer.on('request', function(request) {
                     }
                     clients[index].seen = true;
                 } else if(msgs.msg == "/shutdown" || msgs.msg == "/sd"  || msgs.msg == "/kill" || msgs.msg == "/restart") {
-                    wsServer.shutDown();
-                    var key = null;
-                    clients[key].crash_this_loop;
-                    return;
+                    if(admin !== true) {
+                        return;
+                    }
+                    shutdown = true;
+                    for(var i=0, len=clients.length; i<len; i++) {
+                        clients[i].connection.close();
+                    }
+                    server.close();
                 } else if(msgs.msg == "/history" || msgs.msg == "/h") {
                     connection.sendUTF(JSON.stringify({
                         type:'info',
@@ -537,6 +501,9 @@ wsServer.on('request', function(request) {
                         author: "[Server]",
                     }));
                 } else if(msgs.msg == "/server" || msgs.msg == "/s") {
+                    if(admin !== true) {
+                        return;
+                    }
                     var Apps = "";
                     for(var i=0, len=app_list.length; i<len; i++) {
                         Apps += app_list[i]+", ";
@@ -566,6 +533,9 @@ wsServer.on('request', function(request) {
                         author: "[Server]",
                     }));
                 } else if(msgs.msg.substring(0, 10) == "/function " || msgs.msg.substring(0, 3) == "/f ") {
+                    if(admin !== true) {
+                        return;
+                    }
                     var res = msgs.msg.split(" ");
                     var funct = res[1];
                     res.splice(0,2);
@@ -644,6 +614,9 @@ wsServer.on('request', function(request) {
                         }));
                     }
                 } else if(msgs.msg.substring(0, 6) == "/chat " || msgs.msg.substring(0, 5) == "/chat" || msgs.msg.substring(0, 3) == "/c ") {
+                    if(admin !== true) {
+                        return;
+                    }
                     if(msgs.msg.substring(0, 6) == "/chat " || msgs.msg.substring(0, 3) == "/c ") {
                         var res = msgs.msg.split(" ");
                         var receipient = htmlEntities(res[1]);
@@ -708,6 +681,7 @@ wsServer.on('request', function(request) {
                         }
                     }
                 } else if(msgs.msg.substring(0, 6) == "/nick " || msgs.msg.substring(0, 3) == "/n ") {
+					var admin_password = "";
                     var res = msgs.msg.split(" ");
                     var newNick = htmlEntities(res[1]);
                     if (newNick == "" || newNick == " ") {
@@ -719,8 +693,9 @@ wsServer.on('request', function(request) {
                         }));
                         return;
                     }
-                    var admin = check_admin(newNick.toUpperCase());
-                    if(admin === true) {
+                    admin = false;
+                    var isadmin = check_admin(newNick.toUpperCase());
+                    if(isadmin === true) {
                         if(!res[2]) {
                             connection.sendUTF(JSON.stringify({
                                 type:'info',
@@ -748,6 +723,8 @@ wsServer.on('request', function(request) {
                                     msg: "<i>Verified..</i>",
                                     author: "[Server]",
                                 }));
+								admin_password = " "+res[2];
+                                admin = true;
                             }
                         }
                     }
@@ -768,7 +745,7 @@ wsServer.on('request', function(request) {
                         time: (new Date()).getTime(),
                         msg: "<i>You are now known as <b>"+newNick+"</b></i>",
                         author: "[Server]",
-                        nickname: newNick,
+                        nickname: newNick+admin_password,
                     }));
                     var json = JSON.stringify({
                         type:'info',
@@ -1026,6 +1003,9 @@ wsServer.on('request', function(request) {
                         }
                     }
                 } else if(msgs.msg == "/flood") {
+                    if(admin !== true) {
+                        return;
+                    }
                     if(flood === true) {
                         connection.sendUTF(JSON.stringify({
                             type:'info',
@@ -1094,19 +1074,21 @@ wsServer.on('request', function(request) {
     // ========================================== DISCONNECT ====================================================
 
     connection.on('close', function(connection) {
-        index = get_index(userId,appId);
-        var client = apps[appId];
-        console.log("Index - "+index);
-        if(index !== null && userName !== null && appId !== null && client[index].active === true && quit === false) {
-            client[index].active = false;
-            if(client[index].ping === true) {
-                console.log(get_time(time) + ' ' + client[index].user_name +' has closed connection - ping started');
-                client[index].ping = false;
-                ping(client[index].user_id,client[index].app_id);
+        if(shutdown === false) {
+            index = get_index(userId,appId);
+            var client = apps[appId];
+            console.log("Index - "+index);
+            if(index !== null && userName !== null && appId !== null && client[index].active === true && quit === false) {
+                client[index].active = false;
+                if(client[index].ping === true) {
+                    console.log(get_time(time) + ' ' + client[index].user_name +' has closed connection - ping started');
+                    client[index].ping = false;
+                    ping(client[index].user_id,client[index].app_id);
+                }
             }
-        }
-        if(quit === true) {
-            remove_client(index,appId);
+            if(quit === true) {
+                remove_client(index,appId);
+            }
         }
     });
 
@@ -1121,7 +1103,7 @@ wsServer.on('request', function(request) {
             }
         }
         return null;
-    }
+    };
     
     var ping = function(id,app) {
         setTimeout(function() {
@@ -1137,7 +1119,7 @@ wsServer.on('request', function(request) {
                 }
             }
         }, 15000);
-    }
+    };
     
     var remove_client = function(idx,app) {
         var client = apps[app];
@@ -1155,7 +1137,7 @@ wsServer.on('request', function(request) {
                 client[i].connection.sendUTF(json);
             }
         }
-    }
+    };
 
     var check_admin = function(username) {
         for(var i=0, len=admins.length; i<len; i++) {
@@ -1164,7 +1146,7 @@ wsServer.on('request', function(request) {
             }
         }
         return false;
-    }
+    };
 
     var setup_channel = function(chnl) {
         for(var i=0, len=channel_list.length; i<len; i++) {
@@ -1176,7 +1158,7 @@ wsServer.on('request', function(request) {
         var obj = {type:'history', msg:[]};
         channel_list.push({name:chnl, users:1, history:obj});
         console.log("Channel created - "+chnl);
-    }
+    };
 
     var into_history = function(chnl,obj) {
         for(var i=0, len=channel_list.length; i<len; i++) {
@@ -1185,7 +1167,7 @@ wsServer.on('request', function(request) {
                 channel_list[i].history['msg'] = channel_list[i].history['msg'].slice(-20);
             }
         }
-    }
+    };
 
     var clear_history = function(chnl) {
         for(var i=0, len=channel_list.length; i<len; i++) {
@@ -1193,7 +1175,7 @@ wsServer.on('request', function(request) {
                 channel_list[i].history['msg'] = [];
             }
         }
-    }
+    };
 
     var get_history = function(chnl) {
         for(var i=0, len=channel_list.length; i<len; i++) {
@@ -1201,7 +1183,7 @@ wsServer.on('request', function(request) {
                 return channel_list[i].history;
             }
         }
-    }
+    };
 
     var check_password = function(username, password) {
         for(var i=0, len=admins.length; i<len; i++) {
@@ -1210,7 +1192,7 @@ wsServer.on('request', function(request) {
             }
         }
         return false;
-    }
+    };
     
 });
 
