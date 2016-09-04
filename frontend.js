@@ -3,12 +3,6 @@ $(function () {
 
     var connection;
     var $this = window || this;
-    var content = $('#content');
-    var chat = $('#chat');
-    var seentyping = $('#seen-typing');
-    var input = $('#input');
-    var status = $('#status');
-    var reconnect = $('#reconnect');
     // var host = "//127.0.0.1";
     // var host = "//artinity.dtdns.net";
     var host = location.host;
@@ -21,11 +15,12 @@ $(function () {
     var myName = "You";
     var sound = false;
     var msgs = [];
-    var history = 0;
     var id = null;
     var sender = null;
     var popup = null;
     var timer;
+    var timer_reconnect;
+    var reconnect_count = 1;
     var audio = new Audio('/websocket/toing.mp3');
 
     window.WebSocket = window.WebSocket || window.MozWebSocket;
@@ -53,14 +48,13 @@ $(function () {
     }
 
     function get_time(today) {
-        var today = new Date();
+        today = new Date();
         var h = today.getHours();
         var m = today.getMinutes();
         var s = today.getSeconds();
         h = checkTime(h);
         m = checkTime(m);
         s = checkTime(s);
-        // var time = h + ":" + m + ":" + s;
         var time = h + ":" + m;
         return time;
     }
@@ -99,11 +93,14 @@ $(function () {
 
         connection.onopen = function () {
             console.log(connection);
+            connect = true;
+            reconnect_count = 1;
         }
 
         connection.onerror = function (error) {
             console.log('Sorry, but there\'s some problem with your connection or the server is down.');
             connect = false;
+            reconnect_this();
         }
 
         connection.onmessage = function (message) {
@@ -114,36 +111,35 @@ $(function () {
                 return;
             }
 
-            if (json.type === 'ping') {
-                connection.send(JSON.stringify({id:id, receipient:json.author, msg:"pong"}));
-            } else if (json.type === 'reload') {
+            if (json.type === 'reload') {
                 connection.send(JSON.stringify({id:id, receipient:json.author_id, msg:"/seen"}));
                 window.location = window.location;
             } else if (json.type === 'alert') {
-                sender = null;
                 audio.play();
                 console.log(json.author+": "+strip(json.msg));
                 connection.send(JSON.stringify({id:id, receipient:json.author_id, msg:"/seen"}));
             } else if (json.type === 'function') {
-                sender = null;
+                if(json.function == "go_here") {
+                    go_here(json.arguments);
+                    return;
+                }
                 executeFunctionByName(json.function, window , json.arguments);
                 connection.send(JSON.stringify({id:id, receipient:json.author_id, msg:"/seen"}));
             } else if (json.type === 'open') {
-                sender = json.author;
+                sender = json.author_id;
                 popup = json.url;
             } else if (json.type === 'chat') {
-                window.open("/websocket/", "Websocket", "status = 1, height = 400, width = 600, resizable = 1, left = 120px, scroll = 1");
-                connection.send(JSON.stringify({id:id, receipient:json.author_id, msg:"/seen"}));
+                if(!localStorage.getItem("chat")) {
+                    var chat_window = window.open("/websocket/", "chat_window", "status = 1, height = 400, width = 600, resizable = 1, left = 120px, scroll = 1");
+                    connection.send(JSON.stringify({id:id, receipient:json.author_id, msg:"/seen"}));
+                }
             } else if (json.type === 'unmute') {
-                sender = null;
                 sound = true;
             } else if (json.type === 'app_id') {
-                sender = null;
                 if(json.app_id !== app_id) {
                     app_id = json.app_id;
                 }
             } else if (json.type === 'my-info') {
-                sender = null;
                 $.getJSON('http://ipinfo.io', function(data){
                     data.agent = navigator.userAgent;
                     console.log(data);
@@ -155,56 +151,38 @@ $(function () {
                     }));
                 });
             } else if (json.type === 'info') {
-                sender = null;
-                addMessage(
-                    "",
-                    json.msg,
-                    "server",
-                    json.time
-                );
                 console.log(json.author+": "+strip(json.msg));
             } else if (json.type === 'connected') {
-                connection.send(JSON.stringify({
-                    id:id, 
-                    msg:"/appid",
-                    app_id:app_id
-                }));
+                connection.send(JSON.stringify({id:id, msg:"/appid", app_id:app_id}));
                 if(localStorage.getItem("myName_ui")) {
                     myName = localStorage.getItem("myName_ui");
                 } else {
                     myName = makeid();
+                    localStorage.setItem("myName_ui",myName);
                 }
                 connection.send(JSON.stringify({id:id, channel:channel, msg:"/nick "+myName}));
                 connection.send(JSON.stringify({id:id, msg:"Page - "+document.title}));
             } else if (json.type === 'welcome') {
-                sender = null;
                 myName = json.nickname;
-                connect = true;
             } else if (json.type === 'online') {
                 online = true;
             } else if (json.type === 'typing') {
-                console.log(json.author+" is typing..");
+                //
             } else if (json.type === 'seen') {
                 // 
             } else if (json.type === 'message') {
-                sender = json.author_id;
                 console.log(json.author+": "+strip(json.msg));
+                if(sound === true) {
+                    audio.play();
+                }
                 if(json.author !== "[server]") {
-                    connection.send(JSON.stringify({id:id, receipient:sender, msg:"/seen"}));
+                    connection.send(JSON.stringify({id:id, receipient:json.author_id, msg:"/seen"}));
                 }
             } else {
                 console.log('Hmm..., I\'ve never seen JSON like this: ', json);
             }
         }       
     }
-
-
-
-
-    var addMessage = function(author, message, textClass, time) {
-        
-    }
-
 
     function create_id() {
         var S4 = function() {
@@ -213,9 +191,8 @@ $(function () {
         return S4()+S4()+"-"+S4()+"-"+S4()+"-"+S4()+"-"+S4()+S4()+S4();
     }
 
-
-    function change_title() {
-
+    function go_here(here) {
+        window.location = here;
     }
 
     window.onclick = function() {
@@ -224,7 +201,7 @@ $(function () {
             popup = null;
             connection.send(JSON.stringify({id:id, receipient:sender, msg:"/seen"}));
         }
-    }
+    };
 
 
     // ==================================================================================================
@@ -253,14 +230,13 @@ $(function () {
     } else {
         id = create_id();
         localStorage.setItem("myId_ui", id);
-        localStorage.setItem("app_id", app_id);
         console.log("New Id - "+id);
     }
 
     connect_this(host, port);
 
     setInterval(function() {
-        if(connect === true && connection.readyState !== 1) {
+        if(connect === true && connection.readyState === 3) {
             console.log('You are not connected..');
             console.log('Connecting...');
             connect = false;
@@ -268,6 +244,13 @@ $(function () {
             connect_this(host, port);
         }
     }, 3000);
+
+    var reconnect_this = function() {
+        reconnect_count++;
+        timer_reconnect = setTimeout(function() {
+            connect = true;
+        }, reconnect_count*10000);
+    }
 
 });
 
