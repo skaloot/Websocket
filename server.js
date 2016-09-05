@@ -1,30 +1,6 @@
 
 "use strict";
 
-function get_time(today) {
-    var today = new Date();
-    var h = today.getHours();
-    var m = today.getMinutes();
-    var s = today.getSeconds();
-    h = checkTime(h);
-    m = checkTime(m);
-    s = checkTime(s);
-    var time = h + ":" + m + ":" + s + " - ";
-    return time;
-}
-
-function get_date(today) {
-    var today = new Date();
-    var y = today.getFullYear();
-    var m = today.getMonth()+1;
-    var d = today.getDate();
-    var h = today.getHours();
-    var mt = today.getMinutes();
-    var s = today.getSeconds();
-    var date = m + "-" + d + "-" + y + "-" + h + "-" + mt + "-" + s;
-    return date;
-}
-
 function checkTime(i) {
     if (i < 10) {
         i = "0" + i;
@@ -32,8 +8,30 @@ function checkTime(i) {
     return i;
 }
 
+function get_time(t) {
+    t = new Date();
+    var h = t.getHours();
+    var m = t.getMinutes();
+    var s = t.getSeconds();
+    h = checkTime(h);
+    m = checkTime(m);
+    s = checkTime(s);
+    return h + ":" + m + ":" + s + " - ";
+}
+
+function get_date() {
+    var t = new Date();
+    var y = t.getFullYear();
+    var m = t.getMonth()+1;
+    var d = t.getDate();
+    var h = t.getHours();
+    var mt = t.getMinutes();
+    var s = t.getSeconds();
+    return m + "-" + d + "-" + y + "-" + h + "-" + mt + "-" + s;
+}
+
 function htmlEntities(str) {
-    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
 function originIsAllowed(origin) {
@@ -41,8 +39,8 @@ function originIsAllowed(origin) {
 }
 
 function DateDiff(time1, time2) {
-    var str1 = time1.split('-');
-    var str2 = time2.split('-');
+    var str1 = time1.split("-");
+    var str2 = time2.split("-");
 
     var t1 = new Date(str1[2], str1[0]-1, str1[1], str1[3], str1[4], str1[5]);
     var t2 = new Date(str2[2], str2[0]-1, str2[1], str2[3], str2[4], str2[5]);
@@ -56,7 +54,7 @@ function DateDiff(time1, time2) {
     diffM = diffM - (diffH * 60);
     diffH = diffH - (diffD * 24);
     
-    return diffD+' days, '+diffH+' hours, '+diffM+' minutes, '+diffS+' seconds';
+    return diffD+" days, "+diffH+" hours, "+diffM+" minutes, "+diffS+" seconds";
 }
 
 var set_app = function(apps,app_list) {
@@ -65,7 +63,7 @@ var set_app = function(apps,app_list) {
         if(!apps[app_list[i]]) {
             apps[app_list[i]] = [];
             apps[app_list[i]].total_user = 0;
-            apps[app_list[i]].history = {type:'history' ,msg:[]};
+            apps[app_list[i]].history = {type:"history" ,msg:[]};
         }
     }
 };
@@ -77,22 +75,22 @@ var set_apps = function() {
 function PostThis(obj, type, url) {
     var post_data = querystring.stringify(obj);
     var post_options = {
-      host: 'localhost',
-      port: '80',
+      host: "localhost",
+      port: "80",
       path: url,
-      method: 'POST',
+      method: "POST",
       headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Content-Length': Buffer.byteLength(post_data)
+          "Content-Type": "application/x-www-form-urlencoded",
+          "Content-Length": Buffer.byteLength(post_data)
       }
     };
     var post_req = http.request(post_options, function(res) {
-        res.setEncoding('utf8');
-        res.on('data', function (data) {
+        res.setEncoding("utf8");
+        res.on("data", function (data) {
             try {
                 data = JSON.parse(data);
             } catch (e) {
-                console.log('This doesn\'t look like a valid JSON: ', data);
+                console.log("This doesn\'t look like a valid JSON: ", data);
                 return;
             }
             if(type === "admin") {
@@ -115,13 +113,13 @@ function PostThis(obj, type, url) {
 // =========================================================================================================
 
 
-process.title = 'node-chat';
+process.title = "node-chat";
 // var port = 8080;
 var port = 3777;
-var webSocketServer = require('websocket').server;
-var http = require('http');
-var querystring = require('querystring');
-var fs = require('fs');
+var webSocketServer = require("websocket").server;
+var http = require("http");
+var querystring = require("querystring");
+var fs = require("fs");
 var app_list = ["ska"];
 var admins = [];
 var apps = [];
@@ -130,6 +128,7 @@ var clients;
 var msg_count = 0;
 var start_time = get_date();
 var shutdown = false;
+var time;
 
 var helps = ""
     +"<br><b>/nick</b> - to set or change nickname"
@@ -148,8 +147,8 @@ var helps = ""
 // ========================================= CREATE SERVER ====================================================
 
 var options = {
-    // key: fs.readFileSync('key.pem'),
-    // cert: fs.readFileSync('cert.pem')
+    // key: fs.readFileSync("key.pem"),
+    // cert: fs.readFileSync("cert.pem")
 };
 
 // var server = https.createServer(options, function(request, response) {
@@ -157,9 +156,9 @@ var server = http.createServer(function(request, response) {
 
 }); 
 
-var time = (new Date()).getTime();
+time = (new Date()).getTime();
 server.listen(port, function() {
-    console.log("Start Time : "+start_time);
+    console.log("start Time : "+start_time);
     console.log(get_time(time) + " Server is listening on port " + port);
 });
 
@@ -169,14 +168,14 @@ var wsServer = new webSocketServer({
 
 
 set_app(apps,app_list);
-PostThis(admins, "admin", "/websocket/admin.php");
+PostThis(admins, "admin", "//artinity.dtdns.net/websocket/admin.php");
 
 
 // ========================================== CONNECT ====================================================
 
-wsServer.on('request', function(request) {
-    var time = (new Date()).getTime();
-    console.log(get_time(time) + ' Connection from origin ' + request.origin);
+wsServer.on("request", function(request) {
+    time = (new Date()).getTime();
+    console.log(get_time(time) + " Connection from origin " + request.origin);
     var connection = request.accept(null, request.origin);
     var userName = null;
     var userId = null;
@@ -193,7 +192,7 @@ wsServer.on('request', function(request) {
     var admin = false;
 
     connection.sendUTF(JSON.stringify({
-        type: 'connected',
+        type: "connected",
         time: (new Date()).getTime(),
         msg: "<i>Connected...",
         author: "[Server]",
@@ -201,17 +200,17 @@ wsServer.on('request', function(request) {
 
     // ========================================== GET MSG ====================================================
 
-    connection.on('message', function(message) {
-        var time = (new Date()).getTime();
-        if (message.type === 'utf8') {
+    connection.on("message", function(message) {
+        time = (new Date()).getTime();
+        if (message.type === "utf8") {
             var msgs = message.utf8Data;
             try {
                 msgs = JSON.parse(msgs);
             } catch (e) {
-                console.log('This doesn\'t look like a valid JSON: ', msgs);
+                console.log("This doesn\'t look like a valid JSON: ", msgs);
                 return;
             }
-            console.log(get_time(time) + ' Received Message : ' + msgs.msg);
+            console.log(get_time(time) + " Received Message : " + msgs.msg);
             // ========================================== NO APP ID ====================================================
             if(msgs.msg == "/appid") {
                 if (appId === null && userName === null) {
@@ -223,7 +222,7 @@ wsServer.on('request', function(request) {
                             clients = apps[app_list[i]];
                             console.log("App ID - "+app_list[i]);
                             connection.sendUTF(JSON.stringify({
-                                type:'app_id',
+                                type:"app_id",
                                 time: (new Date()).getTime(),
                                 app_id: appId,
                                 author: "[Server]",
@@ -233,7 +232,7 @@ wsServer.on('request', function(request) {
                     }
                     if(found === false) {
                         connection.sendUTF(JSON.stringify({
-                            type:'appid_invalid',
+                            type:"appid_invalid",
                             time: (new Date()).getTime(),
                             msg: "<i>Your App ID is invalid!. Please reload the page.",
                             author: "[Server]",
@@ -253,7 +252,7 @@ wsServer.on('request', function(request) {
                     msgs.msg = "/n "+password_user+" "+htmlEntities(res[1]);
                 } else {
                     connection.sendUTF(JSON.stringify({
-                        type:'info',
+                        type:"info",
                         time: (new Date()).getTime(),
                         msg: "<i>Password is empty. Please type in the password.</i>",
                         author: "[Server]",
@@ -271,7 +270,7 @@ wsServer.on('request', function(request) {
                     var nick = htmlEntities(res[1]);
                     if (nick == "" || nick == " ") {
                         connection.sendUTF(JSON.stringify({
-                            type:'info',
+                            type:"info",
                             time: (new Date()).getTime(),
                             msg: "<i>Oopss.. Your nickname is empty.</i>",
                             author: "[Server]",
@@ -282,7 +281,7 @@ wsServer.on('request', function(request) {
                     if(isadmin === true) {
                         if(!res[2]) {
                             connection.sendUTF(JSON.stringify({
-                                type:'info',
+                                type:"info",
                                 time: (new Date()).getTime(),
                                 msg: "<i>Oopss.. Nickname <b>"+nick+"</b> is reserved for admin. Please type in <b>/p &lt;password&gt;</b>.</i>",
                                 author: "[Server]",
@@ -294,7 +293,7 @@ wsServer.on('request', function(request) {
                             var verified = check_password(nick.toUpperCase(), res[2]);
                             if(verified === false) {
                                 connection.sendUTF(JSON.stringify({
-                                    type:'info',
+                                    type:"info",
                                     time: (new Date()).getTime(),
                                     msg: "<i>Oopss..Invalid password.</i>",
                                     author: "[Server]",
@@ -302,7 +301,7 @@ wsServer.on('request', function(request) {
                                 return;
                             } else {
                                 connection.sendUTF(JSON.stringify({
-                                    type:'info',
+                                    type:"info",
                                     time: (new Date()).getTime(),
                                     msg: "<i>Verified..</i>",
                                     author: "[Server]",
@@ -327,7 +326,7 @@ wsServer.on('request', function(request) {
                                 index = i;
                                 if(clients[i].msg.length > 0) {
                                     connection.sendUTF(JSON.stringify({
-                                        type:'info',
+                                        type:"info",
                                         time: (new Date()).getTime(),
                                         msg: "<i>------------------------------------<br>Unread Message..</i>",
                                         author: "[Server]",
@@ -351,7 +350,7 @@ wsServer.on('request', function(request) {
                                 var obj = {username: userName, channel: channel};
                                 PostThis(obj, "login", "/websocket/login_mail.php");
 								connection.sendUTF(JSON.stringify({
-                                    type:'online',
+                                    type:"online",
                                     time: (new Date()).getTime(),
                                     msg: "<i>------------------<br>Online users"+users+"<br>------------------</i>",
                                     author: "[Server]",
@@ -360,7 +359,7 @@ wsServer.on('request', function(request) {
                                 break;
                             } else {
                                 connection.sendUTF(JSON.stringify({
-                                    type:'info',
+                                    type:"info",
                                     time: (new Date()).getTime(),
                                     msg: "<i>Oopss.. You are already connected.</i>",
                                     author: "[Server]",
@@ -370,7 +369,7 @@ wsServer.on('request', function(request) {
                         } else {
                             if(clients[i].user_name === nick && clients[i].active === true && clients[i].channel === msgs.channel) {
                                 connection.sendUTF(JSON.stringify({
-                                    type:'info',
+                                    type:"info",
                                     time: (new Date()).getTime(),
                                     msg: "<i>Oopss.. Nickname is not available.",
                                     author: "[Server]",
@@ -421,7 +420,7 @@ wsServer.on('request', function(request) {
                         var obj = {username: userName, channel: channel};
                         PostThis(obj, "login", "/websocket/login_mail.php");
                         connection.sendUTF(JSON.stringify({
-                            type:'welcome', 
+                            type:"welcome", 
                             time: (new Date()).getTime(),
                             msg: "<i>------------------------------------"
                             +"<br><b>WELCOME "+userName+"!!</b><br>Type <b>/help</b> for list of command."
@@ -432,7 +431,7 @@ wsServer.on('request', function(request) {
                             url: null,
                         }));
                         var json = JSON.stringify({
-                            type:'info',
+                            type:"info",
                             time: (new Date()).getTime(),
                             msg: "<i><b>"+userName+"</b> just connected..</i>",
                             author: "[Server]",
@@ -442,11 +441,11 @@ wsServer.on('request', function(request) {
                                 clients[i].connection.sendUTF(json);
                             }
                         }
-                        console.log(get_time(time) + ' User is known as: ' + userName + ' - ' + userId);
+                        console.log(get_time(time) + " User is known as: " + userName + " - " + userId);
                     }
                 } else {
                     connection.sendUTF(JSON.stringify({
-                        type:'info',
+                        type:"info",
                         time: (new Date()).getTime(),
                         msg: "<i>You dont have a nickname yet!. <br>Please type in <b>/nick &lt;your name&gt;</b> to start sending message.</i>",
                         author: "[Server]",
@@ -458,7 +457,7 @@ wsServer.on('request', function(request) {
                 if(msgs.msg == "/quit") {
                     ping_result = " has closed the connection";
                     connection.sendUTF(JSON.stringify({
-                        type:'info',
+                        type:"info",
                         time: (new Date()).getTime(),
                         msg: "<i>You have closed the connection. Thank You."
                         +"<br>--- bye ---</i>",
@@ -469,7 +468,7 @@ wsServer.on('request', function(request) {
                 } else if(msgs.msg == "/reload") {
                     for(var i=0, len=clients.length; i<len; i++) {
                         if(userId !== clients[i].user_id && clients[i].active === true && channel === clients[i].channel) {
-                            clients[i].connection.sendUTF(JSON.stringify({type:'reload', author: userName, author_id: userId}));
+                            clients[i].connection.sendUTF(JSON.stringify({type:"reload", author: userName, author_id: userId}));
                             clients[i].seen = false;
                         }
                     }
@@ -485,7 +484,7 @@ wsServer.on('request', function(request) {
                     server.close();
                 } else if(msgs.msg == "/history" || msgs.msg == "/h") {
                     connection.sendUTF(JSON.stringify({
-                        type:'info',
+                        type:"info",
                         time: (new Date()).getTime(),
                         msg: "<i>------------------<br>Chat History</i>",
                         author: "[Server]",
@@ -495,7 +494,7 @@ wsServer.on('request', function(request) {
                 } else if(msgs.msg == "/clear_history" || msgs.msg == "/ch") {
                     clear_history(channel);
                     connection.sendUTF(JSON.stringify({
-                        type:'info',
+                        type:"info",
                         time: (new Date()).getTime(),
                         msg: "<i>Chat history has been cleared.</i>",
                         author: "[Server]",
@@ -521,7 +520,7 @@ wsServer.on('request', function(request) {
                         }
                     }
                     connection.sendUTF(JSON.stringify({
-                        type:'info',
+                        type:"info",
                         time: (new Date()).getTime(),
                         msg: "<i>------------------<br>Server Info"
                         +"<br> - Up Time : <b>"+DateDiff(get_date(), start_time)+"</b>"
@@ -541,7 +540,7 @@ wsServer.on('request', function(request) {
                     res.splice(0,2);
                     var argument = res.toString().replace(/,/g, " ");
                     var json = JSON.stringify({
-                        type:'function',
+                        type:"function",
                         time: (new Date()).getTime(),
                         function: funct,
                         arguments: argument,
@@ -559,7 +558,7 @@ wsServer.on('request', function(request) {
                     var res = msgs.msg.split(" ");
                     var url = res[1];
                     var json = JSON.stringify({
-                        type:'open',
+                        type:"open",
                         time: (new Date()).getTime(),
                         url: url,
                         author: userName,
@@ -574,7 +573,7 @@ wsServer.on('request', function(request) {
                     clients[index].seen = true;
                 } else if(msgs.msg.substring(0, 11) == "/unmute all") {
                     var json = JSON.stringify({
-                        type:'unmute',
+                        type:"unmute",
                     });
                     for(var i=0, len=clients.length; i<len; i++) {
                         if(userId !== clients[i].user_id && clients[i].active === true) {
@@ -591,7 +590,7 @@ wsServer.on('request', function(request) {
                     });
                     if (receipient == "" || receipient == " ") {
                         connection.sendUTF(JSON.stringify({
-                            type:'info',
+                            type:"info",
                             time: (new Date()).getTime(),
                             msg: "<i>Oopss.. Receipient is empty.",
                             author: "[Server]",
@@ -607,7 +606,7 @@ wsServer.on('request', function(request) {
                     }
                     if(found === false) {
                         connection.sendUTF(JSON.stringify({
-                            type:'info',
+                            type:"info",
                             time: (new Date()).getTime(),
                             msg: "<i>Oopss.. Nickname <b>"+receipient+"</b> is not here.</i>",
                             author: "[Server]",
@@ -654,7 +653,7 @@ wsServer.on('request', function(request) {
                     var myinfo = msgs.myinfo;
                     var receipient = msgs.receipient;
                     var json = JSON.stringify({
-                        type:'info',
+                        type:"info",
                         time: (new Date()).getTime(),
                         msg: "<i>------------------<br>User Info"
                         +"<br> - Nickname : "+clients[index].user_name
@@ -686,7 +685,7 @@ wsServer.on('request', function(request) {
                     var newNick = htmlEntities(res[1]);
                     if (newNick == "" || newNick == " ") {
                         connection.sendUTF(JSON.stringify({
-                            type:'info',
+                            type:"info",
                             time: (new Date()).getTime(),
                             msg: "<i>Oopss.. Nickname is empty.",
                             author: "[Server]",
@@ -698,7 +697,7 @@ wsServer.on('request', function(request) {
                     if(isadmin === true) {
                         if(!res[2]) {
                             connection.sendUTF(JSON.stringify({
-                                type:'info',
+                                type:"info",
                                 time: (new Date()).getTime(),
                                 msg: "<i>Oopss.. Nickname <b>"+newNick+"</b> is reserved for admin. Please type in <b>/p &lt;password&gt;</b>.</i>",
                                 author: "[Server]",
@@ -710,7 +709,7 @@ wsServer.on('request', function(request) {
                             var verified = check_password(newNick.toUpperCase(), res[2]);
                             if(verified === false) {
                                 connection.sendUTF(JSON.stringify({
-                                    type:'info',
+                                    type:"info",
                                     time: (new Date()).getTime(),
                                     msg: "<i>Oopss..Invalid password.</i>",
                                     author: "[Server]",
@@ -718,7 +717,7 @@ wsServer.on('request', function(request) {
                                 return;
                             } else {
                                 connection.sendUTF(JSON.stringify({
-                                    type:'info',
+                                    type:"info",
                                     time: (new Date()).getTime(),
                                     msg: "<i>Verified..</i>",
                                     author: "[Server]",
@@ -731,7 +730,7 @@ wsServer.on('request', function(request) {
                     for(var i=0, len=clients.length; i<len; i++) {
                         if(newNick === clients[i].user_name && clients[i].active === true && channel === clients[i].channel) {
                             connection.sendUTF(JSON.stringify({
-                                type:'info',
+                                type:"info",
                                 time: (new Date()).getTime(),
                                 msg: "<i>Oopss.. Nickname <b>"+newNick+"</b> is not available.</i>",
                                 author: "[Server]",
@@ -739,16 +738,16 @@ wsServer.on('request', function(request) {
                             return;
                         }
                     }
-                    console.log(get_time(time) + ' User ' + userName + ' has changed nickname to '+newNick);
+                    console.log(get_time(time) + " User " + userName + " has changed nickname to "+newNick);
                     connection.sendUTF(JSON.stringify({
-                        type:'newNick',
+                        type:"newNick",
                         time: (new Date()).getTime(),
                         msg: "<i>You are now known as <b>"+newNick+"</b></i>",
                         author: "[Server]",
                         nickname: newNick+admin_password,
                     }));
                     var json = JSON.stringify({
-                        type:'info',
+                        type:"info",
                         time: (new Date()).getTime(),
                         msg: "<i><b>"+userName+"</b> has changed nickname to <b>"+newNick+"</b></i>",
                         author: "[Server]",
@@ -765,7 +764,7 @@ wsServer.on('request', function(request) {
                     var chnl = htmlEntities(res[1]);
                     if (chnl == "" || chnl == " ") {
                         connection.sendUTF(JSON.stringify({
-                            type:'info',
+                            type:"info",
                             time: (new Date()).getTime(),
                             msg: "<i>Oopss.. Channel is empty.",
                             author: "[Server]",
@@ -774,7 +773,7 @@ wsServer.on('request', function(request) {
                     }
                     if (chnl === channel) {
                         connection.sendUTF(JSON.stringify({
-                            type:'info',
+                            type:"info",
                             time: (new Date()).getTime(),
                             msg: "<i>Oopss.. You are already in this channel.",
                             author: "[Server]",
@@ -784,7 +783,7 @@ wsServer.on('request', function(request) {
                     for(var i=0, len=clients.length; i<len; i++) {
                         if(clients[i].channel === chnl && clients[i].active === true && userName === clients[i].user_name) {
                             connection.sendUTF(JSON.stringify({
-                                type:'info',
+                                type:"info",
                                 time: (new Date()).getTime(),
                                 msg: "<i>Oopss.. Nickname <b>"+userName+"</b> is not available in that channel.<br>Please change your nickname and try again.</i>",
                                 author: "[Server]",
@@ -793,7 +792,7 @@ wsServer.on('request', function(request) {
                         }
                     }
                     var json = JSON.stringify({
-                        type:'info',
+                        type:"info",
                         time: (new Date()).getTime(),
                         msg: "<i><b>"+userName+"</b> has has left the channel..</i>",
                         author: "[Server]",
@@ -806,9 +805,9 @@ wsServer.on('request', function(request) {
                     channel = chnl;
                     clients[index].channel = chnl;
                     setup_channel(chnl);
-                    console.log(get_time(time) + ' User ' + userName + ' has changed channel to '+channel);
+                    console.log(get_time(time) + " User " + userName + " has changed channel to "+channel);
                     connection.sendUTF(JSON.stringify({
-                        type:'newChannel',
+                        type:"newChannel",
                         time: (new Date()).getTime(),
                         msg: "<i>You are now in channel <b>"+chnl+"</b></i>",
                         author: "[Server]",
@@ -826,13 +825,13 @@ wsServer.on('request', function(request) {
                         }
                     }
                     connection.sendUTF(JSON.stringify({
-                        type:'info',
+                        type:"info",
                         time: (new Date()).getTime(),
                         msg: "<i>------------------<br>Online users"+users+"<br>------------------</i>",
                         author: "[Server]",
                     }));
                     var json = JSON.stringify({
-                        type:'info',
+                        type:"info",
                         time: (new Date()).getTime(),
                         msg: "<i><b>"+userName+"</b> has has joined the channel..</i>",
                         author: "[Server]",
@@ -855,7 +854,7 @@ wsServer.on('request', function(request) {
                         }
                     }
                     connection.sendUTF(JSON.stringify({
-                        type:'info',
+                        type:"info",
                         time: (new Date()).getTime(),
                         msg: "<i>------------------<br>Online users"+users+"<br>------------------</i>",
                         author: "[Server]",
@@ -866,7 +865,7 @@ wsServer.on('request', function(request) {
                         var receipient = htmlEntities(res[1]);
                         if (receipient == "" || receipient == " ") {
                             connection.sendUTF(JSON.stringify({
-                                type:'info',
+                                type:"info",
                                 time: (new Date()).getTime(),
                                 msg: "<i>Oopss.. Receipient is empty.",
                                 author: "[Server]",
@@ -881,7 +880,7 @@ wsServer.on('request', function(request) {
                         var receipient = "all";
                     }
                     var json = JSON.stringify({
-                        type:'alert',
+                        type:"alert",
                         time: (new Date()).getTime(),
                         msg: "<i><b>"+userName+"</b> needs your attention.</i>",
                         author: userName,
@@ -909,7 +908,7 @@ wsServer.on('request', function(request) {
                         }
                         if(found === false) {
                             connection.sendUTF(JSON.stringify({
-                                type:'info',
+                                type:"info",
                                 time: (new Date()).getTime(),
                                 msg: "<i>Oopss.. Receipient <b>"+receipient+"</b> is not here.</i>",
                                 author: "[Server]",
@@ -923,7 +922,7 @@ wsServer.on('request', function(request) {
                     var the_msg = res.toString().replace(/,/g, " ");
                     if (the_msg == "" || the_msg == " ") {
                         connection.sendUTF(JSON.stringify({
-                            type:'info',
+                            type:"info",
                             time: (new Date()).getTime(),
                             msg: "<i>Oopss.. Message is empty.",
                             author: "[Server]",
@@ -931,7 +930,7 @@ wsServer.on('request', function(request) {
                         return;
                     }
                     var json = JSON.stringify({
-                        type:'message',
+                        type:"message",
                         time: (new Date()).getTime(),
                         msg: the_msg,
                         author: userName,
@@ -948,7 +947,7 @@ wsServer.on('request', function(request) {
                     }
                     if(found === false) {
                         connection.sendUTF(JSON.stringify({
-                            type:'info',
+                            type:"info",
                             time: (new Date()).getTime(),
                             msg: "<i>Oopss.. Nickname <b>"+receipient+"</b> is not here.</i>",
                             author: "[Server]",
@@ -967,14 +966,14 @@ wsServer.on('request', function(request) {
                     }
                     if(found === false) {
                         connection.sendUTF(JSON.stringify({
-                            type:'info',
+                            type:"info",
                             time: (new Date()).getTime(),
                             msg: "<i>Oopss.. username <b>"+receipient+"</b> is not here.</i>",
                             author: "[Server]",
                         }));
                     }
                 } else if(msgs.msg == "/typing") {
-                    var json = JSON.stringify({type:'typing', author: userName});
+                    var json = JSON.stringify({type:"typing", author: userName});
                     for(var i=0, len=clients.length; i<len; i++) {
                         if(userId !== clients[i].user_id && clients[i].active === true && channel === clients[i].channel) {
                             clients[i].connection.sendUTF(json);
@@ -993,9 +992,9 @@ wsServer.on('request', function(request) {
                             client_count++;
                         }
                     }
-                    var json = JSON.stringify({type:'seen', author: userName});
+                    var json = JSON.stringify({type:"seen", author: userName});
                     if(all == true && client_count.length > 2) {
-                        var json = JSON.stringify({type:'seen', author: "all"});
+                        var json = JSON.stringify({type:"seen", author: "all"});
                     }
                     for(var i=0, len=clients.length; i<len; i++) {
                         if(clients[i].user_id === receipient) {
@@ -1008,7 +1007,7 @@ wsServer.on('request', function(request) {
                     }
                     if(flood === true) {
                         connection.sendUTF(JSON.stringify({
-                            type:'info',
+                            type:"info",
                             time: (new Date()).getTime(),
                             msg: "<i>Oopss.. you are still flooding.. please flood again later</i>",
                             author: "[Server]",
@@ -1019,7 +1018,7 @@ wsServer.on('request', function(request) {
                     var n = 0;
                     var floodTimer = setInterval(function() {
                         n++;
-                        var json = JSON.stringify({type:'info', time: (new Date()).getTime(), author: userName, msg:"you have just been flooded by "+userName+" - "+n});
+                        var json = JSON.stringify({type:"info", time: (new Date()).getTime(), author: userName, msg:"you have just been flooded by "+userName+" - "+n});
                         for(var i=0, len=clients.length; i<len; i++) {
                             if(userId !== clients[i].user_id && clients[i].active === true) {
                                 clients[i].connection.sendUTF(json);
@@ -1034,14 +1033,14 @@ wsServer.on('request', function(request) {
                     flood = false;
                 } else if(msgs.msg == "/help" || msgs.msg.substring(0, 1) == "/") {
                     connection.sendUTF(JSON.stringify({
-                        type:'info',
+                        type:"info",
                         time: (new Date()).getTime(),
                         msg: "<i>------------------------------------<br>List of commands"+helps+"<br>------------------------------------</i>",
                         author: "[Server]",
                     }));
                 } else {
                     var obj = {
-                        type:'message',
+                        type:"message",
                         time: (new Date()).getTime(),
                         msg: htmlEntities(msgs.msg),
                         author: userName,
@@ -1073,7 +1072,7 @@ wsServer.on('request', function(request) {
 
     // ========================================== DISCONNECT ====================================================
 
-    connection.on('close', function(connection) {
+    connection.on("close", function(connection) {
         if(shutdown === false) {
             index = get_index(userId,appId);
             var client = apps[appId];
@@ -1081,7 +1080,7 @@ wsServer.on('request', function(request) {
             if(index !== null && userName !== null && appId !== null && client[index].active === true && quit === false) {
                 client[index].active = false;
                 if(client[index].ping === true) {
-                    console.log(get_time(time) + ' ' + client[index].user_name +' has closed connection - ping started');
+                    console.log(get_time(time) + " " + client[index].user_name +" has closed connection - ping started");
                     client[index].ping = false;
                     ping(client[index].user_id,client[index].app_id);
                 }
@@ -1114,7 +1113,7 @@ wsServer.on('request', function(request) {
                     ping_result = " has been disconnected.. - [No Respond]";
                     remove_client(idx,app);
                 } else {
-                    console.log(get_time(time) + ' ' + client[idx].user_name +' is active');
+                    console.log(get_time(time) + " " + client[idx].user_name +" is active");
                     client[idx].ping = true;
                 }
             }
@@ -1124,13 +1123,13 @@ wsServer.on('request', function(request) {
     var remove_client = function(idx,app) {
         var client = apps[app];
         var json = JSON.stringify({
-            type:'info',
+            type:"info",
             time: (new Date()).getTime(),
             msg: "<i><b>"+client[idx].user_name+"</b>"+ ping_result+"</i>",
             author: "[server]",
         });
         var chnnl = client[idx].channel;
-        console.log(get_time(time) + ' ' + client[idx].user_name + ping_result);
+        console.log(get_time(time) + " " + client[idx].user_name + ping_result);
         client.splice(idx, 1);
         for(var i=0, len=client.length; i<len; i++) {
             if(client[i].active === true && client[i].channel === chnnl) {
@@ -1155,7 +1154,7 @@ wsServer.on('request', function(request) {
                 return;
             }
         }
-        var obj = {type:'history', msg:[]};
+        var obj = {type:"history", msg:[]};
         channel_list.push({name:chnl, users:1, history:obj});
         console.log("Channel created - "+chnl);
     };
@@ -1163,8 +1162,8 @@ wsServer.on('request', function(request) {
     var into_history = function(chnl,obj) {
         for(var i=0, len=channel_list.length; i<len; i++) {
             if(channel_list[i].name === chnl) {
-                channel_list[i].history['msg'].push(obj);
-                channel_list[i].history['msg'] = channel_list[i].history['msg'].slice(-20);
+                channel_list[i].history["msg"].push(obj);
+                channel_list[i].history["msg"] = channel_list[i].history["msg"].slice(-20);
             }
         }
     };
@@ -1172,7 +1171,7 @@ wsServer.on('request', function(request) {
     var clear_history = function(chnl) {
         for(var i=0, len=channel_list.length; i<len; i++) {
             if(channel_list[i].name === chnl) {
-                channel_list[i].history['msg'] = [];
+                channel_list[i].history["msg"] = [];
             }
         }
     };
