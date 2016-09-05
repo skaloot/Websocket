@@ -168,7 +168,7 @@ var wsServer = new webSocketServer({
 
 
 set_app(apps,app_list);
-PostThis(admins, "admin", "//artinity.dtdns.net/websocket/admin.php");
+PostThis(admins, "admin", "/websocket/admin.php");
 
 
 // ========================================== CONNECT ====================================================
