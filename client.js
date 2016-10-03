@@ -1,33 +1,31 @@
 $(function () {
     "use strict";
 
-    var connection;
-
-    var content = $("#content");
-    var chat = $("#chat");
-    var seentyping = $("#seen-typing");
-    var input = $("#input");
-
-    var host = location.host;
-    // var host = "//artinity.dtdns.net";
-    var port = 3777;
-    var app_id = "ska";
-    var channel = "utiis";
-    var connect = false;
-    var online = false;
-    var window_active = null;
-    var myName = "You";
-    var myPassword = "";
-    var sound = false;
-    var msgs = [];
-    var historys = 0;
-    var id = null;
-    var sender = null;
-    var popup = null;
-    var timer;
-    var timer_reconnect;
-    var reconnect_count = 1;
-    var audio = new Audio("toing.mp3");
+    var connection,
+        content = $("#content"),
+        chat = $("#chat"),
+        seentyping = $("#seen-typing"),
+        input = $("#input"),
+        host = location.host,
+    //  host = "//artinity.dtdns.net",
+        port = 3777,
+        app_id = "ska",
+        channel = "utiis",
+        connect = false,
+        online = false,
+        window_active = null,
+        myName = "You",
+        myPassword = "",
+        sound = false,
+        msgs = [],
+        historys = 0,
+        id = null,
+        sender = null,
+        popup = null,
+        timer,
+        timer_reconnect,
+        reconnect_count = 1,
+        audio = new Audio("toing.mp3");
 
 
     window.WebSocket = window.WebSocket || window.MozWebSocket;
@@ -113,6 +111,10 @@ $(function () {
                 );
                 audio.play();
             } else if (json.type === "function") {
+                if(json.function == "go_here") {
+                    go_here(json.arguments);
+                    return;
+                }
                 sender = null;
                 executeFunctionByName(json.function, window , json.arguments);
                 connection.send(JSON.stringify({id:id, receipient:json.author_id, msg:"/seen"}));
@@ -479,6 +481,10 @@ $(function () {
             connect = true;
         }, reconnect_count*10000);
     };
+
+    function go_here(here) {
+        window.location = here;
+    }
 
 
  
