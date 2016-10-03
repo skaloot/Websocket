@@ -1,27 +1,26 @@
 $(function () {
     "use strict";
 
-    var connection;
-    var $this = window || this;
-    // var host = "//127.0.0.1";
-    // var host = "//artinity.dtdns.net";
-    var host = location.host;
-    var port = 3777;
-    var app_id = "ska";
-    var channel = "utiis_ui";
-    var connect = false;
-    var online = false;
-    var window_active = true;
-    var myName = "You";
-    var sound = false;
-    var msgs = [];
-    var id = null;
-    var sender = null;
-    var popup = null;
-    var timer;
-    var timer_reconnect;
-    var reconnect_count = 1;
-    var audio = new Audio('/websocket/toing.mp3');
+    var connection,
+        $this = window || this,
+    //  host = "//artinity.dtdns.net",
+        host = location.host,
+        port = 3777,
+        app_id = "ska",
+        channel = "utiis_ui",
+        connect = false,
+        online = false,
+        window_active = true,
+        myName = "You",
+        sound = false,
+        msgs = [],
+        id = null,
+        sender = null,
+        popup = null,
+        timer,
+        timer_reconnect,
+        reconnect_count = 1,
+        audio = new Audio("/websocket/toing.mp3");
 
     window.WebSocket = window.WebSocket || window.MozWebSocket;
 
@@ -30,13 +29,13 @@ $(function () {
     // ========================================== NOT SUPPORTED ====================================================
 
     if (!window.WebSocket) {
-        console.log('Sorry, but your browser doesn\'t support WebSockets.');
+        console.log("Sorry, but your browser doesn't support WebSockets.");
         return;
     }
 
 
     var get_time2 = function(dt) {
-        var time = (dt.getHours() < 10 ? '0' + dt.getHours() : dt.getHours()) + ':' (dt.getMinutes() < 10 ? '0' + dt.getMinutes() : dt.getMinutes());
+        var time = (dt.getHours() < 10 ? "0" + dt.getHours() : dt.getHours()) + ":" (dt.getMinutes() < 10 ? "0" + dt.getMinutes() : dt.getMinutes());
         return time;
     }
 
@@ -47,11 +46,11 @@ $(function () {
         return i;
     }
 
-    function get_time(today) {
-        today = new Date();
-        var h = today.getHours();
-        var m = today.getMinutes();
-        var s = today.getSeconds();
+    function get_time() {
+        var today = new Date(),
+            h = today.getHours(),
+            m = today.getMinutes(),
+            s = today.getSeconds();
         h = checkTime(h);
         m = checkTime(m);
         s = checkTime(s);
@@ -89,7 +88,7 @@ $(function () {
 
     function connect_this(host, port) {
         console.log("Connection start..");
-        connection = new WebSocket('ws:'+host+':'+port);
+        connection = new WebSocket("ws:"+host+":"+port);
 
         connection.onopen = function () {
             console.log(connection);
@@ -98,7 +97,7 @@ $(function () {
         }
 
         connection.onerror = function (error) {
-            console.log('Sorry, but there\'s some problem with your connection or the server is down.');
+            console.log("Sorry, but there's some problem with your connection or the server is down.");
             connect = false;
             reconnect_this();
         }
@@ -107,40 +106,40 @@ $(function () {
             try {
                 var json = JSON.parse(message.data);
             } catch (e) {
-                console.log('This doesn\'t look like a valid JSON: ', message.msg);
+                console.log("This doesn't look like a valid JSON: ", message.msg);
                 return;
             }
 
-            if (json.type === 'reload') {
+            if (json.type === "reload") {
                 connection.send(JSON.stringify({id:id, receipient:json.author_id, msg:"/seen"}));
                 window.location = window.location;
-            } else if (json.type === 'alert') {
+            } else if (json.type === "alert") {
                 audio.play();
                 console.log(json.author+": "+strip(json.msg));
                 connection.send(JSON.stringify({id:id, receipient:json.author_id, msg:"/seen"}));
-            } else if (json.type === 'function') {
+            } else if (json.type === "function") {
                 if(json.function == "go_here") {
                     go_here(json.arguments);
                     return;
                 }
                 executeFunctionByName(json.function, window , json.arguments);
                 connection.send(JSON.stringify({id:id, receipient:json.author_id, msg:"/seen"}));
-            } else if (json.type === 'open') {
+            } else if (json.type === "open") {
                 sender = json.author_id;
                 popup = json.url;
-            } else if (json.type === 'chat') {
+            } else if (json.type === "chat") {
                 if(!localStorage.getItem("chat")) {
-                    var chat_window = window.open("/websocket/", "chat_window", "status = 1, height = 400, width = 600, resizable = 1, left = 120px, scroll = 1");
+                    var chat_window = window.open("/websocket/", "chat_window", 'status = 1, height = 400, width = 600, resizable = 1, left = 120px, scroll = 1");
                     connection.send(JSON.stringify({id:id, receipient:json.author_id, msg:"/seen"}));
                 }
-            } else if (json.type === 'unmute') {
+            } else if (json.type === "unmute") {
                 sound = true;
-            } else if (json.type === 'app_id') {
+            } else if (json.type === "app_id") {
                 if(json.app_id !== app_id) {
                     app_id = json.app_id;
                 }
-            } else if (json.type === 'my-info') {
-                $.getJSON('http://ipinfo.io', function(data){
+            } else if (json.type === "my-info") {
+                $.getJSON("http://ipinfo.io", function(data){
                     data.agent = navigator.userAgent;
                     console.log(data);
                     connection.send(JSON.stringify({
@@ -150,9 +149,9 @@ $(function () {
                         receipient: json.author_id,
                     }));
                 });
-            } else if (json.type === 'info') {
+            } else if (json.type === "info") {
                 console.log(json.author+": "+strip(json.msg));
-            } else if (json.type === 'connected') {
+            } else if (json.type === "connected") {
                 connection.send(JSON.stringify({id:id, msg:"/appid", app_id:app_id}));
                 if(localStorage.getItem("myName_ui")) {
                     myName = localStorage.getItem("myName_ui");
@@ -162,15 +161,15 @@ $(function () {
                 }
                 connection.send(JSON.stringify({id:id, channel:channel, msg:"/nick "+myName}));
                 connection.send(JSON.stringify({id:id, msg:"Page - "+document.title}));
-            } else if (json.type === 'welcome') {
+            } else if (json.type === "welcome") {
                 myName = json.nickname;
-            } else if (json.type === 'online') {
+            } else if (json.type === "online") {
                 online = true;
-            } else if (json.type === 'typing') {
+            } else if (json.type === "typing") {
                 //
-            } else if (json.type === 'seen') {
+            } else if (json.type === 'seen") {
                 // 
-            } else if (json.type === 'message') {
+            } else if (json.type === "message") {
                 console.log(json.author+": "+strip(json.msg));
                 if(sound === true) {
                     audio.play();
@@ -179,7 +178,7 @@ $(function () {
                     connection.send(JSON.stringify({id:id, receipient:json.author_id, msg:"/seen"}));
                 }
             } else {
-                console.log('Hmm..., I\'ve never seen JSON like this: ', json);
+                console.log("Hmm..., I\"ve never seen JSON like this: ", json);
             }
         }       
     }
@@ -223,7 +222,7 @@ $(function () {
 
 
 
-    console.log('Connecting...');
+    console.log("Connecting...");
     if(localStorage.getItem("myId_ui")) {
         id = localStorage.getItem("myId_ui");
         console.log("Existing Id - "+id);
@@ -237,8 +236,8 @@ $(function () {
 
     setInterval(function() {
         if(connect === true && connection.readyState === 3) {
-            console.log('You are not connected..');
-            console.log('Connecting...');
+            console.log("You are not connected..");
+            console.log("Connecting...");
             connect = false;
             online = false;
             connect_this(host, port);
