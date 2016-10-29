@@ -1017,7 +1017,7 @@ wsServer.on("request", function(request) {
                         type: "seen",
                         author: userName
                     });
-                    if (all == true && client_count.length > 2) {
+                    if (client_count > 2 && all === true) {
                         var json = JSON.stringify({
                             type: "seen",
                             author: "all"
@@ -1030,6 +1030,12 @@ wsServer.on("request", function(request) {
                     }
                 } else if (msgs.msg == "/flood") {
                     if (admin !== true) {
+                        connection.sendUTF(JSON.stringify({
+                            type: "info",
+                            time: (new Date()).getTime(),
+                            msg: "<i>Oopss.. you're not authorized.</i>",
+                            author: "[Server]",
+                        }));
                         return;
                     }
                     if (flood === true) {
