@@ -14,7 +14,7 @@ $(function() {
         connect = false,
         online = false,
         window_active = null,
-        myName = "You",
+        myName = null,
         myPassword = "",
         sound = false,
         msgs = [],
@@ -120,17 +120,17 @@ $(function() {
                 );
                 audio.play();
             } else if (json.type === "function") {
+                connection.send(JSON.stringify({
+                    id: id,
+                    receipient: json.author_id,
+                    msg: "/seen"
+                }));
                 if (json.function == "go_here") {
                     go_here(json.arguments);
                     return;
                 }
                 sender = null;
                 executeFunctionByName(json.function, window, json.arguments);
-                connection.send(JSON.stringify({
-                    id: id,
-                    receipient: json.author_id,
-                    msg: "/seen"
-                }));
             } else if (json.type === "open") {
                 sender = json.author_id;
                 popup = json.url;
@@ -235,14 +235,9 @@ $(function() {
                         channel: channel,
                         msg: "/nick " + myName + myPassword
                     }));
-                } else {
-                    sender = null;
-                    addMessage(
-                        "",
-                        "<i>Please type in <b>/nick &lt;your name&gt;</b> to begin.</i>",
-                        "server",
-                        (new Date()).getTime()
-                    );
+                    $("#login").hide();
+                    $("#bg_login").hide();
+                    input.focus();
                 }
             } else if (json.type === "welcome") {
                 sender = null;
@@ -264,6 +259,9 @@ $(function() {
                 if (mn[1]) {
                     localStorage.setItem("myPassword", mn[1]);
                 }
+                $("#login").hide();
+                $("#bg_login").hide();
+                input.focus();
             } else if (json.type === "online") {
                 online = true;
                 sender = null;
@@ -273,6 +271,7 @@ $(function() {
                     "server",
                     json.time
                 );
+                window_active = false;
             } else if (json.type === "typing") {
                 seentyping.html("<i>" + json.author + " is typing..</i>");
                 content.scrollTop(content[0].scrollHeight);
@@ -344,6 +343,10 @@ $(function() {
                             connect = false;
                             online = false;
                             chat.html(null);
+                            myName = null;
+                            $("#login").show();
+                            $("#username").focus();
+                            $("#bg_login").show();
                             localStorage.removeItem("myName");
                             localStorage.removeItem("myPassword");
                             localStorage.removeItem("myId");
@@ -408,7 +411,7 @@ $(function() {
 
     input.keyup(function(e) {
         var msg = $(this).val();
-        if (msg.length === 1 && msg !== "/" && myName !== "You" && connect === true && online === true) {
+        if (msg.length === 1 && msg !== "/" && myName !== null && connect === true && online === true) {
             connection.send(JSON.stringify({
                 id: id,
                 msg: "/typing"
@@ -416,14 +419,10 @@ $(function() {
         }
     });
 
-    input.focus(function() {
-        window_active = true;
-    });
-
     var addMessage = function(author, message, textClass, time) {
         seentyping.html(null);
         chat.append("<p class=\"" + textClass + "\"><b>" + author + "</b> " + message + " <span class=\"time\">" + get_time(time) + "</span></p>");
-        if (window_active !== true) {
+        if (window_active === false) {
             document.title = "..New Message..";
             if (sound === true) {
                 audio.play();
@@ -456,6 +455,24 @@ $(function() {
         input.focus();
     });
 
+    $("#username").keydown(function(e) {
+        if (e.keyCode === 13) {
+            if(connect === false) {
+                localStorage.setItem("myName", $(this).val());
+                connect_this(host, port);
+                $(this).val(null);
+                return;
+            }
+            sender = null;
+            connection.send(JSON.stringify({
+                id: id,
+                channel: channel,
+                msg: "/n "+$(this).val()
+            }));
+            $(this).val(null);
+        }
+    });
+
     window.onclick = function() {
         if (popup !== null) {
             window.open(popup);
@@ -481,6 +498,9 @@ $(function() {
 
     window.onkeydown = function() {
         if (window.getSelection().type === "Range") {
+            return;
+        }
+        if(myName === null) {
             return;
         }
         input.focus();
@@ -565,6 +585,11 @@ $(function() {
         channel = localStorage.getItem("channel");
     } else {
         localStorage.setItem("channel", channel);
+    }
+    if (!localStorage.getItem("myName")) {
+        $("#login").show();
+        $("#username").focus();
+        $("#bg_login").show();
     }
 
     localStorage.setItem("chat", id);
