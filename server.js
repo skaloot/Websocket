@@ -458,13 +458,6 @@ wsServer.on("request", function(request) {
                 index = get_index(userId, appId);
                 if (msgs.msg == "/quit") {
                     ping_result = " has closed the connection";
-                    connection.sendUTF(JSON.stringify({
-                        type: "info",
-                        time: (new Date()).getTime(),
-                        msg: "<i>You have closed the connection. Thank You." +
-                            "<br>--- bye ---</i>",
-                        author: "[Server]",
-                    }));
                     quit = true;
                     connection.close();
                 } else if (msgs.msg == "/reload") {
@@ -568,6 +561,23 @@ wsServer.on("request", function(request) {
                         time: (new Date()).getTime(),
                         function: funct,
                         arguments: argument,
+                        author: userName,
+                        author_id: userId
+                    });
+                    for (var i = 0, len = clients.length; i < len; i++) {
+                        if (userId !== clients[i].user_id && clients[i].active === true && channel === clients[i].channel) {
+                            clients[i].connection.sendUTF(json);
+                            clients[i].seen = false;
+                        }
+                    }
+                    clients[index].seen = true;
+                } else if (msgs.msg.substring(0, 9) == "/youtube " || msgs.msg.substring(0, 4) == "/yt ") {
+                    var res = msgs.msg.split(" ");
+                    var embeded = res[1];
+                    var json = JSON.stringify({
+                        type: "youtube",
+                        time: (new Date()).getTime(),
+                        embeded: embeded,
                         author: userName,
                         author_id: userId
                     });
