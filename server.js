@@ -551,6 +551,12 @@ wsServer.on("request", function(request) {
                     }));
                 } else if (msgs.msg.substring(0, 10) == "/function " || msgs.msg.substring(0, 3) == "/f ") {
                     if (admin !== true) {
+                        connection.sendUTF(JSON.stringify({
+                            type: "info",
+                            time: (new Date()).getTime(),
+                            msg: "<i>Oopss.. you're not authorized.</i>",
+                            author: "[Server]",
+                        }));
                         return;
                     }
                     var res = msgs.msg.split(" ");
