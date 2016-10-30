@@ -225,7 +225,7 @@ $(function() {
                     msg: "/appid",
                     app_id: app_id
                 }));
-                if (localStorage.getItem("myName")) {
+                if (localStorage.getItem("myName") && localStorage.getItem("myId")) {
                     myName = localStorage.getItem("myName");
                     if (localStorage.getItem("myPassword")) {
                         myPassword = " " + localStorage.getItem("myPassword");
@@ -237,6 +237,8 @@ $(function() {
                     }));
                     $("#login").hide();
                     $("#bg_login").hide();
+                    $("#username").val(null);
+                    $("#username").removeAttr("disabled");
                     input.focus();
                 }
             } else if (json.type === "welcome") {
@@ -261,6 +263,8 @@ $(function() {
                 }
                 $("#login").hide();
                 $("#bg_login").hide();
+                $("#username").val(null);
+                $("#username").removeAttr("disabled");
                 input.focus();
             } else if (json.type === "online") {
                 online = true;
@@ -283,6 +287,14 @@ $(function() {
                 window.clearTimeout(timer);
                 seentyping.html("<i>seen by " + json.author + " " + get_time((new Date()).getTime()) + "</i>");
                 content.scrollTop(content[0].scrollHeight);
+            } else if (json.type === "youtube") {
+                sender = json.author_id;
+                addMessage(
+                    json.author + ": ",
+                    "<br><iframe width=\"560\" height=\"315\" src=\"https://www.youtube.com/embed/"+json.embeded+"?autoplay=1\" frameborder=\"0\" allowfullscreen></iframe>",
+                    "client",
+                    json.time
+                );
             } else if (json.type === "message") {
                 sender = json.author_id;
                 addMessage(
@@ -326,16 +338,22 @@ $(function() {
             } else if (msg == "/rr") {
                 window.location = window.location;
             } else {
+                sender = null;
+                var addmsg = msg;
                 if (connect === true) {
+                    if (msg.substring(0, 9) == "/youtube " || msg.substring(0, 4) == "/yt ") {
+                        var res = msg.split(" ");
+                        var embeded = res[1];
+                        addmsg = "<br><iframe width=\"560\" height=\"315\" src=\"https://www.youtube.com/embed/"+embeded+"?autoplay=1\" frameborder=\"0\" allowfullscreen></iframe>";
+                    }
                     addMessage(
                         myName + ": ",
-                        msg,
+                        addmsg,
                         "client",
                         (new Date()).getTime()
                     );
                     if (msg == "/quit" || msg == "/q") {
                         if (online === true) {
-                            sender = null;
                             connection.send(JSON.stringify({
                                 id: id,
                                 msg: "/quit"
@@ -357,13 +375,11 @@ $(function() {
                             }
                         }
                     } else if (msg == "/reload" || msg == "/r") {
-                        sender = null;
                         connection.send(JSON.stringify({
                             id: id,
                             msg: "/reload"
                         }));
                     } else if (msg == "/info" || msg == "/i") {
-                        sender = null;
                         $.getJSON("http://ipinfo.io", function(data) {
                             data.agent = navigator.userAgent;
                             console.log(data);
@@ -375,7 +391,6 @@ $(function() {
                             }));
                         });
                     } else {
-                        sender = null;
                         connection.send(JSON.stringify({
                             id: id,
                             channel: channel,
@@ -387,7 +402,7 @@ $(function() {
             msgs.push(msg);
             msgs = msgs.slice(-10);
             historys = msgs.length;
-            $(this).val("");
+            $(this).val(null);
         } else if (e.keyCode === 40) {
             if (historys < msgs.length) {
                 historys++;
@@ -458,9 +473,11 @@ $(function() {
     $("#username").keydown(function(e) {
         if (e.keyCode === 13) {
             if(connect === false) {
+                id = create_id();
+                localStorage.setItem("myId", id);
                 localStorage.setItem("myName", $(this).val());
                 connect_this(host, port);
-                $(this).val(null);
+                $(this).attr("disabled", "disabled");
                 return;
             }
             sender = null;
@@ -469,7 +486,7 @@ $(function() {
                 channel: channel,
                 msg: "/n "+$(this).val()
             }));
-            $(this).val(null);
+            $(this).attr("disabled", "disabled");
         }
     });
 
