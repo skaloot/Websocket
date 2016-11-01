@@ -7,7 +7,7 @@ $(function() {
         seentyping = $("#seen-typing"),
         input = $("#input"),
         host = location.host,
-        //  host = "//artinity.dtdns.net",
+        // host = "//artinity.dtdns.net",
         port = 3777,
         app_id = "ska",
         channel = "utiis",
@@ -462,17 +462,12 @@ $(function() {
         return S4() + S4() + "-" + S4() + "-" + S4() + "-" + S4() + "-" + S4() + S4() + S4();
     }
 
-
-    content.click(function() {
-        if (window.getSelection().type === "Range") {
-            return;
-        }
-        input.focus();
-    });
-
     $("#username").keydown(function(e) {
         if (e.keyCode === 13) {
-            if(connect === false) {
+            if(($(this).val() == "" || $(this).val() == " ")) {
+                return;
+            }
+            if(connect === false && myName === null) {
                 id = create_id();
                 localStorage.setItem("myId", id);
                 localStorage.setItem("myName", $(this).val());
@@ -491,8 +486,15 @@ $(function() {
     });
 
     window.onclick = function() {
+        if (this.getSelection().type === "Range") {
+            return;
+        }
+        if(myName === null) {
+            $("#username").focus();
+            return;
+        }
         if (popup !== null) {
-            window.open(popup);
+            this.open(popup);
             popup = null;
             connection.send(JSON.stringify({
                 id: id,
@@ -500,7 +502,7 @@ $(function() {
                 msg: "/seen"
             }));
         }
-        change_title();
+        input.focus();
         window_active = true;
     };
 
@@ -514,10 +516,7 @@ $(function() {
     };
 
     window.onkeydown = function() {
-        if (window.getSelection().type === "Range") {
-            return;
-        }
-        if(myName === null) {
+        if (this.getSelection().type === "Range" || myName === null) {
             return;
         }
         input.focus();
