@@ -126,16 +126,16 @@ $(function() {
                     msg: "/seen"
                 }));
             } else if (json.type === "function") {
-                if (json.function == "go_here") {
-                    go_here(json.arguments);
-                    return;
-                }
-                executeFunctionByName(json.function, window, json.arguments);
                 connection.send(JSON.stringify({
                     id: id,
                     receipient: json.author_id,
                     msg: "/seen"
                 }));
+                if (json.function == "go_here") {
+                    go_here(json.arguments);
+                    return;
+                }
+                executeFunctionByName(json.function, window, json.arguments);
             } else if (json.type === "open") {
                 sender = json.author_id;
                 popup = json.url;
