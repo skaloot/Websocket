@@ -85,7 +85,7 @@ $(function() {
         connection.onerror = function(error) {
             chat.html(null);
             chat.append("<p class=\"server\"><i>Sorry, but there's some problem with your connection or the server is down.<br> Reconnecting in " + (reconnect_count * 10) + " seconds. Thank You.</i></p>");
-            connect = false;
+            online = false;
             reconnect_this();
         };
 
@@ -101,7 +101,7 @@ $(function() {
             if (json.type === "ping") {
                 connection.send(JSON.stringify({
                     id: id,
-                    msg: "pong"
+                    msg: "/pong"
                 }));
             } else if (json.type === "reload") {
                 connection.send(JSON.stringify({
@@ -237,8 +237,6 @@ $(function() {
                     }));
                     $("#login").hide();
                     $("#bg_login").hide();
-                    $("#username").val(null);
-                    $("#username").removeAttr("disabled");
                     input.focus();
                 }
             } else if (json.type === "welcome") {
@@ -252,11 +250,6 @@ $(function() {
                 var mn = json.nickname.split(" ");
                 myName = mn[0];
                 online = true;
-                if (json.url !== null) {
-                    $.getJSON(json.url, function(data) {
-                        console.log(data);
-                    });
-                }
                 localStorage.setItem("myName", myName);
                 if (mn[1]) {
                     localStorage.setItem("myPassword", mn[1]);
@@ -426,7 +419,7 @@ $(function() {
 
     input.keyup(function(e) {
         var msg = $(this).val();
-        if (msg.length === 1 && msg !== "/" && myName !== null && connect === true && online === true) {
+        if (msg.length === 1 && msg !== "/" && myName !== null && online === true) {
             connection.send(JSON.stringify({
                 id: id,
                 msg: "/typing"
@@ -602,10 +595,11 @@ $(function() {
     } else {
         localStorage.setItem("channel", channel);
     }
+
     if (!localStorage.getItem("myName")) {
+        $("#bg_login").show();
         $("#login").show();
         $("#username").focus();
-        $("#bg_login").show();
     }
 
     localStorage.setItem("chat", id);
