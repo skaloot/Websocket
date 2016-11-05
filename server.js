@@ -430,7 +430,6 @@ wsServer.on("request", function(request) {
                                 "<br>Online users" + users + "<br>------------------</i>",
                             author: "[Server]",
                             nickname: userName + admin_password,
-                            url: null,
                         }));
                         var json = JSON.stringify({
                             type: "info",
