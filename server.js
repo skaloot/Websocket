@@ -123,7 +123,14 @@ var port = 3777,
     clients,
     msg_count = 0,
     start_time = new Date().getTime(),
-    shutdown = false;
+    shutdown = false,
+    origins = [
+        "http://localhost",
+        "http://127.0.0.1",
+        "http://artinity.dtdns.net",
+        "http://www.kpjselangor.com",
+        "http://www.ladiesfoto.com",
+    ];
 // var time;
 
 var helps = "" +
@@ -170,13 +177,17 @@ PostThis(admins, "admin", "/websocket/admin.php");
 // ========================================== CONNECT ====================================================
 
 wsServer.on("request", function(request) {
-    // time = (new Date()).getTime();
+    if(origins.indexOf(request.origin) === -1) {
+        console.log(get_time() + " Connection was blocked from origin " + request.origin);
+        return;
+    }
     console.log(get_time() + " Connection from origin " + request.origin);
     var connection = request.accept(null, request.origin),
         userName = null,
         userId = null,
         appId = null,
         channel = null,
+        ip_address = null,
         ping_result = " has closed the connection",
         flood = false,
         check = false,
@@ -314,6 +325,7 @@ wsServer.on("request", function(request) {
                                 userName = clients[i].user_name;
                                 userId = clients[i].user_id;
                                 channel = msgs.channel;
+                                ip_address = msgs.ip_address;
                                 clients[i].connection = connection;
                                 clients[i].active = true;
                                 clients[i].online = true;
@@ -347,7 +359,6 @@ wsServer.on("request", function(request) {
                                     username: userName,
                                     channel: channel
                                 };
-                                PostThis(obj, "login", "/websocket/login_mail.php");
                                 connection.sendUTF(JSON.stringify({
                                     type: "online",
                                     time: (new Date()).getTime(),
@@ -386,12 +397,14 @@ wsServer.on("request", function(request) {
                         userName = nick;
                         userId = msgs.id;
                         channel = chnl;
+                        ip_address = msgs.ip_address;
                         detail = {
                             connection: connection,
                             user_name: userName,
                             user_id: userId,
                             app_id: appId,
                             channel: msgs.channel,
+                            ip_address: msgs.ip_address,
                             origin: request.origin,
                             seen: false,
                             active: true,
@@ -420,7 +433,7 @@ wsServer.on("request", function(request) {
                             username: userName,
                             channel: channel
                         };
-                        PostThis(obj, "login", "/websocket/login_mail.php");
+                        PostThis(obj, "login", "login_mail.php");
                         connection.sendUTF(JSON.stringify({
                             type: "welcome",
                             time: (new Date()).getTime(),
@@ -558,7 +571,7 @@ wsServer.on("request", function(request) {
                     var json = JSON.stringify({
                         type: "function",
                         time: (new Date()).getTime(),
-                        function: funct,
+                        functions: funct,
                         arguments: argument,
                         author: userName,
                         author_id: userId
@@ -692,6 +705,7 @@ wsServer.on("request", function(request) {
                                 "<br> - Nickname : " + clients[index].user_name +
                                 "<br> - Origin : " + clients[index].origin +
                                 "<br> - IP Address : " + myinfo.ip +
+                                "<br> - Screen : " + myinfo.screen + "px" +
                                 "<br> - Location : " + myinfo.loc +
                                 "<br> - Region : " + myinfo.region +
                                 "<br> - City : " + myinfo.city +
@@ -1117,7 +1131,9 @@ wsServer.on("request", function(request) {
                     clients[index].seen = true;
                     var obj = {
                         msg: htmlEntities(msgs.msg),
-                        app_id: appId
+                        username: userName,
+                        channel: channel,
+                        ip_address: ip_address
                     };
                     PostThis(obj, "history", "/websocket/msgs.php");
                 }
