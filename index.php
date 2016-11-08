@@ -24,8 +24,9 @@
         p:hover .time { opacity: 1; }
         #reconnect { padding:7px 10px; border:1px solid #ccc; border-radius:3px; background-color:#fff; font-size:1em; }
         #bg_login { position: absolute;background-color: #eee;width:100%;height:100%;display:none; }
-        #login { position:absolute;top: 30%;text-align: center;width:100%;font-size: 1.1em;display:none; }
-        #username { padding:10px;font-size:1.1em;max-width:300px;width:100%;margin:10px 20px auto 20px; }
+        #login { position:absolute;top: 30%;text-align: center;width:100%;font-size: 1em;display:none; }
+        #username { padding:10px;font-size:1em;max-width:300px;width:100%;margin:auto; }
+        #wrapper { width:auto;margin:auto 40px auto 20px; }
         </style>
     </head>
     <body>
@@ -39,8 +40,12 @@
 
         <div id="bg_login"></div>
         <div id="login">
-            <input id="username" autofocus autocomplete="off" placeholder="Username">
+            <div id="wrapper">
+                <input id="username" autofocus autocomplete="off" placeholder="Username">
+            </div>
         </div>
+
+        <input id="ip_address" type="hidden" value="<?php echo $_SERVER["REMOTE_ADDR"]; ?>">
 
         <script src="jquery-1.11.3.min.js"></script>
         <script src="client.js"></script>
