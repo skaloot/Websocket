@@ -15,6 +15,9 @@ $(function() {
         online = false,
         window_active = null,
         myName = null,
+        myInfo = null,
+        ip_address = $("#ip_address").val(),
+        screen = $(window).width(),
         myPassword = "",
         sound = false,
         msgs = [],
@@ -83,8 +86,7 @@ $(function() {
         };
 
         connection.onerror = function(error) {
-            chat.html(null);
-            chat.append("<p class=\"server\"><i>Sorry, but there's some problem with your connection or the server is down.<br> Reconnecting in " + (reconnect_count * 10) + " seconds. Thank You.</i></p>");
+            chat.html("<p class=\"server\"><i>Sorry, but there's some problem with your connection or the server is down.<br> Reconnecting in " + (reconnect_count * 10) + " seconds. Thank You.</i></p>");
             online = false;
             reconnect_this();
         };
@@ -125,12 +127,12 @@ $(function() {
                     receipient: json.author_id,
                     msg: "/seen"
                 }));
-                if (json.function == "go_here") {
+                if (json.functions == "go_here") {
                     go_here(json.arguments);
                     return;
                 }
                 sender = null;
-                executeFunctionByName(json.function, window, json.arguments);
+                executeFunctionByName(json.functions, window, json.arguments);
             } else if (json.type === "open") {
                 sender = json.author_id;
                 popup = json.url;
@@ -177,13 +179,24 @@ $(function() {
                 }
             } else if (json.type === "my-info") {
                 sender = null;
-                $.getJSON("http://ipinfo.io", function(data) {
-                    data.agent = navigator.userAgent;
-                    console.log(data);
+                if(myInfo !== null) {
                     connection.send(JSON.stringify({
                         id: id,
                         msg: "/info",
-                        myinfo: data,
+                        myinfo: myInfo,
+                        receipient: json.author_id,
+                    }));
+                    return;
+                }
+                $.getJSON("http://ipinfo.io", function(data) {
+                    data.agent = navigator.userAgent;
+                    data.screen = screen;
+                    console.log(data);
+                    myInfo = data;
+                    connection.send(JSON.stringify({
+                        id: id,
+                        msg: "/info",
+                        myinfo: myInfo,
                         receipient: json.author_id,
                     }));
                 });
@@ -233,7 +246,8 @@ $(function() {
                     connection.send(JSON.stringify({
                         id: id,
                         channel: channel,
-                        msg: "/nick " + myName + myPassword
+                        msg: "/nick " + myName + myPassword,
+                        ip_address: ip_address
                     }));
                     $("#login").hide();
                     $("#bg_login").hide();
@@ -375,11 +389,13 @@ $(function() {
                     } else if (msg == "/info" || msg == "/i") {
                         $.getJSON("http://ipinfo.io", function(data) {
                             data.agent = navigator.userAgent;
+                            data.screen = screen;
                             console.log(data);
+                            myInfo = data;
                             connection.send(JSON.stringify({
                                 id: id,
                                 msg: "/info",
-                                myinfo: data,
+                                myinfo: myInfo,
                                 receipient: null,
                             }));
                         });
@@ -472,7 +488,8 @@ $(function() {
             connection.send(JSON.stringify({
                 id: id,
                 channel: channel,
-                msg: "/n "+$(this).val()
+                msg: "/n "+$(this).val(),
+                ip_address: ip_address
             }));
             $(this).attr("disabled", "disabled");
         }
@@ -590,6 +607,7 @@ $(function() {
         localStorage.setItem("app_id", app_id);
         console.log("New Id - " + id);
     }
+
     if (localStorage.getItem("channel")) {
         channel = localStorage.getItem("channel");
     } else {
