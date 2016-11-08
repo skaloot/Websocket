@@ -1,5 +1,5 @@
 $(function() {
-    "use strict";
+    "use strict"; 
 
     var connection,
         $this = window || this,
@@ -11,8 +11,10 @@ $(function() {
         connect = false,
         online = false,
         window_active = true,
-        myName = "You",
+        myName = null,
+        myInfo = null,
         sound = false,
+        ip_address = null,
         msgs = [],
         id = null,
         sender = null,
@@ -20,6 +22,7 @@ $(function() {
         timer,
         timer_reconnect,
         reconnect_count = 1,
+        screen = $(window).width(),
         audio = new Audio("/websocket/toing.mp3");
 
     window.WebSocket = window.WebSocket || window.MozWebSocket;
@@ -97,7 +100,7 @@ $(function() {
         }
 
         connection.onerror = function(error) {
-            console.log("Sorry, but there's some problem with your connection or the server is down.");
+            console.error("Sorry, but there's some problem with your connection or the server is down.");
             connect = false;
             reconnect_this();
         }
@@ -131,11 +134,11 @@ $(function() {
                     receipient: json.author_id,
                     msg: "/seen"
                 }));
-                if (json.function == "go_here") {
+                if (json.functions == "go_here") {
                     go_here(json.arguments);
                     return;
                 }
-                executeFunctionByName(json.function, window, json.arguments);
+                executeFunctionByName(json.functions, window, json.arguments);
             } else if (json.type === "open") {
                 sender = json.author_id;
                 popup = json.url;
@@ -155,13 +158,24 @@ $(function() {
                     app_id = json.app_id;
                 }
             } else if (json.type === "my-info") {
-                $.getJSON("http://ipinfo.io", function(data) {
-                    data.agent = navigator.userAgent;
-                    console.log(data);
+                if(myInfo !== null) {
                     connection.send(JSON.stringify({
                         id: id,
                         msg: "/info",
-                        myinfo: data,
+                        myinfo: myInfo,
+                        receipient: json.author_id,
+                    }));
+                    return;
+                }
+                $.getJSON("http://ipinfo.io", function(data) {
+                    data.agent = navigator.userAgent;
+                    data.screen = screen;
+                    console.log(data);
+                    myInfo = data;
+                    connection.send(JSON.stringify({
+                        id: id,
+                        msg: "/info",
+                        myinfo: myInfo,
                         receipient: json.author_id,
                     }));
                 });
@@ -182,7 +196,8 @@ $(function() {
                 connection.send(JSON.stringify({
                     id: id,
                     channel: channel,
-                    msg: "/nick " + myName
+                    msg: "/nick " + myName,
+                    ip_address: ip_address
                 }));
                 connection.send(JSON.stringify({
                     id: id,
@@ -225,6 +240,16 @@ $(function() {
         window.location = here;
     }
 
+    $("#chat_icon").click(function() {
+        if (!localStorage.getItem("chat")) {
+            localStorage.setItem("myName", myName);
+            if(localStorage.getItem("myPassword_ui")) {
+                localStorage.setItem("myPassword", localStorage.getItem("myPassword_ui"));
+            }
+            var chat_window = window.open("/websocket/", "chat_window", "status = 1, height = 400, width = 600, resizable = 1, left = 120px, scroll = 1");
+        }
+    });
+
     window.onclick = function() {
         if (popup !== null) {
             window.open(popup);
@@ -266,6 +291,15 @@ $(function() {
         console.log("New Id - " + id);
     }
 
+    if (localStorage.getItem("ip_address")) {
+        ip_address = localStorage.getItem("ip_address");
+    } else {
+        $.get("http://kpjselangor.com/ip", function(data) {
+            ip_address = data;
+            localStorage.setItem("ip_address", ip_address);
+        });
+    }
+
     connect_this(host, port);
 
     setInterval(function() {
@@ -284,5 +318,18 @@ $(function() {
             connect = true;
         }, reconnect_count * 10000);
     }
+
+    window.setTimeout(function(){
+        if(connect === true) {
+            connection.send(JSON.stringify({
+                id: id,
+                msg: "/quit"
+            }));
+            connection = null;
+            connect = false;
+            online = false;
+            console.log("Disconnected...");
+        }
+    }, 1800000);
 
 });
