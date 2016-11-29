@@ -508,7 +508,7 @@ wsServer.on("request", function(request) {
                             }
                         }
                         if (chnl_list_user > 0) {
-                            chnl_list += channel_list[i].name + " (" + chnl_list_user + "), ";
+                            chnl_list += "<b>"+channel_list[i].name + "</b> (" + chnl_list_user + ") | ";
                         } else {
                             del_list.push(i);
                         }
@@ -519,13 +519,13 @@ wsServer.on("request", function(request) {
                     connection.sendUTF(JSON.stringify({
                         type: "info",
                         time: (new Date()).getTime(),
-                        msg: "<i>------------------<br>Server Info" +
+                        msg: "<i>----------------------------------------------------------------<br>Server Info" +
                             "<br> - Up Time : <b>" + DateDiff((new Date()).getTime(), start_time) + "</b>" +
                             "<br> - Total Users : <b>" + apps.ska.total_user + "</b>" +
                             "<br> - Total Message : <b>" + msg_count + "</b>" +
-                            "<br> - Channel List : <b>" + chnl_list + "</b>" +
+                            "<br> - Channel List : " + chnl_list +
                             "<br> - Current Channel : <b>" + channel + "</b>" +
-                            "<br>------------------</i>",
+                            "<br>----------------------------------------------------------------</i>",
                         author: "[Server]",
                     }));
                 } else if (msgs.msg.substring(0, 10) == "/function " || msgs.msg.substring(0, 3) == "/f ") {
