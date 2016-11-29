@@ -117,6 +117,7 @@ var port = 3777,
     querystring = require("querystring"),
     fs = require("fs"),
     app_list = ["ska"],
+    password_server = "isu2uDIABL0W67B",
     admins = [],
     apps = [],
     channel_list = [],
@@ -131,7 +132,6 @@ var port = 3777,
         "http://www.kpjselangor.com",
         "http://www.ladiesfoto.com",
     ];
-// var time;
 
 var helps = "" +
     "<br><b>/nick</b> - to set or change nickname" +
@@ -201,14 +201,13 @@ wsServer.on("request", function(request) {
     connection.sendUTF(JSON.stringify({
         type: "connected",
         time: (new Date()).getTime(),
-        msg: "<i>Connected...",
+        msg: "<i>Connected...</i>",
         author: "[Server]",
     }));
 
     // ========================================== GET MSG ====================================================
 
     connection.on("message", function(message) {
-        // time = (new Date()).getTime();
         if (message.type === "utf8") {
             var msgs = message.utf8Data;
             try {
@@ -241,7 +240,7 @@ wsServer.on("request", function(request) {
                         connection.sendUTF(JSON.stringify({
                             type: "appid_invalid",
                             time: (new Date()).getTime(),
-                            msg: "<i>Your App ID is invalid!. Please reload the page.",
+                            msg: "<i>Your App ID is invalid!..",
                             author: "[Server]",
                         }));
                         return;
@@ -344,28 +343,13 @@ wsServer.on("request", function(request) {
                                     }
                                 }
                                 clients[i].msg = [];
-                                var users = "";
-                                var n = 1;
-                                for (var x = 0, len2 = clients.length; x < len2; x++) {
-                                    if (clients[x].online === true && channel === clients[x].channel) {
-                                        if (clients[x].user_id === userId) {
-                                            users += "<br>" + (n++) + ". <b>" + clients[x].user_name + "</b>";
-                                        } else {
-                                            users += "<br>" + (n++) + ". " + clients[x].user_name;
-                                        }
-                                    }
-                                }
-                                var obj = {
-                                    username: userName,
-                                    channel: channel
-                                };
                                 connection.sendUTF(JSON.stringify({
                                     type: "online",
                                     time: (new Date()).getTime(),
-                                    msg: "<i>------------------<br>Online users" + users + "<br>------------------</i>",
                                     author: "[Server]",
                                     nickname: userName + admin_password,
                                 }));
+                                online_users(channel, clients[i].app_id);
                                 break;
                             } else {
                                 connection.sendUTF(JSON.stringify({
@@ -416,31 +400,18 @@ wsServer.on("request", function(request) {
                         clients.push(detail);
                         index = clients.length - 1;
                         clients.total_user++;
-
-                        var users = "";
-                        var n = 1;
-                        for (var i = 0, len = clients.length; i < len; i++) {
-                            if (clients[i].online === true && channel === clients[i].channel) {
-                                if (clients[i].user_id === userId) {
-                                    users += "<br>" + (n++) + ". <b>" + clients[i].user_name + "</b>";
-                                } else {
-                                    users += "<br>" + (n++) + ". " + clients[i].user_name;
-                                }
-
-                            }
-                        }
+                        
                         var obj = {
                             username: userName,
                             channel: channel
                         };
-                        PostThis(obj, "login", "login_mail.php");
+                        PostThis(obj, "login", "/websocket/login_mail.php");
                         connection.sendUTF(JSON.stringify({
                             type: "welcome",
                             time: (new Date()).getTime(),
                             msg: "<i>------------------------------------" +
                                 "<br><b>WELCOME " + userName + "!!</b><br>Type <b>/help</b> for list of command." +
-                                "<br>------------------------------------</i>" +
-                                "<br>Online users" + users + "<br>------------------</i>",
+                                "<br>------------------------------------</i>",
                             author: "[Server]",
                             nickname: userName + admin_password,
                         }));
@@ -455,6 +426,7 @@ wsServer.on("request", function(request) {
                                 clients[i].connection.sendUTF(json);
                             }
                         }
+                        online_users(channel, appId);
                         console.log(get_time() + " User is known as: " + userName + " - " + userId);
                     }
                 } else {
@@ -526,11 +498,8 @@ wsServer.on("request", function(request) {
                         }));
                         return;
                     }
-                    var Apps = "";
-                    for (var i = 0, len = app_list.length; i < len; i++) {
-                        Apps += app_list[i] + ", ";
-                    }
                     var chnl_list = "";
+                    var del_list = [];
                     for (var i = 0, len = channel_list.length; i < len; i++) {
                         var chnl_list_user = 0;
                         for (var n = 0, len2 = clients.length; n < len2; n++) {
@@ -540,7 +509,12 @@ wsServer.on("request", function(request) {
                         }
                         if (chnl_list_user > 0) {
                             chnl_list += channel_list[i].name + " (" + chnl_list_user + "), ";
+                        } else {
+                            del_list.push(i);
                         }
+                    }
+                    for (var i = 0, len = del_list.length; i < len; i++) {
+                        channel_list.splice(del_list[i], 1);
                     }
                     connection.sendUTF(JSON.stringify({
                         type: "info",
@@ -849,6 +823,7 @@ wsServer.on("request", function(request) {
                             clients[i].connection.sendUTF(json);
                         }
                     }
+                    var old_channel = channel;
                     channel = chnl;
                     clients[index].channel = chnl;
                     setup_channel(chnl);
@@ -880,7 +855,7 @@ wsServer.on("request", function(request) {
                     var json = JSON.stringify({
                         type: "info",
                         time: (new Date()).getTime(),
-                        msg: "<i><b>" + userName + "</b> has has joined the channel..</i>",
+                        msg: "<i><b>" + userName + "</b> has joined the channel..</i>",
                         author: "[Server]",
                     });
                     for (var i = 0, len = clients.length; i < len; i++) {
@@ -888,6 +863,8 @@ wsServer.on("request", function(request) {
                             clients[i].connection.sendUTF(json);
                         }
                     }
+                    online_users(old_channel, appId);
+                    online_users(channel, appId);
                 } else if (msgs.msg == "/users" || msgs.msg == "/u") {
                     var users = "";
                     var n = 1;
@@ -1205,6 +1182,28 @@ wsServer.on("request", function(request) {
         client.splice(idx, 1);
         for (var i = 0, len = client.length; i < len; i++) {
             if (client[i].active === true && client[i].channel === chnnl) {
+                client[i].connection.sendUTF(json);
+            }
+        }
+        online_users(chnnl, app);
+    };
+
+    var online_users = function(channel,app) {
+        var client = apps[app];
+        var users = [];
+        for (var i = 0, len = client.length; i < len; i++) {
+            if (client[i].active === true && client[i].channel === channel) {
+                users.push(client[i].user_name);
+            }
+        }
+        var json = JSON.stringify({
+            type: "users",
+            time: (new Date()).getTime(),
+            users: users,
+            author: "[Server]",
+        });
+        for (var i = 0, len = client.length; i < len; i++) {
+            if (client[i].active === true && client[i].channel === channel) {
                 client[i].connection.sendUTF(json);
             }
         }
