@@ -121,6 +121,7 @@ var port = 3777,
     admins = [],
     apps = [],
     channel_list = [],
+    blocked_list = [],
     clients,
     msg_count = 0,
     start_time = new Date().getTime(),
@@ -179,6 +180,9 @@ PostThis(admins, "admin", "/websocket/admin.php");
 wsServer.on("request", function(request) {
     if(origins.indexOf(request.origin) === -1) {
         console.log(get_time() + " Connection was blocked from origin " + request.origin);
+        if(blocked_list.indexOf(request.origin) === -1) {
+            blocked_list.push(request.origin);
+        }
         return;
     }
     console.log(get_time() + " Connection from origin " + request.origin);
@@ -499,7 +503,6 @@ wsServer.on("request", function(request) {
                         return;
                     }
                     var chnl_list = "";
-                    var del_list = [];
                     for (var i = 0, len = channel_list.length; i < len; i++) {
                         var chnl_list_user = 0;
                         for (var n = 0, len2 = clients.length; n < len2; n++) {
@@ -508,13 +511,16 @@ wsServer.on("request", function(request) {
                             }
                         }
                         if (chnl_list_user > 0) {
-                            chnl_list += "<b>"+channel_list[i].name + "</b> (" + chnl_list_user + ") | ";
-                        } else {
-                            del_list.push(i);
+                            chnl_list += "<b>"+channel_list[i].name + "</b> (<b>" + chnl_list_user + "</b>), ";
                         }
                     }
-                    for (var i = 0, len = del_list.length; i < len; i++) {
-                        channel_list.splice(del_list[i], 1);
+                    var blocked = "";
+                    if(blocked_list.length > 0) {
+                        blocked += "<br> - Blocked Orogin : <b>";
+                        for (var i = 0, len = blocked_list.length; i < len; i++) {
+                            blocked += blocked_list[i] + ", ";
+                        }
+                        blocked += "</b>";
                     }
                     connection.sendUTF(JSON.stringify({
                         type: "info",
@@ -524,7 +530,8 @@ wsServer.on("request", function(request) {
                             "<br> - Total Users : <b>" + apps.ska.total_user + "</b>" +
                             "<br> - Total Message : <b>" + msg_count + "</b>" +
                             "<br> - Channel List : " + chnl_list +
-                            "<br> - Current Channel : <b>" + channel + "</b>" +
+                            "<br> - Current Channel : <b>" + channel + "</b>" + 
+                            blocked +
                             "<br>----------------------------------------------------------------</i>",
                         author: "[Server]",
                     }));
@@ -659,15 +666,25 @@ wsServer.on("request", function(request) {
                             }
                         }
                         clients[index].seen = true;
-                    } else {
-                        for (var i = 0, len = clients.length; i < len; i++) {
-                            if (clients[i].user_name == receipient && clients[i].active === true && channel === clients[i].channel) {
-                                clients[i].connection.sendUTF(json);
-                                clients[i].seen = false;
-                                break;
-                            }
+                        return;
+                    }
+                    var found = false;
+                    for (var i = 0, len = clients.length; i < len; i++) {
+                        if (clients[i].user_name == receipient && clients[i].active === true && channel === clients[i].channel) {
+                            clients[i].connection.sendUTF(json);
+                            clients[i].seen = false;
+                            found = true;
+                            break;
                         }
-                        clients[index].seen = true;
+                    }
+                    clients[index].seen = true;
+                    if(found === false) {
+                        connection.sendUTF(JSON.stringify({
+                            type: "info",
+                            time: (new Date()).getTime(),
+                            msg: "<i>Oopss.. Nickname <b>" + receipient + "</b> is not here.</i>",
+                            author: "[Server]",
+                        }));
                     }
                 } else if (msgs.msg == "/info") {
                     var myinfo = msgs.myinfo,
@@ -780,6 +797,7 @@ wsServer.on("request", function(request) {
                     }
                     userName = newNick;
                     clients[index].user_name = userName;
+                    online_users(channel, appId);
                 } else if (msgs.msg.substring(0, 9) == "/channel " || msgs.msg.substring(0, 4) == "/ch ") {
                     var res = msgs.msg.split(" ");
                     var chnl = htmlEntities(res[1]);
