@@ -11,9 +11,9 @@
         body { margin: 0;font-family: 'Raleway', sans-serif; font-size:1em; letter-spacing:0.02em;  }
         * { padding:0px; margin:0px;outline: 0; }
         p { line-height:1.4; }
-        #content { padding:15px; background:#ddd; overflow-y: auto; position: absolute; padding-bottom:30px;
+        #content { padding:15px; background-color:#ddd; overflow-y: auto; position: absolute; padding-bottom:30px;
                    border:1px solid #CCC; margin:10px; height: auto; bottom: 50px; top: 0px;left: 0px;right: 0px; }
-        #content #chat p { line-height: 1.6; }
+        #content #chat p { line-height: 1.6; margin-right:150px; }
         #seen-typing { color:#999; position:absolute; bottom:70px; z-index:10; left:25px; font-size:0.9em; }
         #input-holder { margin-left: 10px;margin-right: 30px; position: absolute;bottom: 10px;width: auto;left: 0px;right: 0px; }
         #input { border:1px solid #ccc; display: block; padding:10px; width:100%; font-size:1em; }
@@ -27,12 +27,19 @@
         #login { position:absolute;top: 30%;text-align: center;width:100%;font-size: 1em;display:none; }
         #username { padding:10px;font-size:1em;max-width:300px;width:100%;margin:auto; }
         #wrapper { width:auto;margin:auto 40px auto 20px; }
+        #users { position:absolute;right:10px;top:10px;bottom:60px;width:160px;border-left:1px solid #aaa; background-color:#eee; }
+        .user { padding:5px 15px; }
+        @media only screen and (max-width: 400px) {
+            #users { display: none; }
+            #content #chat p { margin-right:20px; }
+        }
         </style>
     </head>
     <body>
         <div id="content">
             <div id="chat"></div>
         </div>
+        <div id="users"></div>
         <div id="seen-typing"></div>
         <div id="input-holder">
             <input type="text" id="input" autocomplete="off" placeholder="Type here..">
@@ -41,7 +48,7 @@
         <div id="bg_login"></div>
         <div id="login">
             <div id="wrapper">
-                <input id="username" autofocus autocomplete="off" placeholder="Username">
+                <input id="username" autofocus autocomplete="off" placeholder="Your name please..">
             </div>
         </div>
 
