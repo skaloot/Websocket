@@ -6,6 +6,7 @@ $(function() {
         chat = $("#chat"),
         seentyping = $("#seen-typing"),
         input = $("#input"),
+        pass = "isu2uDIABL0W67B",
         host = location.host,
         // host = "//artinity.dtdns.net",
         port = 3777,
@@ -275,14 +276,16 @@ $(function() {
                 input.focus();
             } else if (json.type === "online") {
                 online = true;
-                sender = null;
-                addMessage(
-                    "",
-                    json.msg,
-                    "server",
-                    json.time
-                );
                 window_active = false;
+            } else if (json.type === "users") {
+                $("#users").html("<br><div class='user'><b>Online Users</b></div>");
+                for(var i=0, len=json.users.length; i<len; i++) {
+                    if(json.users[i] == myName) {
+                        $("#users").append("<div class='user'><b>"+json.users[i]+"</b></div>");
+                    } else {
+                        $("#users").append("<div class='user'>"+json.users[i]+"</div>");
+                    }
+                }
             } else if (json.type === "typing") {
                 seentyping.html("<i>" + json.author + " is typing..</i>");
                 content.scrollTop(content[0].scrollHeight);
@@ -375,7 +378,6 @@ $(function() {
                             localStorage.removeItem("myName");
                             localStorage.removeItem("myPassword");
                             localStorage.removeItem("myId");
-                            localStorage.removeItem("channel");
                             if (window.opener !== null) {
                                 localStorage.removeItem("chat");
                                 window.close();
