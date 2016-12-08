@@ -15,25 +15,19 @@ if(isset($_GET["username"])) {
 	mail("skaloot@gmail.com", "WebChat Login Notification - ".$username, $msg, "From: WebChat<no-reply@ladiesfoto.com>");
 	mail("ladiesfoto@gmail.com", "WebChat Login Notification - ".$username, $msg, "From: WebChat<no-reply@ladiesfoto.com>");
 	mail("ladiesfotostudio@gmail.com", "WebChat Login Notification - ".$username, $msg, "From: WebChat<no-reply@ladiesfoto.com>");
-
-	echo "Mail sent..";
 }
 
 
-<<<<<<< HEAD
-if(isset($_POST["username"]) && isset($_POST["app_id"])) {
+
+if(isset($_POST["username"]) && isset($_POST["channel"])) {
 	$username = $_POST['username'];
-	if($_POST["app_id"] === "ladiesfotochat") {
+	if($_POST["channel"] === "ladiesfoto") {
 		if($username == "skaloot" || $username == "ska" || $username == "hudajamal" || $username == "admin" || $username == "huda") {
 			exit;
 		}
-		echo file_get_contents("http://www.ladiesfoto.com/websocket/login_mail.php?username=".$username);
+		file_get_contents("http://www.ladiesfoto.com/websocket/login_mail.php?username=".$username);
 	}
 }
-=======
-if(isset($_POST["username"])) {
-	$username = $_POST['username'];
-	// echo file_get_contents("//ladiesfoto.com/websocket/login_mail?username=".$username);
-	echo $username;
-}
->>>>>>> origin/master
+
+
+
