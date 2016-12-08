@@ -11,9 +11,15 @@ $db->connect();
 
 if(isset($_POST["msg"])) {
 	$msg = $_POST["msg"];
-	$app_id = $_POST["app_id"];
-	$db->insert("message", ["msg"=>$msg, "app_id"=>$app_id]);
-	// echo "OK";
+	$username = $_POST["username"];
+	$channel = $_POST["channel"];
+	$ip_address = $_POST["ip_address"];
+	$db->insert("message", [
+		"msg"=>$msg,
+		"username"=>$username,
+		"channel"=>$channel,
+		"ip_address"=>$ip_address
+	]);
 }
 
 
