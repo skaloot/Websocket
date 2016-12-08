@@ -144,12 +144,7 @@ $(function() {
                 popup = json.url;
             } else if (json.type === "chat") {
                 if (!localStorage.getItem("chat")) {
-                    var chat_window = window.open("/websocket/", "chat_window", "status = 1, height = 400, width = 600, resizable = 1, left = 120px, scroll = 1");
-                    connection.send(JSON.stringify({
-                        id: id,
-                        receipient: json.author_id,
-                        msg: "/seen"
-                    }));
+                    $("#chat_icon").trigger("click");
                 }
             } else if (json.type === "unmute") {
                 sound = true;
@@ -187,6 +182,10 @@ $(function() {
                     msg: "/appid",
                     app_id: app_id
                 }));
+                var pw = "";
+                if (localStorage.getItem("myPassword_ui")) {
+                    pw = " "+localStorage.getItem("myPassword_ui");
+                }
                 if (localStorage.getItem("myName_ui")) {
                     myName = localStorage.getItem("myName_ui");
                 } else {
@@ -196,7 +195,7 @@ $(function() {
                 connection.send(JSON.stringify({
                     id: id,
                     channel: channel,
-                    msg: "/nick " + myName,
+                    msg: "/nick " + myName+pw,
                     ip_address: ip_address
                 }));
                 connection.send(JSON.stringify({
@@ -211,6 +210,8 @@ $(function() {
                 //
             } else if (json.type === "seen") {
                 // 
+            } else if (json.type === "users") {
+                //
             } else if (json.type === "message") {
                 console.log(json.author + ": " + strip(json.msg));
                 if (sound === true) {
@@ -242,11 +243,13 @@ $(function() {
 
     $("#chat_icon").click(function() {
         if (!localStorage.getItem("chat")) {
-            localStorage.setItem("myName", myName);
-            if(localStorage.getItem("myPassword_ui")) {
-                localStorage.setItem("myPassword", localStorage.getItem("myPassword_ui"));
+            if(channel == "utiis_ui") {
+                localStorage.setItem("myName", myName);
+                if(localStorage.getItem("myPassword_ui")) {
+                    localStorage.setItem("myPassword", localStorage.getItem("myPassword_ui"));
+                }
             }
-            var chat_window = window.open("/websocket/", "chat_window", "status = 1, height = 400, width = 600, resizable = 1, left = 120px, scroll = 1");
+            var chat_window = window.open("/websocket/", "chat_window", "status = 1, height = 400, width = 800, resizable = 1, left = 120px, scroll = 1");
         }
     });
 
@@ -320,7 +323,7 @@ $(function() {
     }
 
     window.setTimeout(function(){
-        if(connect === true) {
+        if(connect === true && connection.readyState === 1) {
             connection.send(JSON.stringify({
                 id: id,
                 msg: "/quit"
