@@ -15,6 +15,7 @@
                    border:1px solid #CCC; margin:10px; height: auto; bottom: 50px; top: 0px;left: 0px;right: 0px; }
         #content #chat p { line-height: 1.6; margin-right:150px; }
         #seen-typing { color:#999; position:absolute; bottom:70px; z-index:10; left:25px; font-size:0.9em; }
+        #new-message { color:#eee; background-color: #333; padding: 5px; cursor:pointer; position:absolute; bottom:70px; z-index:10; left:25px; font-size:0.8em; border-radius:3px; display:none; margin:auto 40%; }
         #input-holder { margin-left: 10px;margin-right: 30px; position: absolute;bottom: 10px;width: auto;left: 0px;right: 0px; }
         #input { border:1px solid #ccc; display: block; padding:10px; width:100%; font-size:1em; }
         #status { width:200px; display:block; float:left; margin-top:15px; }
@@ -41,6 +42,7 @@
         </div>
         <div id="users"></div>
         <div id="seen-typing"></div>
+        <div id="new-message">New Message</div>
         <div id="input-holder">
             <input type="text" id="input" autocomplete="off" placeholder="Type here..">
         </div>
