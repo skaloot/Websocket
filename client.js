@@ -1,4 +1,4 @@
-$(function() {
+(function(window) {
     "use strict";
 
     var connection,
@@ -6,11 +6,10 @@ $(function() {
         chat = $("#chat"),
         seentyping = $("#seen-typing"),
         input = $("#input"),
-        pass = "isu2uDIABL0W67B",
         host = location.host,
         // host = "//artinity.dtdns.net",
         port = 3777,
-        app_id = "ska",
+        app_id = "utiis",
         channel = "utiis",
         connect = false,
         online = false,
@@ -29,6 +28,8 @@ $(function() {
         timer,
         timer_reconnect,
         reconnect_count = 1,
+        pending_seen = false,
+        blocked = false,
         audio = new Audio("toing.mp3");
 
 
@@ -113,6 +114,9 @@ $(function() {
                     msg: "/seen"
                 }));
                 window.location = window.location;
+            } else if (json.type === "blocked") {
+                blocked = true;
+                connect = false;
             } else if (json.type === "alert") {
                 sender = json.author_id;
                 addMessage(
@@ -167,7 +171,9 @@ $(function() {
                     json.time
                 );
                 channel = json.channel;
+                app_id = json.channel;
                 localStorage.setItem("channel", channel);
+                localStorage.setItem("app_id", app_id);
             } else if (json.type === "history") {
                 sender = null;
                 for (var i = 0; i < json.msg.length; i++) {
@@ -227,6 +233,10 @@ $(function() {
                     app_id = json.app_id;
                     addMessage("", "<i>Your AppId has been changed to <b>" + json.app_id + "</b></i>", "server", (new Date()).getTime());
                 }
+                channel = json.app_id;
+                app_id = json.app_id;
+                localStorage.setItem("channel", json.app_id);
+                localStorage.setItem("app_id", json.app_id);
             } else if (json.type === "connected") {
                 sender = null;
                 addMessage(
@@ -237,7 +247,8 @@ $(function() {
                 );
                 connection.send(JSON.stringify({
                     msg: "/appid",
-                    app_id: app_id
+                    app_id: app_id,
+                    id: id
                 }));
                 if (localStorage.getItem("myName") && localStorage.getItem("myId")) {
                     myName = localStorage.getItem("myName");
@@ -287,16 +298,26 @@ $(function() {
                     }
                 }
             } else if (json.type === "typing") {
-                seentyping.html("<i>" + json.author + " is typing..</i>");
-                content.scrollTop(content[0].scrollHeight);
+                var h = chat.height();
+                if(h < content.height()) {
+                    seentyping.html("<i>" + json.author + " is typing..</i>");
+                } else if(content.scrollTop()+content.height() == h) {
+                    seentyping.html("<i>" + json.author + " is typing..</i>");
+                    content.scrollTop(chat.height());
+                }
                 window.clearTimeout(timer);
                 timer = window.setTimeout(function() {
                     seentyping.html(null);
                 }, 5000);
             } else if (json.type === "seen") {
                 window.clearTimeout(timer);
-                seentyping.html("<i>seen by " + json.author + " " + get_time((new Date()).getTime()) + "</i>");
-                content.scrollTop(content[0].scrollHeight);
+                var h = chat.height();
+                if(h < content.height()) {
+                    seentyping.html("<i>seen by " + json.author + " " + get_time((new Date()).getTime()) + "</i>");
+                } else if(content.scrollTop()+content.height() == h) {
+                    seentyping.html("<i>seen by " + json.author + " " + get_time((new Date()).getTime()) + "</i>");
+                    content.scrollTop(chat.height());
+                }
             } else if (json.type === "youtube") {
                 sender = json.author_id;
                 addMessage(
@@ -329,7 +350,7 @@ $(function() {
             }
             var d = new Date();
             if (msg == "/connect") {
-                if (connect === false && connection.readyState !== 1) {
+                if (connect === false && connection.readyState !== 1 && blocked !== true) {
                     sender = myName;
                     var time = (new Date()).getTime();
                     chat.append("<p class=\"server\"><i>Connecting...</i><span class=\"time\">" + get_time(time) + "</span></p>");
@@ -348,7 +369,7 @@ $(function() {
             } else if (msg == "/rr") {
                 window.location = window.location;
             } else {
-                sender = null;
+                sender = "me";
                 var addmsg = msg;
                 if (connect === true) {
                     if (msg.substring(0, 9) == "/youtube " || msg.substring(0, 4) == "/yt ") {
@@ -378,6 +399,8 @@ $(function() {
                             localStorage.removeItem("myName");
                             localStorage.removeItem("myPassword");
                             localStorage.removeItem("myId");
+                            localStorage.removeItem("channel");
+                            localStorage.removeItem("app_id");
                             if (window.opener !== null) {
                                 localStorage.removeItem("chat");
                                 window.close();
@@ -447,23 +470,58 @@ $(function() {
 
     var addMessage = function(author, message, textClass, time) {
         seentyping.html(null);
+        var h = chat.height();
         chat.append("<p class=\"" + textClass + "\"><b>" + author + "</b> " + message + " <span class=\"time\">" + get_time(time) + "</span></p>");
+        scroll(h);
         if (window_active === false) {
             document.title = "..New Message..";
             if (sound === true) {
                 audio.play();
             }
-        } else if (window_active === true) {
-            if (sender !== null) {
-                connection.send(JSON.stringify({
-                    id: id,
-                    receipient: sender,
-                    msg: "/seen"
-                }));
+        } else {
+            seen();
+        }
+    };
+
+
+    function seen() {
+        if (window_active === true && sender !== null && pending_seen === false) {
+            connection.send(JSON.stringify({
+                id: id,
+                receipient: sender,
+                msg: "/seen"
+            }));
+        }
+    }
+
+
+    function scroll(h) {
+        if(sender == "me" || h < content.height()) {
+            content.scrollTop(chat.height());
+        } else if(content.scrollTop()+content.height() == h) {
+            content.scrollTop(chat.height());
+        } else {
+            $("#new-message").show();
+            pending_seen = true;
+        }
+    }
+
+
+    $("#new-message").click(function() {
+        $(this).hide();
+        content.scrollTop(chat.height());
+    });
+
+
+    $("#content").scroll(function() {
+        if(content.scrollTop()+content.height() == chat.height()) {
+            $("#new-message").hide();
+            if(pending_seen === true) {
+                pending_seen = false;
+                seen();
             }
         }
-        content.scrollTop(content[0].scrollHeight);
-    };
+    });
 
 
     function create_id() {
@@ -519,8 +577,8 @@ $(function() {
     };
 
     window.onfocus = function() {
-        change_title();
         window_active = true;
+        change_title();
     };
 
     window.onblur = function() {
@@ -545,25 +603,26 @@ $(function() {
     function change_title() {
         if (document.title !== "Websocket") {
             document.title = "Websocket";
-            if (sender !== null) {
-                connection.send(JSON.stringify({
-                    id: id,
-                    receipient: sender,
-                    msg: "/seen"
-                }));
-            }
+            seen();
         }
     }
 
 
     setInterval(function() {
-        if (connect === true && connection.readyState === 3) {
+        var h = chat.height();
+        if (connect === true && connection.readyState === 3 && blocked !== true) {
             connect = false;
             online = false;
             connect_this(host, port);
             var time = (new Date()).getTime();
-            chat.append("<p class=\"server\"><i>You are not connected..</i><span class=\"time\">" + get_time(time) + "</span></p>");
-            chat.append("<p class=\"server\"><i>Connecting...</i><span class=\"time\">" + get_time(time) + "</span></p>");
+            if(h < content.height()) {
+                chat.append("<p class=\"server\"><i>You are not connected..</i><span class=\"time\">" + get_time(time) + "</span></p>");
+                chat.append("<p class=\"server\"><i>Connecting...</i><span class=\"time\">" + get_time(time) + "</span></p>");
+            } else if(content.scrollTop()+content.height() == h) {
+                chat.append("<p class=\"server\"><i>You are not connected..</i><span class=\"time\">" + get_time(time) + "</span></p>");
+                chat.append("<p class=\"server\"><i>Connecting...</i><span class=\"time\">" + get_time(time) + "</span></p>");
+                content.scrollTop(chat.height());
+            }
         }
     }, 3000);
 
@@ -610,10 +669,12 @@ $(function() {
         console.log("New Id - " + id);
     }
 
-    if (localStorage.getItem("channel")) {
-        channel = localStorage.getItem("channel");
+    if (localStorage.getItem("app_id")) {
+        app_id = localStorage.getItem("app_id");
+        channel = localStorage.getItem("app_id");
     } else {
-        localStorage.setItem("channel", channel);
+        localStorage.setItem("app_id", app_id);
+        localStorage.setItem("channel", app_id);
     }
 
     if (!localStorage.getItem("myName")) {
@@ -626,4 +687,4 @@ $(function() {
     connect_this(host, port);
 
 
-});
+})(this);
