@@ -1,112 +1,5 @@
 "use strict";
 
-function checkTime(i) {
-    if (i < 10) {
-        i = "0" + i;
-    }
-    return i;
-}
-
-function get_time() {
-    var t = new Date(),
-        h = t.getHours(),
-        m = t.getMinutes(),
-        s = t.getSeconds();
-    h = checkTime(h);
-    m = checkTime(m);
-    s = checkTime(s);
-    return h + ":" + m + ":" + s + " - ";
-}
-
-function get_date() {
-    var t = new Date(),
-        y = t.getFullYear(),
-        m = t.getMonth() + 1,
-        d = t.getDate(),
-        h = t.getHours(),
-        mt = t.getMinutes(),
-        s = t.getSeconds();
-    return m + "-" + d + "-" + y + "-" + h + "-" + mt + "-" + s;
-}
-
-function htmlEntities(str) {
-    return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-}
-
-function originIsAllowed(origin) {
-    return true;
-}
-
-function DateDiff(time1, time2) {
-    var diffMS = time1 - time2,
-        diffS = Math.floor(diffMS / 1000),
-        diffM = Math.floor(diffS / 60),
-        diffH = Math.floor(diffM / 60),
-        diffD = Math.floor(diffH / 24);
-
-    diffS = diffS - (diffM * 60);
-    diffM = diffM - (diffH * 60);
-    diffH = diffH - (diffD * 24);
-
-    return diffD + " days, " + diffH + " hours, " + diffM + " minutes, " + diffS + " seconds";
-}
-
-var set_app = function(apps, app_list) {
-    for (var i = 0, len = app_list.length; i < len; i++) {
-        console.log(app_list[i]);
-        if (!apps[app_list[i]]) {
-            apps[app_list[i]] = [];
-            apps[app_list[i]].total_user = 0;
-            apps[app_list[i]].history = {
-                type: "history",
-                msg: []
-            };
-        }
-    }
-};
-
-var set_apps = function() {
-    set_app(apps, app_list);
-};
-
-function PostThis(obj, type, url) {
-    var post_data = querystring.stringify(obj),
-        post_options = {
-            host: "localhost",
-            port: "80",
-            path: url,
-            method: "POST",
-            headers: {
-                "Content-Type": "application/x-www-form-urlencoded",
-                "Content-Length": Buffer.byteLength(post_data)
-            }
-        };
-    var post_req = http.request(post_options, function(res) {
-        res.setEncoding("utf8");
-        res.on("data", function(data) {
-            try {
-                data = JSON.parse(data);
-            } catch (e) {
-                console.log("This doesn\'t look like a valid JSON: ", data);
-                return;
-            }
-            if (type === "admin") {
-                for (var i = 0, len = data.length; i < len; i++) {
-                    obj.push({
-                        username: data[i].username,
-                        password: data[i].password
-                    });
-                }
-            }
-        });
-    });
-    post_req.write(post_data);
-    post_req.end();
-}
-
-
-
-
 // =========================================================================================================
 
 
@@ -116,25 +9,38 @@ var port = 3777,
     http = require("http"),
     querystring = require("querystring"),
     fs = require("fs"),
-    app_list = ["ska"],
+    password_server = "isu2uDIABL0W67B",
+    app_list = [
+        "ska",
+        "utiis",
+        "utiis_ui",
+        "kpj",
+        "kpj_ui",
+        "ladiesfoto",
+        "ladiesfoto_ui",
+    ],
     password_server = "isu2uDIABL0W67B",
     admins = [],
     apps = [],
     channel_list = [],
     blocked_list = [],
+    blocked_id = [],
     clients,
     msg_count = 0,
     start_time = new Date().getTime(),
     shutdown = false,
+    max_connection = 200,
+    total_connection = 0,
     origins = [
         "http://localhost",
         "http://127.0.0.1",
+        "http://192.168.0.10",
         "http://artinity.dtdns.net",
         "http://www.kpjselangor.com",
+        "https://www.kpjselangor.com",
         "http://www.ladiesfoto.com",
-    ];
-
-var helps = "" +
+    ],
+    helps = "" +
     "<br><b>/nick</b> - to set or change nickname" +
     "<br><b>/users</b> - to get online users" +
     "<br><b>/info</b> - to get your connection info" +
@@ -178,11 +84,18 @@ PostThis(admins, "admin", "/websocket/admin.php");
 // ========================================== CONNECT ====================================================
 
 wsServer.on("request", function(request) {
+    console.log(get_time() + " Total connection : " + total_connection);
     if(origins.indexOf(request.origin) === -1) {
         console.log(get_time() + " Connection was blocked from origin " + request.origin);
         if(blocked_list.indexOf(request.origin) === -1) {
             blocked_list.push(request.origin);
         }
+        request.reject(401, "Go away. You're no authorized.");
+        return;
+    }
+    if(total_connection > max_connection) {
+        console.log(get_time() + " Connection reached max value!");
+        request.reject(403, "Too many connection.. Please try later..");
         return;
     }
     console.log(get_time() + " Connection from origin " + request.origin);
@@ -200,13 +113,17 @@ wsServer.on("request", function(request) {
         password_user = null,
         detail,
         index = 0,
+        is_blocked = false,
         admin = false;
+
+    total_connection++;
 
     connection.sendUTF(JSON.stringify({
         type: "connected",
         time: (new Date()).getTime(),
         msg: "<i>Connected...</i>",
         author: "[Server]",
+        requests: request.accept
     }));
 
     // ========================================== GET MSG ====================================================
@@ -221,6 +138,16 @@ wsServer.on("request", function(request) {
                 return;
             }
             console.log(get_time() + " Received Message : " + msgs.msg);
+            if(blocked_id.indexOf(msgs.id) !== -1) {
+                console.log(get_time() + " Blocked ID trying to connect " + msgs.id);
+                connection.sendUTF(JSON.stringify({
+                    type: "blocked",
+                    time: (new Date()).getTime(),
+                    author: "[Server]",
+                }));
+                connection.close();
+                return;
+            }
             // ========================================== NO APP ID ====================================================
             if (msgs.msg == "/appid") {
                 if (appId === null && userName === null) {
@@ -353,7 +280,7 @@ wsServer.on("request", function(request) {
                                     author: "[Server]",
                                     nickname: userName + admin_password,
                                 }));
-                                online_users(channel, clients[i].app_id);
+                                online_users(clients[i].app_id);
                                 break;
                             } else {
                                 connection.sendUTF(JSON.stringify({
@@ -365,7 +292,7 @@ wsServer.on("request", function(request) {
                                 return;
                             }
                         } else {
-                            if (clients[i].user_name === nick && clients[i].active === true && clients[i].channel === msgs.channel) {
+                            if (clients[i].user_name === nick && clients[i].active === true) {
                                 connection.sendUTF(JSON.stringify({
                                     type: "info",
                                     time: (new Date()).getTime(),
@@ -398,9 +325,10 @@ wsServer.on("request", function(request) {
                             active: true,
                             online: true,
                             ping: true,
+                            is_blocked: false,
                             msg: [],
                         };
-                        setup_channel(channel);
+                        setup_channel(appId);
                         clients.push(detail);
                         index = clients.length - 1;
                         clients.total_user++;
@@ -426,11 +354,11 @@ wsServer.on("request", function(request) {
                             author: "[Server]",
                         });
                         for (var i = 0, len = clients.length; i < len; i++) {
-                            if (userId !== clients[i].user_id && clients[i].active === true && channel === clients[i].channel) {
+                            if (userId !== clients[i].user_id && clients[i].active === true) {
                                 clients[i].connection.sendUTF(json);
                             }
                         }
-                        online_users(channel, appId);
+                        online_users(appId);
                         console.log(get_time() + " User is known as: " + userName + " - " + userId);
                     }
                 } else {
@@ -450,7 +378,7 @@ wsServer.on("request", function(request) {
                     connection.close();
                 } else if (msgs.msg == "/reload") {
                     for (var i = 0, len = clients.length; i < len; i++) {
-                        if (userId !== clients[i].user_id && clients[i].active === true && channel === clients[i].channel) {
+                        if (userId !== clients[i].user_id && clients[i].active === true) {
                             clients[i].connection.sendUTF(JSON.stringify({
                                 type: "reload",
                                 author: userName,
@@ -472,9 +400,96 @@ wsServer.on("request", function(request) {
                     }
                     shutdown = true;
                     for (var i = 0, len = clients.length; i < len; i++) {
+                        clients[i].is_blocked = false;
                         clients[i].connection.close();
                     }
                     server.close();
+                } else if (msgs.msg.substring(0, 14) == "/allow_origin ") {
+                    var res = msgs.msg.split(" ");
+                    var origin = res[1];
+                    if (admin !== true) {
+                        connection.sendUTF(JSON.stringify({
+                            type: "info",
+                            time: (new Date()).getTime(),
+                            msg: "<i>Oopss.. you're not authorized.</i>",
+                            author: "[Server]",
+                        }));
+                        return;
+                    }
+                    origins.push(origin);
+                    connection.sendUTF(JSON.stringify({
+                        type: "info",
+                        time: (new Date()).getTime(),
+                        msg: "<i>Done</i>",
+                        author: "[Server]",
+                    }));
+                } else if (msgs.msg.substring(0, 14) == "/block_origin ") {
+                    var res = msgs.msg.split(" ");
+                    var origin = res[1];
+                    if (admin !== true) {
+                        connection.sendUTF(JSON.stringify({
+                            type: "info",
+                            time: (new Date()).getTime(),
+                            msg: "<i>Oopss.. you're not authorized.</i>",
+                            author: "[Server]",
+                        }));
+                        return;
+                    }
+                    origins.splice(origins.indexOf(origin), 1);
+                    connection.sendUTF(JSON.stringify({
+                        type: "info",
+                        time: (new Date()).getTime(),
+                        msg: "<i>Done</i>",
+                        author: "[Server]",
+                    }));
+                } else if (msgs.msg.substring(0, 7) == "/block ") {
+                    var res = msgs.msg.split(" ");
+                    var receipient = res[1];
+                    if (admin !== true) {
+                        connection.sendUTF(JSON.stringify({
+                            type: "info",
+                            time: (new Date()).getTime(),
+                            msg: "<i>Oopss.. you're not authorized.</i>",
+                            author: "[Server]",
+                        }));
+                        return;
+                    }
+                    for (var i = 0, len = clients.length; i < len; i++) {
+                        if (receipient === clients[i].user_name && clients[i].active === true) {
+                            clients[i].connection.sendUTF(JSON.stringify({
+                                type: "reload",
+                                time: (new Date()).getTime(),
+                                author: "[Server]"
+                            }));
+                            blocked_id.push(clients[i].user_id);
+                            clients[i].is_blocked = true;
+                            clients[i].connection.close();
+                            return;
+                        }
+                    }
+                    connection.sendUTF(JSON.stringify({
+                        type: "info",
+                        time: (new Date()).getTime(),
+                        msg: "<i>Oopss.. Nickname <b>" + receipient + "</b> is not here.</i>",
+                        author: "[Server]",
+                    }));
+                } else if (msgs.msg.substring(0, 8) == "/unblock") {
+                    if (admin !== true) {
+                        connection.sendUTF(JSON.stringify({
+                            type: "info",
+                            time: (new Date()).getTime(),
+                            msg: "<i>Oopss.. you're not authorized.</i>",
+                            author: "[Server]",
+                        }));
+                        return;
+                    }
+                    blocked_id = [];
+                    connection.sendUTF(JSON.stringify({
+                        type: "info",
+                        time: (new Date()).getTime(),
+                        msg: "<i>Done</i>",
+                        author: "[Server]",
+                    }));
                 } else if (msgs.msg == "/history" || msgs.msg == "/h") {
                     connection.sendUTF(JSON.stringify({
                         type: "info",
@@ -505,8 +520,8 @@ wsServer.on("request", function(request) {
                     var chnl_list = "";
                     for (var i = 0, len = channel_list.length; i < len; i++) {
                         var chnl_list_user = 0;
-                        for (var n = 0, len2 = clients.length; n < len2; n++) {
-                            if (channel_list[i].name === clients[n].channel && clients[n].online === true) {
+                        for (var n = 0, len2 = apps[channel_list[i].name].length; n < len2; n++) {
+                            if (apps[channel_list[i].name][n].online === true) {
                                 chnl_list_user++;
                             }
                         }
@@ -527,7 +542,7 @@ wsServer.on("request", function(request) {
                         time: (new Date()).getTime(),
                         msg: "<i>----------------------------------------------------------------<br>Server Info" +
                             "<br> - Up Time : <b>" + DateDiff((new Date()).getTime(), start_time) + "</b>" +
-                            "<br> - Total Users : <b>" + apps.ska.total_user + "</b>" +
+                            "<br> - Total Users : <b>" + apps[appId].total_user + "</b>" +
                             "<br> - Total Message : <b>" + msg_count + "</b>" +
                             "<br> - Channel List : " + chnl_list +
                             "<br> - Current Channel : <b>" + channel + "</b>" + 
@@ -558,7 +573,7 @@ wsServer.on("request", function(request) {
                         author_id: userId
                     });
                     for (var i = 0, len = clients.length; i < len; i++) {
-                        if (userId !== clients[i].user_id && clients[i].active === true && channel === clients[i].channel) {
+                        if (userId !== clients[i].user_id && clients[i].active === true ) {
                             clients[i].connection.sendUTF(json);
                             clients[i].seen = false;
                         }
@@ -575,7 +590,7 @@ wsServer.on("request", function(request) {
                         author_id: userId
                     });
                     for (var i = 0, len = clients.length; i < len; i++) {
-                        if (userId !== clients[i].user_id && clients[i].active === true && channel === clients[i].channel) {
+                        if (userId !== clients[i].user_id && clients[i].active === true) {
                             clients[i].connection.sendUTF(json);
                             clients[i].seen = false;
                         }
@@ -592,7 +607,7 @@ wsServer.on("request", function(request) {
                         author_id: userId
                     });
                     for (var i = 0, len = clients.length; i < len; i++) {
-                        if (userId !== clients[i].user_id && clients[i].active === true && channel === clients[i].channel) {
+                        if (userId !== clients[i].user_id && clients[i].active === true) {
                             clients[i].connection.sendUTF(json);
                             clients[i].seen = false;
                         }
@@ -625,7 +640,7 @@ wsServer.on("request", function(request) {
                         return;
                     }
                     for (var i = 0, len = clients.length; i < len; i++) {
-                        if (clients[i].user_name === receipient && clients[i].active === true && channel === clients[i].channel) {
+                        if (clients[i].user_name === receipient && clients[i].active === true) {
                             clients[i].connection.sendUTF(json);
                             found = true;
                             break;
@@ -660,7 +675,7 @@ wsServer.on("request", function(request) {
                     });
                     if (receipient === "-all" || receipient === "-a") {
                         for (var i = 0, len = clients.length; i < len; i++) {
-                            if (userId !== clients[i].user_id && clients[i].active === true && channel === clients[i].channel) {
+                            if (userId !== clients[i].user_id && clients[i].active === true) {
                                 clients[i].connection.sendUTF(json);
                                 clients[i].seen = false;
                             }
@@ -670,7 +685,7 @@ wsServer.on("request", function(request) {
                     }
                     var found = false;
                     for (var i = 0, len = clients.length; i < len; i++) {
-                        if (clients[i].user_name == receipient && clients[i].active === true && channel === clients[i].channel) {
+                        if (clients[i].user_name == receipient && clients[i].active === true) {
                             clients[i].connection.sendUTF(json);
                             clients[i].seen = false;
                             found = true;
@@ -694,6 +709,7 @@ wsServer.on("request", function(request) {
                             time: (new Date()).getTime(),
                             msg: "<i>------------------<br>User Info" +
                                 "<br> - Nickname : " + clients[index].user_name +
+                                "<br> - User ID : " + clients[index].user_id +
                                 "<br> - Origin : " + clients[index].origin +
                                 "<br> - IP Address : " + myinfo.ip +
                                 "<br> - Screen : " + myinfo.screen + "px" +
@@ -711,7 +727,7 @@ wsServer.on("request", function(request) {
                         return;
                     }
                     for (var i = 0, len = clients.length; i < len; i++) {
-                        if (clients[i].user_id === receipient && clients[i].active === true && channel === clients[i].channel) {
+                        if (clients[i].user_id === receipient && clients[i].active === true) {
                             clients[i].connection.sendUTF(json);
                             found = true;
                             return;
@@ -766,7 +782,7 @@ wsServer.on("request", function(request) {
                         }
                     }
                     for (var i = 0, len = clients.length; i < len; i++) {
-                        if (newNick === clients[i].user_name && clients[i].active === true && channel === clients[i].channel) {
+                        if (newNick === clients[i].user_name && clients[i].active === true) {
                             connection.sendUTF(JSON.stringify({
                                 type: "info",
                                 time: (new Date()).getTime(),
@@ -791,13 +807,13 @@ wsServer.on("request", function(request) {
                         author: "[Server]",
                     });
                     for (var i = 0, len = clients.length; i < len; i++) {
-                        if (userId !== clients[i].user_id && clients[i].active === true && channel === clients[i].channel) {
+                        if (userId !== clients[i].user_id && clients[i].active === true) {
                             clients[i].connection.sendUTF(json);
                         }
                     }
                     userName = newNick;
                     clients[index].user_name = userName;
-                    online_users(channel, appId);
+                    online_users(appId);
                 } else if (msgs.msg.substring(0, 9) == "/channel " || msgs.msg.substring(0, 4) == "/ch ") {
                     var res = msgs.msg.split(" ");
                     var chnl = htmlEntities(res[1]);
@@ -810,7 +826,7 @@ wsServer.on("request", function(request) {
                         }));
                         return;
                     }
-                    if (chnl === channel) {
+                    if (chnl === appId) {
                         connection.sendUTF(JSON.stringify({
                             type: "info",
                             time: (new Date()).getTime(),
@@ -819,8 +835,17 @@ wsServer.on("request", function(request) {
                         }));
                         return;
                     }
-                    for (var i = 0, len = clients.length; i < len; i++) {
-                        if (clients[i].channel === chnl && clients[i].active === true && userName === clients[i].user_name) {
+                    if (!apps[chnl]) {
+                        connection.sendUTF(JSON.stringify({
+                            type: "info",
+                            time: (new Date()).getTime(),
+                            msg: "<i>Oopss.. Channel is not valid.",
+                            author: "[Server]",
+                        }));
+                        return;
+                    }
+                    for (var i = 0, len = apps[chnl].length; i < len; i++) {
+                        if (apps[chnl][i].active === true && userName === apps[chnl][i].user_name) {
                             connection.sendUTF(JSON.stringify({
                                 type: "info",
                                 time: (new Date()).getTime(),
@@ -837,14 +862,20 @@ wsServer.on("request", function(request) {
                         author: "[Server]",
                     });
                     for (var i = 0, len = clients.length; i < len; i++) {
-                        if (userId !== clients[i].user_id && clients[i].active === true && channel === clients[i].channel) {
+                        if (userId !== clients[i].user_id && clients[i].active === true) {
                             clients[i].connection.sendUTF(json);
                         }
                     }
-                    var old_channel = channel;
+                    var old_channel = appId;
                     channel = chnl;
-                    clients[index].channel = chnl;
-                    setup_channel(chnl);
+                    appId = chnl;
+                    clients[index].app_id = appId;
+                    clients[index].channel = appId;
+                    apps[appId].push(clients[index]);
+                    apps[old_channel].splice(index, 1);
+                    setup_channel(appId);
+                    clients = apps[chnl];
+                    index = get_index(userId, appId);
                     console.log(get_time() + " User " + userName + " has changed channel to " + channel);
                     connection.sendUTF(JSON.stringify({
                         type: "newChannel",
@@ -856,7 +887,7 @@ wsServer.on("request", function(request) {
                     var users = "";
                     var n = 1;
                     for (var i = 0, len = clients.length; i < len; i++) {
-                        if (clients[i].online === true && channel === clients[i].channel) {
+                        if (clients[i].online === true) {
                             if (clients[i].user_id === userId) {
                                 users += "<br>" + (n++) + ". <b>" + clients[i].user_name + "</b>";
                             } else {
@@ -877,17 +908,17 @@ wsServer.on("request", function(request) {
                         author: "[Server]",
                     });
                     for (var i = 0, len = clients.length; i < len; i++) {
-                        if (userId !== clients[i].user_id && clients[i].active === true && channel === clients[i].channel) {
+                        if (userId !== clients[i].user_id && clients[i].active === true) {
                             clients[i].connection.sendUTF(json);
                         }
                     }
-                    online_users(old_channel, appId);
-                    online_users(channel, appId);
+                    online_users(old_channel);
+                    online_users(appId);
                 } else if (msgs.msg == "/users" || msgs.msg == "/u") {
                     var users = "";
                     var n = 1;
                     for (var i = 0, len = clients.length; i < len; i++) {
-                        if (clients[i].online === true && channel === clients[i].channel) {
+                        if (clients[i].online === true) {
                             if (clients[i].user_id === userId) {
                                 users += "<br>" + (n++) + ". <b>" + clients[i].user_name + "</b>";
                             } else {
@@ -930,7 +961,7 @@ wsServer.on("request", function(request) {
                     });
                     if (receipient === "all") {
                         for (var i = 0, len = clients.length; i < len; i++) {
-                            if (userId !== clients[i].user_id && clients[i].active === true && channel === clients[i].channel) {
+                            if (userId !== clients[i].user_id && clients[i].active === true) {
                                 clients[i].connection.sendUTF(json);
                                 clients[i].seen = false;
                             }
@@ -940,7 +971,7 @@ wsServer.on("request", function(request) {
                         var found = false;
                         clients[index].seen = true;
                         for (var i = 0, len = clients.length; i < len; i++) {
-                            if (clients[i].user_name === receipient && clients[i].active === true && channel === clients[i].channel) {
+                            if (clients[i].user_name === receipient && clients[i].active === true) {
                                 clients[i].connection.sendUTF(json);
                                 clients[i].seen = false;
                                 clients[index].seen = false;
@@ -979,7 +1010,7 @@ wsServer.on("request", function(request) {
                     });
                     var found = false;
                     for (var i = 0, len = clients.length; i < len; i++) {
-                        if (clients[i].user_name === receipient && clients[i].active === true && channel === clients[i].channel) {
+                        if (clients[i].user_name === receipient && clients[i].active === true) {
                             clients[i].connection.sendUTF(json);
                             clients[i].seen = false;
                             clients[index].seen = false
@@ -1000,7 +1031,7 @@ wsServer.on("request", function(request) {
                     var receipient = res[1];
                     var found = false;
                     for (var i = 0, len = clients.length; i < len; i++) {
-                        if (clients[i].user_name === receipient && channel === clients[i].channel) {
+                        if (clients[i].user_name === receipient) {
                             clients[i].connection.close();
                             found = true;
                             break;
@@ -1020,7 +1051,7 @@ wsServer.on("request", function(request) {
                         author: userName
                     });
                     for (var i = 0, len = clients.length; i < len; i++) {
-                        if (userId !== clients[i].user_id && clients[i].active === true && channel === clients[i].channel) {
+                        if (userId !== clients[i].user_id && clients[i].active === true) {
                             clients[i].connection.sendUTF(json);
                         }
                     }
@@ -1030,12 +1061,10 @@ wsServer.on("request", function(request) {
                     clients[index].seen = true;
                     var client_count = 0;
                     for (var i = 0, len = clients.length; i < len; i++) {
-                        if (clients[i].seen === false && channel === clients[i].channel) {
+                        if (clients[i].seen === false) {
                             all = false;
                         }
-                        if (channel === clients[i].channel) {
-                            client_count++;
-                        }
+                        client_count++;
                     }
                     var json = JSON.stringify({
                         type: "seen",
@@ -1112,7 +1141,7 @@ wsServer.on("request", function(request) {
                     into_history(channel, obj);
                     var json = JSON.stringify(obj);
                     for (var i = 0, len = clients.length; i < len; i++) {
-                        if (userId !== clients[i].user_id && channel === clients[i].channel) {
+                        if (userId !== clients[i].user_id) {
                             if (clients[i].active === true) {
                                 clients[i].connection.sendUTF(json);
                             }
@@ -1140,11 +1169,15 @@ wsServer.on("request", function(request) {
     // ========================================== DISCONNECT ====================================================
 
     connection.on("close", function(connection) {
+        total_connection--;
         if (shutdown === false) {
             index = get_index(userId, appId);
+            if(index === null) {
+                return;
+            }
             var client = apps[appId];
             console.log("Index - " + index);
-            if (index !== null && userName !== null && appId !== null && client[index].active === true && quit === false) {
+            if (userName !== null && appId !== null && client[index].active === true && quit === false && client[index].is_blocked === false) {
                 client[index].active = false;
                 if (client[index].ping === true) {
                     console.log(get_time() + " " + client[index].user_name + " has closed connection - ping started");
@@ -1152,7 +1185,7 @@ wsServer.on("request", function(request) {
                     ping(client[index].user_id, client[index].app_id);
                 }
             }
-            if (quit === true) {
+            if (quit === true || client[index].is_blocked === true) {
                 remove_client(index, appId);
             }
         }
@@ -1184,33 +1217,36 @@ wsServer.on("request", function(request) {
                     client[idx].ping = true;
                 }
             }
-        }, 15000);
+        }, 10000);
     };
 
     var remove_client = function(idx, app) {
         var client = apps[app];
+        var pingresult = ping_result;
+        if(client[idx].is_blocked === true) {
+            pingresult = " has been blocked by admin.";
+        }
         var json = JSON.stringify({
             type: "info",
             time: (new Date()).getTime(),
-            msg: "<i><b>" + client[idx].user_name + "</b>" + ping_result + "</i>",
+            msg: "<i><b>" + client[idx].user_name + "</b>" + pingresult + "</i>",
             author: "[server]",
         });
-        var chnnl = client[idx].channel;
-        console.log(get_time() + " " + client[idx].user_name + ping_result);
+        console.log(get_time() + " " + client[idx].user_name + pingresult);
         client.splice(idx, 1);
         for (var i = 0, len = client.length; i < len; i++) {
-            if (client[i].active === true && client[i].channel === chnnl) {
+            if (client[i].active === true) {
                 client[i].connection.sendUTF(json);
             }
         }
-        online_users(chnnl, app);
+        online_users(app);
     };
 
-    var online_users = function(channel,app) {
+    var online_users = function(app) {
         var client = apps[app];
         var users = [];
         for (var i = 0, len = client.length; i < len; i++) {
-            if (client[i].active === true && client[i].channel === channel) {
+            if (client[i].active ===true) {
                 users.push(client[i].user_name);
             }
         }
@@ -1221,7 +1257,7 @@ wsServer.on("request", function(request) {
             author: "[Server]",
         });
         for (var i = 0, len = client.length; i < len; i++) {
-            if (client[i].active === true && client[i].channel === channel) {
+            if (client[i].active === true) {
                 client[i].connection.sendUTF(json);
             }
         }
@@ -1256,28 +1292,16 @@ wsServer.on("request", function(request) {
     };
 
     var into_history = function(chnl, obj) {
-        for (var i = 0, len = channel_list.length; i < len; i++) {
-            if (channel_list[i].name === chnl) {
-                channel_list[i].history["msg"].push(obj);
-                channel_list[i].history["msg"] = channel_list[i].history["msg"].slice(-20);
-            }
-        }
+        apps[chnl].history["msg"].push(obj);
+        apps[chnl].history["msg"] = apps[chnl].history["msg"].slice(-20);
     };
 
     var clear_history = function(chnl) {
-        for (var i = 0, len = channel_list.length; i < len; i++) {
-            if (channel_list[i].name === chnl) {
-                channel_list[i].history["msg"] = [];
-            }
-        }
+        apps[chnl].history["msg"] = [];
     };
 
     var get_history = function(chnl) {
-        for (var i = 0, len = channel_list.length; i < len; i++) {
-            if (channel_list[i].name === chnl) {
-                return channel_list[i].history;
-            }
-        }
+        return apps[chnl].history;
     };
 
     var check_password = function(username, password) {
@@ -1290,3 +1314,109 @@ wsServer.on("request", function(request) {
     };
 
 });
+
+
+
+// ========================================== FUNCTIONS ====================================================
+
+function checkTime(i) {
+    if (i < 10) {
+        i = "0" + i;
+    }
+    return i;
+}
+
+function get_time() {
+    var t = new Date(),
+        h = t.getHours(),
+        m = t.getMinutes(),
+        s = t.getSeconds();
+    h = checkTime(h);
+    m = checkTime(m);
+    s = checkTime(s);
+    return h + ":" + m + ":" + s + " - ";
+}
+
+function get_date() {
+    var t = new Date(),
+        y = t.getFullYear(),
+        m = t.getMonth() + 1,
+        d = t.getDate(),
+        h = t.getHours(),
+        mt = t.getMinutes(),
+        s = t.getSeconds();
+    return m + "-" + d + "-" + y + "-" + h + "-" + mt + "-" + s;
+}
+
+function htmlEntities(str) {
+    return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function originIsAllowed(origin) {
+    return true;
+}
+
+function DateDiff(time1, time2) {
+    var diffMS = time1 - time2,
+        diffS = Math.floor(diffMS / 1000),
+        diffM = Math.floor(diffS / 60),
+        diffH = Math.floor(diffM / 60),
+        diffD = Math.floor(diffH / 24);
+
+    diffS = diffS - (diffM * 60);
+    diffM = diffM - (diffH * 60);
+    diffH = diffH - (diffD * 24);
+
+    return diffD + " days, " + diffH + " hours, " + diffM + " minutes, " + diffS + " seconds";
+}
+
+function set_app(apps, app_list) {
+    for (var i = 0, len = app_list.length; i < len; i++) {
+        console.log(app_list[i]);
+        if (!apps[app_list[i]]) {
+            apps[app_list[i]] = [];
+            apps[app_list[i]].total_user = 0;
+            apps[app_list[i]].history = {
+                type: "history",
+                msg: []
+            };
+        }
+    }
+}
+
+function PostThis(obj, type, url) {
+    var post_data = querystring.stringify(obj),
+        post_options = {
+            host: "localhost",
+            port: "80",
+            path: url,
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Content-Length": Buffer.byteLength(post_data)
+            }
+        };
+    var post_req = http.request(post_options, function(res) {
+        res.setEncoding("utf8");
+        res.on("data", function(data) {
+            try {
+                data = JSON.parse(data);
+            } catch (e) {
+                console.log("This doesn\'t look like a valid JSON: ", data);
+                return;
+            }
+            if (type === "admin") {
+                for (var i = 0, len = data.length; i < len; i++) {
+                    obj.push({
+                        username: data[i].username,
+                        password: data[i].password
+                    });
+                }
+            }
+        });
+    });
+    post_req.write(post_data);
+    post_req.end();
+}
+
+
