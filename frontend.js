@@ -6,7 +6,7 @@ $(function() {
         //  host = "//artinity.dtdns.net",
         host = location.host,
         port = 3777,
-        app_id = "ska",
+        app_id = "utiis_ui",
         channel = "utiis_ui",
         connect = false,
         online = false,
@@ -22,6 +22,7 @@ $(function() {
         timer,
         timer_reconnect,
         reconnect_count = 1,
+        blocked = false,
         screen = $(window).width(),
         audio = new Audio("/websocket/toing.mp3");
 
@@ -120,6 +121,9 @@ $(function() {
                     msg: "/seen"
                 }));
                 window.location = window.location;
+            } else if (json.type === "blocked") {
+                blocked = true;
+                connect = false;
             } else if (json.type === "alert") {
                 audio.play();
                 console.log(json.author + ": " + strip(json.msg));
@@ -306,7 +310,7 @@ $(function() {
     connect_this(host, port);
 
     setInterval(function() {
-        if (connect === true && connection.readyState === 3) {
+        if (connect === true && connection.readyState === 3 && blocked !== true) {
             console.log("You are not connected..");
             console.log("Connecting...");
             connect = false;
