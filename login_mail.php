@@ -13,8 +13,8 @@ if(isset($_GET["username"])) {
 
 	-Websocket Chat-";
 	mail("skaloot@gmail.com", "WebChat Login Notification - ".$username, $msg, "From: WebChat<no-reply@ladiesfoto.com>");
-	mail("ladiesfoto@gmail.com", "WebChat Login Notification - ".$username, $msg, "From: WebChat<no-reply@ladiesfoto.com>");
-	mail("ladiesfotostudio@gmail.com", "WebChat Login Notification - ".$username, $msg, "From: WebChat<no-reply@ladiesfoto.com>");
+	// mail("ladiesfoto@gmail.com", "WebChat Login Notification - ".$username, $msg, "From: WebChat<no-reply@ladiesfoto.com>");
+	// mail("ladiesfotostudio@gmail.com", "WebChat Login Notification - ".$username, $msg, "From: WebChat<no-reply@ladiesfoto.com>");
 }
 
 

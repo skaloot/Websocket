@@ -68,7 +68,7 @@ var server = http.createServer(function(request, response) {
 
 // time = (new Date()).getTime();
 server.listen(port, function() {
-    console.log("start Time : " + new Date());
+    console.log("start Time : " + start_time);
     console.log(get_time() + " Server is listening on port " + port);
 });
 
@@ -1328,20 +1328,23 @@ function checkTime(i) {
 
 function get_time() {
     var t = new Date(),
-        h = checkTime(t.getHours()),
-        m = checkTime(t.getMinutes()),
-        s = checkTime(t.getSeconds());
+        h = t.getHours(),
+        m = t.getMinutes(),
+        s = t.getSeconds();
+    h = checkTime(h);
+    m = checkTime(m);
+    s = checkTime(s);
     return h + ":" + m + ":" + s + " - ";
 }
 
 function get_date() {
     var t = new Date(),
         y = t.getFullYear(),
-        m = checkTime(t.getMonth() + 1),
-        d = checkTime(t.getDate()),
-        h = checkTime(t.getHours()),
-        mt = checkTime(t.getMinutes()),
-        s = checkTime(t.getSeconds());
+        m = t.getMonth() + 1,
+        d = t.getDate(),
+        h = t.getHours(),
+        mt = t.getMinutes(),
+        s = t.getSeconds();
     return m + "-" + d + "-" + y + "-" + h + "-" + mt + "-" + s;
 }
 
