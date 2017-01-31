@@ -6,7 +6,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
         <title>Websocket</title>
 
-        <link href="https://fonts.googleapis.com/css?family=Raleway:300,300i,600,600i" rel="stylesheet">
+        <link href="font.css" rel="stylesheet"/>
         <style>
         body { margin: 0;font-family: 'Raleway', sans-serif; font-size:1em; letter-spacing:0.02em;  }
         * { padding:0px; margin:0px;outline: 0; }

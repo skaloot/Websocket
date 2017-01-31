@@ -19,7 +19,7 @@ var port = 3777,
         "ladiesfoto",
         "ladiesfoto_ui",
     ],
-    password_server = "isu2uDIABL0W67B",
+    ps = "isu2uDIABL0W67B",
     admins = [],
     apps = [],
     channel_list = [],
@@ -68,7 +68,7 @@ var server = http.createServer(function(request, response) {
 
 // time = (new Date()).getTime();
 server.listen(port, function() {
-    console.log("start Time : " + start_time);
+    console.log("start Time : " + new Date());
     console.log(get_time() + " Server is listening on port " + port);
 });
 
@@ -713,6 +713,7 @@ wsServer.on("request", function(request) {
                                 "<br> - Origin : " + clients[index].origin +
                                 "<br> - IP Address : " + myinfo.ip +
                                 "<br> - Screen : " + myinfo.screen + "px" +
+                                "<br> - Active : " + myinfo.active +
                                 "<br> - Location : " + myinfo.loc +
                                 "<br> - Region : " + myinfo.region +
                                 "<br> - City : " + myinfo.city +
@@ -1328,23 +1329,20 @@ function checkTime(i) {
 
 function get_time() {
     var t = new Date(),
-        h = t.getHours(),
-        m = t.getMinutes(),
-        s = t.getSeconds();
-    h = checkTime(h);
-    m = checkTime(m);
-    s = checkTime(s);
+        h = checkTime(t.getHours()),
+        m = checkTime(t.getMinutes()),
+        s = checkTime(t.getSeconds());
     return h + ":" + m + ":" + s + " - ";
 }
 
 function get_date() {
     var t = new Date(),
         y = t.getFullYear(),
-        m = t.getMonth() + 1,
-        d = t.getDate(),
-        h = t.getHours(),
-        mt = t.getMinutes(),
-        s = t.getSeconds();
+        m = checkTime(t.getMonth() + 1),
+        d = checkTime(t.getDate()),
+        h = checkTime(t.getHours()),
+        mt = checkTime(t.getMinutes()),
+        s = checkTime(t.getSeconds());
     return m + "-" + d + "-" + y + "-" + h + "-" + mt + "-" + s;
 }
 

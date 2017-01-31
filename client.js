@@ -187,6 +187,7 @@
             } else if (json.type === "my-info") {
                 sender = null;
                 if(myInfo !== null) {
+                    myInfo.active = window_active;
                     connection.send(JSON.stringify({
                         id: id,
                         msg: "/info",
@@ -198,6 +199,7 @@
                 $.getJSON("http://ipinfo.io", function(data) {
                     data.agent = navigator.userAgent;
                     data.screen = screen;
+                    data.active = window_active;
                     console.log(data);
                     myInfo = data;
                     connection.send(JSON.stringify({
@@ -415,6 +417,7 @@
                         $.getJSON("http://ipinfo.io", function(data) {
                             data.agent = navigator.userAgent;
                             data.screen = screen;
+                            data.active = window_active;
                             console.log(data);
                             myInfo = data;
                             connection.send(JSON.stringify({
@@ -485,7 +488,7 @@
 
 
     function seen() {
-        if (window_active === true && sender !== null && pending_seen === false) {
+        if (window_active === true && sender !== null && sender != "me" && pending_seen === false) {
             connection.send(JSON.stringify({
                 id: id,
                 receipient: sender,
