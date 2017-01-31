@@ -326,6 +326,8 @@ wsServer.on("request", function(request) {
                             online: true,
                             ping: true,
                             is_blocked: false,
+                            start: new Date().getTime(),
+                            timeout: null,
                             msg: [],
                         };
                         setup_channel(appId);
@@ -709,6 +711,7 @@ wsServer.on("request", function(request) {
                             time: (new Date()).getTime(),
                             msg: "<i>------------------<br>User Info" +
                                 "<br> - Nickname : " + clients[index].user_name +
+                                "<br> - Online : " + DateDiff((new Date()).getTime(), clients[index].start) +
                                 "<br> - User ID : " + clients[index].user_id +
                                 "<br> - Origin : " + clients[index].origin +
                                 "<br> - IP Address : " + myinfo.ip +
@@ -1182,7 +1185,7 @@ wsServer.on("request", function(request) {
                 client[index].active = false;
                 if (client[index].ping === true) {
                     console.log(get_time() + " " + client[index].user_name + " has closed connection - ping started");
-                    client[index].ping = false;
+                    client[index].timeout = new Date().getTime();
                     ping(client[index].user_id, client[index].app_id);
                 }
             }
@@ -1210,6 +1213,10 @@ wsServer.on("request", function(request) {
             var idx = get_index(id, app);
             var client = apps[app];
             if (idx !== null) {
+                var diff = new Date().getTime() - client[idx].timeout;
+                if(diff < 10000) {
+                    return;
+                }
                 if (client[idx].active === false) {
                     ping_result = " has been disconnected.. - [No Respond]";
                     remove_client(idx, app);
@@ -1247,7 +1254,7 @@ wsServer.on("request", function(request) {
         var client = apps[app];
         var users = [];
         for (var i = 0, len = client.length; i < len; i++) {
-            if (client[i].active ===true) {
+            if (client[i].active === true) {
                 users.push(client[i].user_name);
             }
         }
