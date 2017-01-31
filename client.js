@@ -1,7 +1,7 @@
 (function(window) {
     "use strict";
 
-    var connection,
+    var connection = null,
         content = $("#content"),
         chat = $("#chat"),
         seentyping = $("#seen-typing"),
@@ -78,6 +78,8 @@
 
 
     function connect_this(host, port) {
+        var time = (new Date()).getTime();
+        chat.append("<p class=\"server\"><i>Connecting...</i><span class=\"time\">" + get_time(time) + "</span></p>");
         console.log("Connection start..");
         connection = new WebSocket("ws:" + host + ":" + port);
 
@@ -208,6 +210,18 @@
                         myinfo: myInfo,
                         receipient: json.author_id,
                     }));
+                }).error(function(){
+                    myInfo = {};
+                    myInfo.agent = navigator.userAgent;
+                    myInfo.screen = screen;
+                    myInfo.active = window_active;
+                    myInfo.ip = ip_address;
+                    connection.send(JSON.stringify({
+                        id: id,
+                        msg: "/info",
+                        myinfo: myInfo,
+                        receipient: json.author_id,
+                    }));
                 });
             } else if (json.type === "info") {
                 sender = null;
@@ -252,21 +266,19 @@
                     app_id: app_id,
                     id: id
                 }));
-                if (localStorage.getItem("myName") && localStorage.getItem("myId")) {
-                    myName = localStorage.getItem("myName");
-                    if (localStorage.getItem("myPassword")) {
-                        myPassword = " " + localStorage.getItem("myPassword");
-                    }
-                    connection.send(JSON.stringify({
-                        id: id,
-                        channel: channel,
-                        msg: "/nick " + myName + myPassword,
-                        ip_address: ip_address
-                    }));
-                    $("#login").hide();
-                    $("#bg_login").hide();
-                    input.focus();
+                myName = localStorage.getItem("myName");
+                if (localStorage.getItem("myPassword")) {
+                    myPassword = " " + localStorage.getItem("myPassword");
                 }
+                connection.send(JSON.stringify({
+                    id: id,
+                    channel: channel,
+                    msg: "/nick " + myName + myPassword,
+                    ip_address: ip_address
+                }));
+                $("#login").hide();
+                $("#bg_login").hide();
+                input.focus();
             } else if (json.type === "welcome") {
                 sender = null;
                 addMessage(
@@ -352,7 +364,7 @@
             }
             var d = new Date();
             if (msg == "/connect") {
-                if (connect === false && connection.readyState !== 1 && blocked !== true) {
+                if (connection === null && connect === false && blocked !== true) {
                     sender = myName;
                     var time = (new Date()).getTime();
                     chat.append("<p class=\"server\"><i>Connecting...</i><span class=\"time\">" + get_time(time) + "</span></p>");
@@ -395,6 +407,7 @@
                             online = false;
                             chat.html(null);
                             myName = null;
+                            connection = null;
                             $("#login").show();
                             $("#username").focus();
                             $("#bg_login").show();
@@ -420,6 +433,18 @@
                             data.active = window_active;
                             console.log(data);
                             myInfo = data;
+                            connection.send(JSON.stringify({
+                                id: id,
+                                msg: "/info",
+                                myinfo: myInfo,
+                                receipient: null,
+                            }));
+                        }).error(function(){
+                            myInfo = {};
+                            myInfo.agent = navigator.userAgent;
+                            myInfo.screen = screen;
+                            myInfo.active = window_active;
+                            myInfo.ip = ip_address;
                             connection.send(JSON.stringify({
                                 id: id,
                                 msg: "/info",
@@ -543,18 +568,10 @@
                 id = create_id();
                 localStorage.setItem("myId", id);
                 localStorage.setItem("myName", $(this).val());
+                localStorage.setItem("chat", id);
                 connect_this(host, port);
                 $(this).attr("disabled", "disabled");
-                return;
             }
-            sender = null;
-            connection.send(JSON.stringify({
-                id: id,
-                channel: channel,
-                msg: "/n "+$(this).val(),
-                ip_address: ip_address
-            }));
-            $(this).attr("disabled", "disabled");
         }
     });
 
@@ -659,19 +676,6 @@
 
 
 
-
-    var time = (new Date()).getTime();
-    chat.append("<p class=\"server\"><i>Connecting...</i><span class=\"time\">" + get_time(time) + "</span></p>");
-    if (localStorage.getItem("myId")) {
-        id = localStorage.getItem("myId");
-        console.log("Existing Id - " + id);
-    } else {
-        id = create_id();
-        localStorage.setItem("myId", id);
-        localStorage.setItem("app_id", app_id);
-        console.log("New Id - " + id);
-    }
-
     if (localStorage.getItem("app_id")) {
         app_id = localStorage.getItem("app_id");
         channel = localStorage.getItem("app_id");
@@ -684,10 +688,18 @@
         $("#bg_login").show();
         $("#login").show();
         $("#username").focus();
+    } else {
+        if (localStorage.getItem("myId")) {
+            id = localStorage.getItem("myId");
+            console.log("Existing Id - " + id);
+        } else {
+            id = create_id();
+            localStorage.setItem("myId", id);
+            console.log("New Id - " + id);
+        }
+        localStorage.setItem("chat", id);
+        connect_this(host, port);
     }
-
-    localStorage.setItem("chat", id);
-    connect_this(host, port);
 
 
 })(this);
