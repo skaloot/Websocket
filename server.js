@@ -30,7 +30,7 @@ var port = 3777,
     start_time = new Date().getTime(),
     shutdown = false,
     max_connection = 200,
-    total_connection = 0,
+    total_connection = 1,
     origins = [
         "http://localhost",
         "http://127.0.0.1",
@@ -116,8 +116,6 @@ wsServer.on("request", function(request) {
         is_blocked = false,
         admin = false;
 
-    total_connection++;
-
     connection.sendUTF(JSON.stringify({
         type: "connected",
         time: (new Date()).getTime(),
@@ -125,6 +123,8 @@ wsServer.on("request", function(request) {
         author: "[Server]",
         requests: request.accept
     }));
+
+    total_connection++;
 
     // ========================================== GET MSG ====================================================
 
@@ -138,7 +138,7 @@ wsServer.on("request", function(request) {
                 return;
             }
             console.log(get_time() + " Received Message : " + msgs.msg);
-            if(blocked_id.indexOf(msgs.id) !== -1) {
+            if(check_blocked_id(msgs.id)) {
                 console.log(get_time() + " Blocked ID trying to connect " + msgs.id);
                 connection.sendUTF(JSON.stringify({
                     type: "blocked",
@@ -157,7 +157,6 @@ wsServer.on("request", function(request) {
                             found = true;
                             appId = htmlEntities(msgs.app_id);
                             clients = apps[app_list[i]];
-                            console.log("App ID - " + app_list[i]);
                             connection.sendUTF(JSON.stringify({
                                 type: "app_id",
                                 time: (new Date()).getTime(),
@@ -251,7 +250,6 @@ wsServer.on("request", function(request) {
                     for (var i = 0, len = clients.length; i < len; i++) {
                         if (clients[i].user_id === msgs.id) {
                             if (clients[i].active === false) {
-                                console.log(get_time() + " Existing user! - " + clients[i].user_name + " - " + clients[i].user_id);
                                 userName = clients[i].user_name;
                                 userId = clients[i].user_id;
                                 channel = msgs.channel;
@@ -457,13 +455,13 @@ wsServer.on("request", function(request) {
                         return;
                     }
                     for (var i = 0, len = clients.length; i < len; i++) {
-                        if (receipient === clients[i].user_name && clients[i].active === true) {
+                        if (receipient === clients[i].user_name) {
                             clients[i].connection.sendUTF(JSON.stringify({
                                 type: "reload",
                                 time: (new Date()).getTime(),
                                 author: "[Server]"
                             }));
-                            blocked_id.push(clients[i].user_id);
+                            blocked_id.push({user_id:clients[i].user_id, user_name:clients[i].user_name});
                             clients[i].is_blocked = true;
                             clients[i].connection.close();
                             return;
@@ -475,7 +473,9 @@ wsServer.on("request", function(request) {
                         msg: "<i>Oopss.. Nickname <b>" + receipient + "</b> is not here.</i>",
                         author: "[Server]",
                     }));
-                } else if (msgs.msg.substring(0, 8) == "/unblock") {
+                } else if (msgs.msg.substring(0, 9) == "/unblock ") {
+                    var res = msgs.msg.split(" ");
+                    var receipient = res[1];
                     if (admin !== true) {
                         connection.sendUTF(JSON.stringify({
                             type: "info",
@@ -485,7 +485,11 @@ wsServer.on("request", function(request) {
                         }));
                         return;
                     }
-                    blocked_id = [];
+                    for (var i = 0, len = blocked_id.length; i < len; i++) {
+                        if(receipient === blocked_id[i].user_name) {
+                            blocked_id.splice(i,1);
+                        }
+                    }
                     connection.sendUTF(JSON.stringify({
                         type: "info",
                         time: (new Date()).getTime(),
@@ -547,6 +551,7 @@ wsServer.on("request", function(request) {
                             "<br> - Total Users : <b>" + apps[appId].total_user + "</b>" +
                             "<br> - Total Message : <b>" + msg_count + "</b>" +
                             "<br> - Channel List : " + chnl_list +
+                            "<br> - Current Connection : <b>" + (total_connection-1) + "</b>" +
                             "<br> - Current Channel : <b>" + channel + "</b>" + 
                             blocked +
                             "<br>----------------------------------------------------------------</i>",
@@ -1148,8 +1153,7 @@ wsServer.on("request", function(request) {
                         if (userId !== clients[i].user_id) {
                             if (clients[i].active === true) {
                                 clients[i].connection.sendUTF(json);
-                            }
-                            if (clients[i].active === false) {
+                            } else {
                                 clients[i].msg.push(json);
                                 clients[i].msg = clients[i].msg.slice(-20);
                             }
@@ -1180,16 +1184,13 @@ wsServer.on("request", function(request) {
                 return;
             }
             var client = apps[appId];
-            console.log("Index - " + index);
             if (userName !== null && appId !== null && client[index].active === true && quit === false && client[index].is_blocked === false) {
                 client[index].active = false;
-                if (client[index].ping === true) {
-                    console.log(get_time() + " " + client[index].user_name + " has closed connection - ping started");
-                    client[index].timeout = new Date().getTime();
-                    ping(client[index].user_id, client[index].app_id);
-                }
+                client[index].timeout = new Date().getTime();
+                ping(client[index].user_id, client[index].app_id);
             }
             if (quit === true || client[index].is_blocked === true) {
+                console.log(get_time() + " " + client[index].user_name + " has closed connection");
                 remove_client(index, appId);
             }
         }
@@ -1209,21 +1210,21 @@ wsServer.on("request", function(request) {
     };
 
     var ping = function(id, app) {
-        setTimeout(function() {
+        setTimeout(function(id, app) {
             var idx = get_index(id, app);
             var client = apps[app];
-            if (idx !== null) {
-                var diff = new Date().getTime() - client[idx].timeout;
-                if(diff < 10000) {
-                    return;
-                }
-                if (client[idx].active === false) {
-                    ping_result = " has been disconnected.. - [No Respond]";
-                    remove_client(idx, app);
-                } else {
-                    console.log(get_time() + " " + client[idx].user_name + " is active");
-                    client[idx].ping = true;
-                }
+            if(idx === null) {
+                return;
+            }
+            var diff = new Date().getTime() - client[idx].timeout;
+            if(diff < 10000) {
+                return;
+            }
+            if (client[idx].active === false) {
+                ping_result = " has been disconnected.. - [No Respond]";
+                remove_client(idx, app);
+            } else {
+                client[idx].ping = true;
             }
         }, 10000);
     };
@@ -1315,6 +1316,15 @@ wsServer.on("request", function(request) {
     var check_password = function(username, password) {
         for (var i = 0, len = admins.length; i < len; i++) {
             if (admins[i].password === password && admins[i].username === username) {
+                return true;
+            }
+        }
+        return false;
+    };
+
+    var check_blocked_id = function(id) {
+        for (var i = 0, len = blocked_id .length; i < len; i++) {
+            if (blocked_id[i].user_id === id) {
                 return true;
             }
         }
