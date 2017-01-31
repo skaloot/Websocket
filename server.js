@@ -485,9 +485,13 @@ wsServer.on("request", function(request) {
                         }));
                         return;
                     }
-                    for (var i = 0, len = blocked_id.length; i < len; i++) {
-                        if(receipient === blocked_id[i].user_name) {
-                            blocked_id.splice(i,1);
+                    if(receipient == "-a" || receipient == "-all") {
+                        blocked_id = [];
+                    } else {
+                        for (var i = 0; i < blocked_id.length; i++) {
+                            if(receipient === blocked_id[i].user_name) {
+                                blocked_id.splice(i,1);
+                            }
                         }
                     }
                     connection.sendUTF(JSON.stringify({
