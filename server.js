@@ -1214,7 +1214,7 @@ wsServer.on("request", function(request) {
     };
 
     var ping = function(id, app) {
-        setTimeout(function(id, app) {
+        setTimeout(function() {
             var idx = get_index(id, app);
             var client = apps[app];
             if(idx === null) {
