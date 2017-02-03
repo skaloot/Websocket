@@ -21,7 +21,7 @@
         #status { width:200px; display:block; float:left; margin-top:15px; }
         .client { color:#000; }
         .server { color:#888; }
-        .time { color:#999; opacity: 0;margin-left: 15px;font-size: 1em; }
+        .time { color:#999; opacity: 0;margin-left: 15px;font-size: 1em; float:right; margin-right: 15px; }
         p:hover .time { opacity: 1; }
         #reconnect { padding:7px 10px; border:1px solid #ccc; border-radius:3px; background-color:#fff; font-size:1em; }
         #bg_login { position: absolute;background-color: #eee;width:100%;height:100%;display:none; }

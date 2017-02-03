@@ -277,6 +277,7 @@ wsServer.on("request", function(request) {
                                     type: "online",
                                     time: (new Date()).getTime(),
                                     author: "[Server]",
+                                    assigned: clients[i].assigned,
                                     nickname: userName + admin_password,
                                 }));
                                 online_users(clients[i].app_id);
@@ -376,6 +377,17 @@ wsServer.on("request", function(request) {
                 // ========================================== HAS NICK ====================================================
             } else if (userName !== null && appId !== null) {
                 index = get_index(userId, appId);
+                if(channel == "kpj" && clients[index].assigned === null && admin === false && msgs.msg != "/quit") {
+                    if (msgs.msg != "/typing") {
+                        connection.sendUTF(JSON.stringify({
+                            type: "info",
+                            time: (new Date()).getTime(),
+                            msg: "<i>Please hold on. Our staff will be with you in a moment.</i>",
+                            author: "[Server]",
+                        }));
+                    }
+                    return;
+                }
                 if (msgs.msg == "/quit") {
                     ping_result = " has closed the connection";
                     quit = true;
@@ -504,6 +516,65 @@ wsServer.on("request", function(request) {
                         msg: "<i>Done</i>",
                         author: "[Server]",
                     }));
+                } else if (msgs.msg == "/assign_client") {
+                    var receipient_id = msgs.receipient;
+                    var receipient;
+                    if (admin !== true) {
+                        connection.sendUTF(JSON.stringify({
+                            type: "info",
+                            time: (new Date()).getTime(),
+                            msg: "<i>Oopss.. you're not authorized.</i>",
+                            author: "[Server]",
+                        }));
+                        return;
+                    }
+                    for (var i = 0, len = clients.length; i < len; i++) {
+                        if (receipient_id === clients[i].user_id && clients[i].assigned === null) {
+                            clients[i].assigned = userId;
+                            clients[i].connection.sendUTF(JSON.stringify({
+                                type: "assigned",
+                                assigned: userId,
+                                time: (new Date()).getTime(),
+                                msg: "<i>Hi.. you are now chatting with <b>"+userName+"</b>.</i>",
+                                author: "[Server]",
+                            }));
+                            receipient = clients[i].user_name;
+                            break;
+                        }
+                    }
+                    connection.sendUTF(JSON.stringify({
+                        type: "assign_client_result",
+                        time: (new Date()).getTime(),
+                        msg: "<i>Done</i>",
+                        author: "[Server]",
+                        receipient: receipient,
+                        receipient_id: receipient_id,
+                    }));
+                    online_users(appId);
+                } else if (msgs.msg == "/unassign_client") {
+                    var receipient = msgs.receipient;
+                    if (admin !== true) {
+                        connection.sendUTF(JSON.stringify({
+                            type: "info",
+                            time: (new Date()).getTime(),
+                            msg: "<i>Oopss.. you're not authorized.</i>",
+                            author: "[Server]",
+                        }));
+                        return;
+                    }
+                    for (var i = 0, len = clients.length; i < len; i++) {
+                        if (receipient === clients[i].user_id && clients[i].assigned !== null) {
+                            clients[i].assigned = null;
+                            clients[i].connection.sendUTF(JSON.stringify({
+                                type: "unassigned",
+                                assigned: userId,
+                                time: (new Date()).getTime(),
+                                msg: "<i>Your session has ended.</i>",
+                                author: "[Server]",
+                            }));
+                        }
+                    }
+                    online_users(appId);
                 } else if (msgs.msg == "/history" || msgs.msg == "/h") {
                     connection.sendUTF(JSON.stringify({
                         type: "info",
@@ -1026,14 +1097,22 @@ wsServer.on("request", function(request) {
                         time: (new Date()).getTime(),
                         msg: the_msg,
                         author: userName,
+                        author_id: userId,
                     });
                     var found = false;
                     for (var i = 0, len = clients.length; i < len; i++) {
-                        if (clients[i].user_name === receipient && clients[i].active === true) {
+                        if ((clients[i].user_name === receipient || clients[i].user_id === receipient) && clients[i].active === true) {
                             clients[i].connection.sendUTF(json);
                             clients[i].seen = false;
                             clients[index].seen = false
                             found = true;
+                            var obj = {
+                                msg: htmlEntities(msgs.msg),
+                                username: userName,
+                                channel: channel,
+                                ip_address: ip_address
+                            };
+                            PostThis(obj, "history", "/websocket/msgs.php");
                             break;
                         }
                     }

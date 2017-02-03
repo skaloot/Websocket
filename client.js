@@ -29,6 +29,7 @@
         timer_reconnect,
         reconnect_count = 1,
         pending_seen = false,
+        assigned = null,
         blocked = false,
         audio = new Audio("toing.mp3");
 
@@ -128,6 +129,23 @@
                     json.time
                 );
                 audio.play();
+            } else if (json.type === "assigned") {
+                sender = null;
+                assigned = json.assigned;
+                addMessage(
+                    "",
+                    json.msg,
+                    "server",
+                    json.time
+                );
+            } else if (json.type === "unassigned") {
+                assigned = null;
+                addMessage(
+                    "",
+                    json.msg,
+                    "server",
+                    json.time
+                );
             } else if (json.type === "function") {
                 connection.send(JSON.stringify({
                     id: id,
@@ -302,6 +320,7 @@
             } else if (json.type === "online") {
                 online = true;
                 window_active = false;
+                assigned = json.assigned;
             } else if (json.type === "users") {
                 $("#users").html("<br><div class='user'><b>Online Users</b></div>");
                 for(var i=0, len=json.users.length; i<len; i++) {
@@ -453,10 +472,14 @@
                             }));
                         });
                     } else {
+                        var m = msg.trim();
+                        if(app_id == "kpj") {
+                            m = "/msg "+assigned+" "+m;
+                        }
                         connection.send(JSON.stringify({
                             id: id,
                             channel: channel,
-                            msg: msg.trim()
+                            msg: m
                         }));
                     }
                 }
