@@ -320,14 +320,13 @@
             } else if (json.type === "online") {
                 online = true;
                 window_active = false;
-                assigned = json.assigned;
             } else if (json.type === "users") {
                 $("#users").html("<br><div class='user'><b>Online Users</b></div>");
                 for(var i=0, len=json.users.length; i<len; i++) {
-                    if(json.users[i] == myName) {
-                        $("#users").append("<div class='user'><b>"+json.users[i]+"</b></div>");
+                    if(json.users[i].name == myName) {
+                        $("#users").append("<div class='user'><b>"+json.users[i].name+"</b></div>");
                     } else {
-                        $("#users").append("<div class='user'>"+json.users[i]+"</div>");
+                        $("#users").append("<div class='user'>"+json.users[i].name+"</div>");
                     }
                 }
             } else if (json.type === "typing") {
@@ -472,14 +471,10 @@
                             }));
                         });
                     } else {
-                        var m = msg.trim();
-                        if(app_id == "kpj") {
-                            m = "/msg "+assigned+" "+m;
-                        }
                         connection.send(JSON.stringify({
                             id: id,
                             channel: channel,
-                            msg: m
+                            msg: msg.trim()
                         }));
                     }
                 }
@@ -564,8 +559,8 @@
     });
 
 
-    $("#content").scroll(function() {
-        if(content.scrollTop()+content.height() == chat.height()) {
+    content.scroll(function() {
+        if($(this).scrollTop()+$(this).height() == chat.height()) {
             $("#new-message").hide();
             if(pending_seen === true) {
                 pending_seen = false;
