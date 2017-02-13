@@ -267,14 +267,13 @@ wsServer.on("request", function(request) {
                                     connection.sendUTF(JSON.stringify({
                                         type: "info",
                                         time: (new Date()).getTime(),
-                                        msg: "<i>------------------------------------<br>Unread Message..</i>",
+                                        msg: "<i>------------------------------------<br></i>",
                                         author: "[Server]",
                                     }));
                                     for (var n = 0, len2 = clients[i].msg.length; n < len2; n++) {
                                         connection.sendUTF(clients[i].msg[n]);
                                     }
                                 }
-                                clients[i].msg = [];
                                 connection.sendUTF(JSON.stringify({
                                     type: "online",
                                     time: (new Date()).getTime(),
@@ -348,11 +347,15 @@ wsServer.on("request", function(request) {
                             channel: channel
                         };
                         PostThis(obj, "login", "/websocket/login_mail.php");
+                        var m = "Type <b>/help</b> for list of command.";
+                        if(clients.type == "private") {
+                            m = "Please wait. Our staff will be with you shortly. Thank You.";
+                        }
                         connection.sendUTF(JSON.stringify({
                             type: "welcome",
                             time: (new Date()).getTime(),
                             msg: "<i>------------------------------------" +
-                                "<br><b>WELCOME " + userName + "!!</b><br>Type <b>/help</b> for list of command." +
+                                "<br><b>WELCOME " + userName + "!!</b><br>" + m +
                                 "<br>------------------------------------</i>",
                             author: "[Server]",
                             nickname: userName + admin_password,
@@ -386,7 +389,7 @@ wsServer.on("request", function(request) {
             } else if (userName !== null && appId !== null) {
                 index = get_index(userId, appId);
                 if(clients.type == "private" && clients[index].assigned === null && clients[index].operator === false && admin === false) {
-                    if (msgs.msg != "/typing" && msgs.msg != "/seen" && msgs.msg != "/quit") {
+                    if (msgs.msg != "/typing" && msgs.msg != "/seen" && msgs.msg != "/quit" && msgs.msg != "/ping") {
                         connection.sendUTF(JSON.stringify({
                             type: "info",
                             time: (new Date()).getTime(),
@@ -527,6 +530,7 @@ wsServer.on("request", function(request) {
                         author: "[Server]",
                     }));
                 } else if (msgs.msg == "/assign_client") {
+					clients[index].msg = [];
                     var receipient_id = msgs.receipient;
                     var receipient;
                     if (clients[index].operator !== true) {
@@ -573,12 +577,11 @@ wsServer.on("request", function(request) {
                         }));
                         return;
                     }
-                    if(clients[index].client !== receipient) {
-                        return;
-                    }
                     for (var i = 0, len = clients.length; i < len; i++) {
-                        if (receipient === clients[i].user_id && clients[i].assigned !== null) {
+                        if (receipient === clients[i].user_id && clients[i].assigned !== null && clients[index].client === receipient) {
                             clients[i].assigned = null;
+                            clients[i].msg = [];
+							clients[index].msg = [];
                             clients[index].client = null;
                             clients[i].connection.sendUTF(JSON.stringify({
                                 type: "unassigned",
@@ -1203,6 +1206,10 @@ wsServer.on("request", function(request) {
                             clients[i].connection.sendUTF(json);
                         }
                     }
+				} else if (msgs.msg == "/ping") {
+                    connection.sendUTF(JSON.stringify({
+                        type: "pong",
+                    }));
                 } else if (msgs.msg == "/seen") {
                     var json = JSON.stringify({
                         type: "seen",
@@ -1289,6 +1296,9 @@ wsServer.on("request", function(request) {
                 } else if (msgs.msg == "/flood-stop") {
                     flood = false;
                 } else if (msgs.msg == "/help" || msgs.msg.substring(0, 1) == "/") {
+                    if(clients.type == "private" && clients[index].operator === false) {
+                        return;
+                    }
                     connection.sendUTF(JSON.stringify({
                         type: "info",
                         time: (new Date()).getTime(),
@@ -1310,28 +1320,30 @@ wsServer.on("request", function(request) {
                         if(clients[index].assigned !== null) {
                             for (var i = 0, len = clients.length; i < len; i++) {
                                 if (userId !== clients[i].user_id && (clients[index].assigned === clients[i].user_id || clients[i].admin === true)) {
-                                    if (clients[i].active === true) {
-                                        clients[i].connection.sendUTF(json);
-                                    } else {
+                                    clients[i].connection.sendUTF(json);
+									if (clients[i].admin === false) {
                                         clients[i].msg.push(json);
                                         clients[i].msg = clients[i].msg.slice(-20);
                                     }
                                     clients[i].seen = false;
                                 }
                             }
+							clients[index].msg.push(json);
+                            clients[index].msg = clients[index].msg.slice(-20);
                         }
                         if(clients[index].operator === true && clients[index].client !== null) {
                             for (var i = 0, len = clients.length; i < len; i++) {
                                 if (userId !== clients[i].user_id && (clients[index].client === clients[i].user_id || clients[i].admin === true)) {
-                                    if (clients[i].active === true) {
-                                        clients[i].connection.sendUTF(json);
-                                    } else {
+                                    clients[i].connection.sendUTF(json);
+									if (clients[i].admin === false) {
                                         clients[i].msg.push(json);
                                         clients[i].msg = clients[i].msg.slice(-20);
                                     }
                                     clients[i].seen = false;
                                 }
                             }
+							clients[index].msg.push(json);
+                            clients[index].msg = clients[index].msg.slice(-20);
                         }
                     } else {
                         for (var i = 0, len = clients.length; i < len; i++) {
@@ -1403,7 +1415,7 @@ wsServer.on("request", function(request) {
                 return;
             }
             var diff = new Date().getTime() - client[idx].timeout;
-            if(diff < 10000) {
+            if(diff < 15000) {
                 return;
             }
             if (client[idx].active === false) {
@@ -1413,7 +1425,7 @@ wsServer.on("request", function(request) {
                 client[idx].ping = true;
                 console.log(get_time() + " " + client[idx].user_name + " is active.");
             }
-        }, 10000);
+        }, 15000);
     };
 
     var remove_client = function(idx, app) {
@@ -1425,6 +1437,23 @@ wsServer.on("request", function(request) {
         }
         if(client.type == "private") {
             type = "leave";
+            if(client[idx].client !== null) {
+                var cl = client[idx].client;
+                for (var i = 0, len = client.length; i < len; i++) {
+                    if (client[i].user_id === cl) {
+                        client[i].assigned = null;
+                        client[i].msg = [];
+                        client[i].connection.sendUTF(JSON.stringify({
+                            type: "unassigned",
+                            assigned: userId,
+                            time: (new Date()).getTime(),
+                            msg: "<i>Your session has ended due to <b>"+userName+"'s</b> connectivity.</i>",
+                            author: "[Server]",
+                        }));
+                        break;
+                    }
+                }
+            }
         }
         var json = JSON.stringify({
             type: type,
