@@ -54,15 +54,15 @@
         return i;
     }
 
-    function get_time(time) {
-        var today = new Date(time);
-        var h = today.getHours();
-        var m = today.getMinutes();
-        var s = today.getSeconds();
+    function get_time() {
+        var today = new Date(),
+            h = today.getHours(),
+            m = today.getMinutes(),
+            s = today.getSeconds();
         h = checkTime(h);
         m = checkTime(m);
         s = checkTime(s);
-        time = h + ":" + m;
+        var time = h + ":" + m;
         return time;
     }
 
@@ -79,8 +79,7 @@
 
 
     function connect_this(host, port) {
-        var time = (new Date()).getTime();
-        chat.append("<p class=\"server\"><i>Connecting...</i><span class=\"time\">" + get_time(time) + "</span></p>");
+        chat.append("<p class=\"server\"><i>Connecting...</i><span class=\"time\">" + get_time() + "</span></p>");
         console.log("Connection start..");
         connection = new WebSocket("ws:" + host + ":" + port);
 
@@ -105,11 +104,8 @@
                 return;
             }
 
-            if (json.type === "ping") {
-                connection.send(JSON.stringify({
-                    id: id,
-                    msg: "/pong"
-                }));
+            if (json.type === "pong") {
+                //
             } else if (json.type === "reload") {
                 connection.send(JSON.stringify({
                     id: id,
@@ -138,6 +134,8 @@
                     "server",
                     json.time
                 );
+                sound = true;
+                audio.play();
             } else if (json.type === "unassigned") {
                 assigned = null;
                 addMessage(
@@ -146,6 +144,7 @@
                     "server",
                     json.time
                 );
+                localStorage.removeItem("client_chat_with_id");
             } else if (json.type === "function") {
                 connection.send(JSON.stringify({
                     id: id,
@@ -249,6 +248,19 @@
                     "server",
                     json.time
                 );
+            } else if (json.type === "leave") {
+                if(localStorage.getItem("client_chat_with_id")) {
+                    if(json.user_id == localStorage.getItem("client_chat_with_id")) {
+                        sender = null;
+                        addMessage(
+                            "",
+                            json.msg,
+                            "server",
+                            json.time
+                        );
+                        localStorage.removeItem("client_chat_with_id");
+                    }
+                }
             } else if (json.type === "appid_invalid") {
                 sender = null;
                 addMessage(
@@ -330,10 +342,10 @@
                     }
                 }
             } else if (json.type === "typing") {
-                var h = chat.height();
+                var h = chat.height()-1;
                 if(h < content.height()) {
                     seentyping.html("<i>" + json.author + " is typing..</i>");
-                } else if(content.scrollTop()+content.height() == h) {
+                } else if(content.scrollTop()+content.height() >= h) {
                     seentyping.html("<i>" + json.author + " is typing..</i>");
                     content.scrollTop(chat.height());
                 }
@@ -343,11 +355,11 @@
                 }, 5000);
             } else if (json.type === "seen") {
                 window.clearTimeout(timer);
-                var h = chat.height();
+                var h = chat.height()-1;
                 if(h < content.height()) {
-                    seentyping.html("<i>seen by " + json.author + " " + get_time((new Date()).getTime()) + "</i>");
-                } else if(content.scrollTop()+content.height() == h) {
-                    seentyping.html("<i>seen by " + json.author + " " + get_time((new Date()).getTime()) + "</i>");
+                    seentyping.html("<i>seen by " + json.author + " " + get_time() + "</i>");
+                } else if(content.scrollTop()+content.height() >= h) {
+                    seentyping.html("<i>seen by " + json.author + " " + get_time() + "</i>");
                     content.scrollTop(chat.height());
                 }
             } else if (json.type === "youtube") {
@@ -384,8 +396,7 @@
             if (msg == "/connect") {
                 if (connection === null && connect === false && blocked !== true) {
                     sender = myName;
-                    var time = (new Date()).getTime();
-                    chat.append("<p class=\"server\"><i>Connecting...</i><span class=\"time\">" + get_time(time) + "</span></p>");
+                    chat.append("<p class=\"server\"><i>Connecting...</i><span class=\"time\">" + get_time() + "</span></p>");
                     connect_this(host, port);
                 }
             } else if (msg == "/mute") {
@@ -516,8 +527,8 @@
 
     var addMessage = function(author, message, textClass, time) {
         seentyping.html(null);
-        var h = chat.height();
-        chat.append("<p class=\"" + textClass + "\"><b>" + author + "</b> " + message + " <span class=\"time\">" + get_time(time) + "</span></p>");
+        var h = chat.height()-1;
+        chat.append("<p class=\"" + textClass + "\"><b>" + author + "</b> " + message + " <span class=\"time\">" + get_time() + "</span></p>");
         scroll(h);
         if (window_active === false) {
             document.title = "..New Message..";
@@ -544,7 +555,7 @@
     function scroll(h) {
         if(sender == "me" || h < content.height()) {
             content.scrollTop(chat.height());
-        } else if(content.scrollTop()+content.height() == h) {
+        } else if(content.scrollTop()+content.height() >= h) {
             content.scrollTop(chat.height());
         } else {
             $("#new-message").show();
@@ -560,7 +571,7 @@
 
 
     content.scroll(function() {
-        if($(this).scrollTop()+$(this).height() == chat.height()) {
+        if($(this).scrollTop()+$(this).height() >= chat.height()-1) {
             $("#new-message").hide();
             if(pending_seen === true) {
                 pending_seen = false;
@@ -636,6 +647,7 @@
 
     window.onbeforeunload = function() {
         localStorage.removeItem("chat");
+        localStorage.removeItem("client_chat_with_id");
     };
 
     function change_title() {
@@ -645,24 +657,30 @@
         }
     }
 
-
-    setInterval(function() {
-        var h = chat.height();
+    var check_con = setInterval(function() {
+        var h = chat.height()-1;
         if (connect === true && connection.readyState === 3 && blocked !== true) {
             connect = false;
             online = false;
             connect_this(host, port);
-            var time = (new Date()).getTime();
             if(h < content.height()) {
-                chat.append("<p class=\"server\"><i>You are not connected..</i><span class=\"time\">" + get_time(time) + "</span></p>");
-                chat.append("<p class=\"server\"><i>Connecting...</i><span class=\"time\">" + get_time(time) + "</span></p>");
-            } else if(content.scrollTop()+content.height() == h) {
-                chat.append("<p class=\"server\"><i>You are not connected..</i><span class=\"time\">" + get_time(time) + "</span></p>");
-                chat.append("<p class=\"server\"><i>Connecting...</i><span class=\"time\">" + get_time(time) + "</span></p>");
+                chat.append("<p class=\"server\"><i>You are not connected..</i><span class=\"time\">" + get_time() + "</span></p>");
+                chat.append("<p class=\"server\"><i>Connecting...</i><span class=\"time\">" + get_time() + "</span></p>");
+            } else if(content.scrollTop()+content.height() >= h) {
+                chat.append("<p class=\"server\"><i>You are not connected..</i><span class=\"time\">" + get_time() + "</span></p>");
+                chat.append("<p class=\"server\"><i>Connecting...</i><span class=\"time\">" + get_time() + "</span></p>");
                 content.scrollTop(chat.height());
             }
         }
     }, 3000);
+    
+    var ping = setInterval(function() {
+        if (connect === true && connection.readyState === 1 && blocked !== true) {
+            connection.send(JSON.stringify({
+                msg: "/ping"
+            }));
+        }
+    }, 60000);
 
     var reconnect_this = function() {
         reconnect_count++;
