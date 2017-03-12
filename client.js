@@ -1,4 +1,4 @@
-(function(window) {
+(function(global) {
     "use strict";
 
     var connection = null,
