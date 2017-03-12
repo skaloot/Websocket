@@ -282,6 +282,14 @@ wsServer.on("request", function(request) {
                                     nickname: userName + admin_password,
                                     app_type: clients.type,
                                 }));
+                                if(channel == "kpj" || channel == "kpj_ui") {
+                                    connection.sendUTF(JSON.stringify({
+                                        type: "online_state",
+                                        time: (new Date()).getTime(),
+                                        author: "[Server]",
+                                        state: apps["kpj"].online_state
+                                    }));
+                                }
                                 online_users(clients[i].app_id);
                                 break;
                             } else {
@@ -373,6 +381,14 @@ wsServer.on("request", function(request) {
                                     clients[i].connection.sendUTF(json);
                                 }
                             }
+                        }
+                        if(channel == "kpj" || channel == "kpj_ui") {
+                            connection.sendUTF(JSON.stringify({
+                                type: "online_state",
+                                time: (new Date()).getTime(),
+                                author: "[Server]",
+                                state: apps["kpj"].online_state
+                            }));
                         }
                         online_users(appId);
                         console.log(get_time() + " User is known as: " + userName + " - " + userId);
@@ -593,6 +609,14 @@ wsServer.on("request", function(request) {
                         }
                     }
                     online_users(appId);
+                } else if (msgs.msg == "/online_state") {
+                    clients.online_state = msgs.state;
+                    connection.sendUTF(JSON.stringify({
+                        type: "online_state",
+                        time: (new Date()).getTime(),
+                        author: "[Server]",
+                        state: clients.online_state,
+                    }));
                 } else if (msgs.msg == "/history" || msgs.msg == "/h") {
                     connection.sendUTF(JSON.stringify({
                         type: "info",
