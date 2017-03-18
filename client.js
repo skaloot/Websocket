@@ -54,8 +54,8 @@
         return i;
     }
 
-    function get_time() {
-        var today = new Date(),
+    function get_time(t) {
+        var today = new Date(t),
             h = today.getHours(),
             m = today.getMinutes(),
             s = today.getSeconds();
@@ -296,10 +296,16 @@
                     app_id: app_id,
                     id: id
                 }));
-                myName = localStorage.getItem("myName");
                 if (localStorage.getItem("myPassword")) {
                     myPassword = " " + localStorage.getItem("myPassword");
                 }
+                if (!localStorage.getItem("myName")) {
+                    localStorage.setItem("myName", $("#username").val());
+                    $("#username").attr("disabled", "disabled");
+                }
+                localStorage.setItem("myId", id);
+                localStorage.setItem("chat", id);
+                myName = localStorage.getItem("myName");
                 connection.send(JSON.stringify({
                     id: id,
                     channel: channel,
@@ -530,7 +536,7 @@
     var addMessage = function(author, message, textClass, time) {
         seentyping.html(null);
         var h = chat.height()-1;
-        chat.append("<p class=\"" + textClass + "\"><b>" + author + "</b> " + message + " <span class=\"time\">" + get_time() + "</span></p>");
+        chat.append("<p class=\"" + textClass + "\"><b>" + author + "</b> " + message + " <span class=\"time\">" + get_time(time) + "</span></p>");
         scroll(h);
         if (window_active === false) {
             document.title = "..New Message..";
@@ -597,11 +603,7 @@
             }
             if(connect === false && myName === null) {
                 id = create_id();
-                localStorage.setItem("myId", id);
-                localStorage.setItem("myName", $(this).val());
-                localStorage.setItem("chat", id);
                 connect_this(host, port);
-                $(this).attr("disabled", "disabled");
             }
         }
     });
