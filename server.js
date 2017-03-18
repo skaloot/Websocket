@@ -56,14 +56,21 @@ var wsServer = new webSocketServer({
 
 
 util.set_app(apps, app_list);
-util.PostThis(admins, "admin", "/websocket/admin.php");
+util.PostThis(admins, "localhost", "/websocket/admin.php", function(data){
+    for (var i = 0, len = data.length; i < len; i++) {
+        admins.push({
+            username: data[i].username,
+            password: data[i].password
+        });
+    }
+});
 
 
 // ========================================== CONNECT ====================================================
 
 wsServer.on("request", function(request) {
     console.log(util.get_time() + " Total connection : " + total_connection);
-    if(origins.indexOf(request.origin) === -1) {
+    if(origins.indexOf(request.origin) === -1 || shutdown === true) {
         console.log(util.get_time() + " Connection was blocked from origin " + request.origin);
         if(blocked_list.indexOf(request.origin) === -1) {
             blocked_list.push(request.origin);
@@ -126,9 +133,34 @@ wsServer.on("request", function(request) {
                 connection.close();
                 return;
             }
+            
             // ========================================== NO APP ID ====================================================
-            if (msgs.msg == "/appid") {
-                if (appId === null && userName === null) {
+            if (appId === null && userName === null) {
+                if (msgs.msg == "/login") {
+                    util.PostThis({email:msgs.email}, "www.kpjselangor.com", "/chat/login.php", function(data) {
+                        if(data.success === true) {
+                            connection.sendUTF(JSON.stringify({
+                                type: "connected",
+                                connected: true,
+                                granted: true,
+                                time: (new Date()).getTime(),
+                                author: "[Server]",
+                                name: data.name,
+                                msg: "<i>Connected...</i>",
+                            }));
+                        } else {
+                            connection.sendUTF(JSON.stringify({
+                                type: "connected",
+                                connected: true,
+                                time: (new Date()).getTime(),
+                                author: "[Server]",
+                            }));
+                            connection.close();
+                        }
+                    });
+                    return;
+                }
+                if (msgs.msg == "/appid") {
                     var found = false;
                     for (var i = 0, len = app_list.length; i < len; i++) {
                         if (app_list[i] == msgs.app_id) {
@@ -156,7 +188,7 @@ wsServer.on("request", function(request) {
                 }
                 return;
             }
-            // ========================================== NO NICK ====================================================
+            // ========================================== SET PASSWORD ====================================================
             clients = apps[appId];
             if (password === true) {
                 var stop = false;
@@ -176,6 +208,7 @@ wsServer.on("request", function(request) {
                 password = false;
                 password_user = null;
             }
+            // ========================================== NO NICK ====================================================
             if (userName === null && appId !== null) {
                 if (msgs.msg.substring(0, 6) == "/nick " || msgs.msg.substring(0, 3) == "/n ") {
                     var reconnect = false,
@@ -331,7 +364,7 @@ wsServer.on("request", function(request) {
                             username: userName,
                             channel: channel
                         };
-                        util.PostThis(obj, "login", "/websocket/login_mail.php");
+                        util.PostThis(obj, "localhost", "/websocket/login_mail.php");
                         var m = "Type <b>/help</b> for list of command.";
                         if(clients.type == "private") {
                             m = "Please wait. Our staff will be with you shortly. Thank You.";
@@ -1149,7 +1182,7 @@ wsServer.on("request", function(request) {
                                 channel: channel,
                                 ip_address: ip_address
                             };
-                            util.PostThis(obj, "history", "/websocket/msgs.php");
+                            util.PostThis(obj, "localhost", "/websocket/msgs.php");
                             break;
                         }
                     }
@@ -1366,7 +1399,11 @@ wsServer.on("request", function(request) {
                         channel: channel,
                         ip_address: ip_address
                     };
-                    util.PostThis(obj, "history", "/websocket/msgs.php");
+                    if(clients.type == "private") {
+                        util.PostThis(obj, "www.kpjselangor.com", "/chat/msgs.php");
+                    } else {
+                        util.PostThis(obj, "localhost", "/websocket/msgs.php");
+                    }
                 }
             }
         }
@@ -1407,8 +1444,11 @@ wsServer.on("request", function(request) {
         return null;
     };
 
+    var timeout;
+
     var ping = function(id, app) {
-        setTimeout(function() {
+        clearTimeout(timeout);
+        timeout = setTimeout(function() {
             var idx = get_index(id, app);
             var client = apps[app];
             if(idx === null) {
