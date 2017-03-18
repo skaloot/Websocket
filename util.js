@@ -114,10 +114,10 @@ exports.set_app = function(apps, app_list) {
     }
 }
 
-exports.PostThis = function(obj, type, url) {
+exports.PostThis = function(obj, host, url, callback) {
     var post_data = querystring.stringify(obj),
         post_options = {
-            host: "localhost",
+            host: host,
             port: "80",
             path: url,
             method: "POST",
@@ -135,13 +135,9 @@ exports.PostThis = function(obj, type, url) {
                 console.log("This doesn\'t look like a valid JSON: ", data);
                 return;
             }
-            if (type === "admin") {
-                for (var i = 0, len = data.length; i < len; i++) {
-                    obj.push({
-                        username: data[i].username,
-                        password: data[i].password
-                    });
-                }
+            console.log(data);
+            if(typeof callback === "function") {
+                callback(data);
             }
         });
     });
