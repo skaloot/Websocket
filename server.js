@@ -24,6 +24,7 @@ var port = 3777,
     blocked_list = [],
     blocked_id = [],
     clients,
+    ping_result,
     msg_count = 0,
     start_time = new Date().getTime(),
     shutdown = false,
@@ -344,10 +345,9 @@ wsServer.on("request", function(request) {
                             seen: false,
                             active: true,
                             online: true,
-                            ping: true,
+                            ping: null,
                             is_blocked: false,
                             start: new Date().getTime(),
-                            timeout: null,
                             assigned: null,
                             client: null,
                             msg: [],
@@ -455,6 +455,7 @@ wsServer.on("request", function(request) {
                     for (var i = 0, len = app_list.length; i < len; i++) {
                         for (var ii = 0, len2 = apps[app_list[i]].length; ii < len2; ii++) {
                             apps[app_list[i]][ii].is_blocked = false;
+                            clearTimeout(apps[app_list[i]][ii].ping);
                             apps[app_list[i]][ii].connection.close();
                         }
                     }
@@ -1422,7 +1423,6 @@ wsServer.on("request", function(request) {
             var client = apps[appId];
             if (userName !== null && appId !== null && client[index].active === true && quit === false && client[index].is_blocked === false) {
                 client[index].active = false;
-                client[index].timeout = new Date().getTime();
                 ping(client[index].user_id, client[index].app_id);
             }
             if (quit === true || client[index].is_blocked === true) {
@@ -1430,6 +1430,8 @@ wsServer.on("request", function(request) {
             }
         }
     });
+
+});
 
 
     var get_index = function(id, app) {
@@ -1444,29 +1446,25 @@ wsServer.on("request", function(request) {
         return null;
     };
 
-    var timeout;
 
     var ping = function(id, app) {
-        clearTimeout(timeout);
-        timeout = setTimeout(function() {
-            var idx = get_index(id, app);
+        var idx = get_index(id, app);
+        clearTimeout(apps[app][idx].ping);
+        apps[app][idx].ping = setTimeout(function() {
             var client = apps[app];
+            idx = get_index(id, app);
             if(idx === null) {
-                return;
-            }
-            var diff = new Date().getTime() - client[idx].timeout;
-            if(diff < 15000) {
                 return;
             }
             if (client[idx].active === false) {
                 ping_result = " has been disconnected.. - [No Respond]";
                 remove_client(idx, app);
             } else {
-                client[idx].ping = true;
                 console.log(util.get_time() + " " + client[idx].user_name + " is active.");
             }
         }, 15000);
     };
+
 
     var remove_client = function(idx, app) {
         var client = apps[app];
@@ -1597,8 +1595,6 @@ wsServer.on("request", function(request) {
         }
         return false;
     };
-
-});
 
 
 
