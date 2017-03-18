@@ -24,7 +24,7 @@ var port = 3777,
     blocked_list = [],
     blocked_id = [],
     clients,
-    ping_result,
+    ping_result = " has closed the connection",
     msg_count = 0,
     start_time = new Date().getTime(),
     shutdown = false,
@@ -190,7 +190,6 @@ wsServer.on("request", function(request) {
                 return;
             }
             // ========================================== SET PASSWORD ====================================================
-            clients = apps[appId];
             if (password === true) {
                 var stop = false;
                 var pw = "<i>Password Invalid.</i>";
