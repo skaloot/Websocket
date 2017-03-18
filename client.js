@@ -390,8 +390,8 @@
     input.keydown(function(e) {
         var msg = $(this).val();
         if (e.keyCode === 13) {
-            msg.trim();
-            if (!msg || msg.trim().length === 0) {
+            msg = msg.trim().replace(/\s+/g, " ");
+            if (!msg || msg.length === 0) {
                 return;
             }
             var d = new Date();
@@ -487,7 +487,7 @@
                         connection.send(JSON.stringify({
                             id: id,
                             channel: channel,
-                            msg: msg.trim()
+                            msg: msg
                         }));
                     }
                 }
