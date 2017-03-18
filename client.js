@@ -332,6 +332,8 @@
             } else if (json.type === "online") {
                 online = true;
                 window_active = false;
+            } else if (json.type === "online_state") {
+                //
             } else if (json.type === "users") {
                 $("#users").html("<br><div class='user'><b>Online Users</b></div>");
                 for(var i=0, len=json.users.length; i<len; i++) {
