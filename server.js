@@ -71,7 +71,7 @@ util.PostThis(admins, "localhost", "/websocket/admin.php", function(data){
 
 wsServer.on("request", function(request) {
     console.log(util.get_time() + " Total connection : " + total_connection);
-    if(origins.indexOf(request.origin) === -1 || shutdown === true) {
+    if(typeof request.origin != "undefined" && origins.indexOf(request.origin) === -1 || shutdown === true) {
         console.log(util.get_time() + " Connection was blocked from origin " + request.origin);
         if(blocked_list.indexOf(request.origin) === -1) {
             blocked_list.push(request.origin);
@@ -229,6 +229,7 @@ wsServer.on("request", function(request) {
                         if (!res[2]) {
                             connection.sendUTF(JSON.stringify({
                                 type: "info",
+                                auth_admin: true,
                                 time: (new Date()).getTime(),
                                 msg: "<i>Oopss.. Nickname <b>" + nick + "</b> is reserved for admin. Please type in <b>/p &lt;password&gt;</b>.</i>",
                                 author: "[Server]",
@@ -298,6 +299,13 @@ wsServer.on("request", function(request) {
                                         time: (new Date()).getTime(),
                                         author: "[Server]",
                                         state: apps["kpj"].online_state
+                                    }));
+                                }
+                                if(admin === true) {
+                                    var channels = ["ska", "utiis", "kpj", "ladiesfoto", "utiis_ui", "kpj_ui", "ladiesfoto_ui"];
+                                    connection.sendUTF(JSON.stringify({
+                                        type: "channels",
+                                        channels: channels
                                     }));
                                 }
                                 online_users(clients[i].app_id);
@@ -399,6 +407,13 @@ wsServer.on("request", function(request) {
                                 state: apps["kpj"].online_state
                             }));
                         }
+                        if(admin === true) {
+                            var channels = ["ska", "utiis", "kpj", "ladiesfoto", "utiis_ui", "kpj_ui", "ladiesfoto_ui"];
+                            connection.sendUTF(JSON.stringify({
+                                type: "channels",
+                                channels: channels
+                            }));
+                        }
                         online_users(appId);
                         console.log(util.get_time() + " User is known as: " + userName + " - " + userId);
                     }
@@ -406,12 +421,13 @@ wsServer.on("request", function(request) {
                     connection.sendUTF(JSON.stringify({
                         type: "info",
                         time: (new Date()).getTime(),
-                        msg: "<i>You dont have a nickname yet!. <br>Please type in <b>/nick &lt;your name&gt;</b> to start sending message.</i>",
+                        msg: "<i>You haven't told us your name yet!. <br>Please type in <b>/nick &lt;your name&gt;</b> to start sending message.</i>",
                         author: "[Server]",
                     }));
                 }
                 // ========================================== HAS NICK ====================================================
             } else if (userName !== null && appId !== null) {
+                clients = apps[appId];
                 index = get_index(userId, appId);
                 if(clients.type == "private" && clients[index].assigned === null && clients[index].operator === false && admin === false) {
                     if (msgs.msg != "/typing" && msgs.msg != "/seen" && msgs.msg != "/quit" && msgs.msg != "/ping") {
@@ -1018,14 +1034,14 @@ wsServer.on("request", function(request) {
                     var old_channel = appId;
                     channel = chnl;
                     appId = chnl;
+                    setup_channel(appId);
                     clients[index].app_id = appId;
                     clients[index].channel = appId;
+                    clients[index].assigned = null;
                     apps[appId].push(clients[index]);
                     apps[old_channel].splice(index, 1);
-                    setup_channel(appId);
-                    clients = apps[chnl];
                     index = get_index(userId, appId);
-                    clients[index].assigned = null;
+                    clients = apps[appId];
                     console.log(util.get_time() + " User " + userName + " has changed channel to " + channel);
                     connection.sendUTF(JSON.stringify({
                         type: "newChannel",
@@ -1065,7 +1081,14 @@ wsServer.on("request", function(request) {
                         }
                     }
                     online_users(old_channel);
-                    online_users(appId);
+                    online_users(channel);
+                    if(admin === true) {
+                        var channels = ["ska", "utiis", "kpj", "ladiesfoto", "utiis_ui", "kpj_ui", "ladiesfoto_ui"];
+                        connection.sendUTF(JSON.stringify({
+                            type: "channels",
+                            channels: channels
+                        }));
+                    }
                 } else if (msgs.msg == "/users" || msgs.msg == "/u") {
                     var users = "";
                     var n = 1;
@@ -1458,6 +1481,7 @@ wsServer.on("request", function(request) {
             if (client[idx].active === false) {
                 ping_result = " has been disconnected.. - [No Respond]";
                 remove_client(idx, app);
+                ping_result = " has closed the connection";
             } else {
                 console.log(util.get_time() + " " + client[idx].user_name + " is active.");
             }
