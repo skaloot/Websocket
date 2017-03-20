@@ -3,7 +3,7 @@
 
     var connection = null,
         content = $("#content"),
-        chat = $("#chat"),
+        chat = $(".chat"),
         seentyping = $("#seen-typing"),
         input = $("#input"),
         host = location.host,
@@ -193,6 +193,8 @@
                 app_id = json.channel;
                 localStorage.setItem("channel", channel);
                 localStorage.setItem("app_id", app_id);
+                $(".chat").attr("id","chat_"+channel);
+                chat = $("#chat_"+channel);
             } else if (json.type === "history") {
                 sender = null;
                 for (var i = 0; i < json.msg.length; i++) {
@@ -334,14 +336,18 @@
                 $("#bg_login").hide();
                 $("#username").val(null);
                 $("#username").removeAttr("disabled");
+                $(".chat").attr("id","chat_"+channel);
+                chat = $("#chat_"+channel);
                 input.focus();
             } else if (json.type === "online") {
                 online = true;
                 window_active = false;
+                $(".chat").attr("id","chat_"+channel);
+                chat = $("#chat_"+channel);
             } else if (json.type === "online_state") {
                 //
             } else if (json.type === "users") {
-                $("#users").html("<br><div class='user'><b>Online Users</b></div>");
+                $("#users").html(null);
                 for(var i=0, len=json.users.length; i<len; i++) {
                     if(json.users[i].name == myName) {
                         $("#users").append("<div class='user'><b>"+json.users[i].name+"</b></div>");
@@ -349,6 +355,17 @@
                         $("#users").append("<div class='user'>"+json.users[i].name+"</div>");
                     }
                 }
+            } else if (json.type === "channels") {
+                $("#channels-title").show();
+                $("#channels").html(null);
+                for(var i=0, len=json.channels.length; i<len; i++) {
+                    var c = "";
+                    if(json.channels[i] == channel) {
+                        c = "channel-now";
+                    }
+                    $("#channels").append("<div class='channel "+c+"' onclick=\"ch.chg_channel('"+json.channels[i]+"')\">"+json.channels[i]+"</div>");
+                }
+                $("#channels").append("<br>");
             } else if (json.type === "typing") {
                 var h = chat.height()-1;
                 if(h < content.height()) {
@@ -365,9 +382,9 @@
                 window.clearTimeout(timer);
                 var h = chat.height()-1;
                 if(h < content.height()) {
-                    seentyping.html("<i>seen by " + json.author + " " + get_time() + "</i>");
+                    seentyping.html("<i>seen by " + json.author + " " + get_time(new Date().getTime()) + "</i>");
                 } else if(content.scrollTop()+content.height() >= h) {
-                    seentyping.html("<i>seen by " + json.author + " " + get_time() + "</i>");
+                    seentyping.html("<i>seen by " + json.author + " " + get_time(new Date().getTime()) + "</i>");
                     content.scrollTop(chat.height());
                 }
             } else if (json.type === "youtube") {
@@ -390,6 +407,17 @@
                 console.log("Hmm..., I\"ve never seen JSON like this: ", json);
             }
         };
+    }
+
+
+    global.ch = {
+        chg_channel: function(c) {
+            connection.send(JSON.stringify({
+                id: id,
+                msg: "/ch "+c,
+                channel: channel
+            }));
+        }
     }
 
 
@@ -453,6 +481,10 @@
                             localStorage.removeItem("myId");
                             localStorage.removeItem("channel");
                             localStorage.removeItem("app_id");
+                            $("#channels-title").hide();
+                            $("#channels").html(null);
+                            chat.removeAttr("id");
+                            chat = $(".chat");
                             if (window.opener !== null) {
                                 localStorage.removeItem("chat");
                                 window.close();
