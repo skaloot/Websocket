@@ -24,7 +24,6 @@ var port = 3777,
     blocked_list = [],
     blocked_id = [],
     clients,
-    ping_result = " has closed the connection",
     msg_count = 0,
     start_time = new Date().getTime(),
     shutdown = false,
@@ -91,7 +90,6 @@ wsServer.on("request", function(request) {
         appId = null,
         channel = null,
         ip_address = null,
-        ping_result = " has closed the connection",
         flood = false,
         check = false,
         quit = false,
@@ -302,10 +300,9 @@ wsServer.on("request", function(request) {
                                     }));
                                 }
                                 if(admin === true) {
-                                    var channels = ["ska", "utiis", "kpj", "ladiesfoto", "utiis_ui", "kpj_ui", "ladiesfoto_ui"];
                                     connection.sendUTF(JSON.stringify({
                                         type: "channels",
-                                        channels: channels
+                                        channels: app_list
                                     }));
                                 }
                                 online_users(clients[i].app_id);
@@ -408,10 +405,9 @@ wsServer.on("request", function(request) {
                             }));
                         }
                         if(admin === true) {
-                            var channels = ["ska", "utiis", "kpj", "ladiesfoto", "utiis_ui", "kpj_ui", "ladiesfoto_ui"];
                             connection.sendUTF(JSON.stringify({
                                 type: "channels",
-                                channels: channels
+                                channels: app_list
                             }));
                         }
                         online_users(appId);
@@ -441,7 +437,6 @@ wsServer.on("request", function(request) {
                     }
                 }
                 if (msgs.msg == "/quit") {
-                    ping_result = " has closed the connection";
                     quit = true;
                     connection.close();
                 } else if (msgs.msg == "/reload") {
@@ -475,6 +470,16 @@ wsServer.on("request", function(request) {
                         }
                     }
                     server.close();
+                } else if (msgs.msg == "/internet on") {
+                    if (admin !== true) {
+                        return;
+                    }
+                    util.check_internet(true);
+                } else if (msgs.msg == "/internet off") {
+                    if (admin !== true) {
+                        return;
+                    }
+                    util.check_internet(false);
                 } else if (msgs.msg.substring(0, 14) == "/allow_origin ") {
                     var res = msgs.msg.split(" ");
                     var origin = res[1];
@@ -734,6 +739,9 @@ wsServer.on("request", function(request) {
                     }
                     clients[index].seen = true;
                 } else if (msgs.msg.substring(0, 9) == "/youtube " || msgs.msg.substring(0, 4) == "/yt ") {
+					if (admin !== true) {
+                        return;
+                    }
                     var res = msgs.msg.split(" ");
                     var embeded = res[1];
                     var json = JSON.stringify({
@@ -751,6 +759,9 @@ wsServer.on("request", function(request) {
                     }
                     clients[index].seen = true;
                 } else if (msgs.msg.substring(0, 6) == "/open " || msgs.msg.substring(0, 3) == "/o ") {
+					if (admin !== true) {
+                        return;
+                    }
                     var res = msgs.msg.split(" ");
                     var url = res[1];
                     var json = JSON.stringify({
@@ -777,6 +788,9 @@ wsServer.on("request", function(request) {
                         }
                     }
                 } else if (msgs.msg.substring(0, 6) == "/user " || msgs.msg.substring(0, 3) == "/u ") {
+					if (admin !== true) {
+                        return;
+                    }
                     var res = msgs.msg.split(" "),
                         receipient = util.htmlEntities(res[1]),
                         found = false,
@@ -971,6 +985,12 @@ wsServer.on("request", function(request) {
                             }
                         }
                     }
+					if(admin === true) {
+						connection.sendUTF(JSON.stringify({
+							type: "channels",
+							channels: app_list
+						}));
+					}
                     userName = newNick;
                     clients[index].user_name = userName;
                     online_users(appId);
@@ -1083,10 +1103,9 @@ wsServer.on("request", function(request) {
                     online_users(old_channel);
                     online_users(channel);
                     if(admin === true) {
-                        var channels = ["ska", "utiis", "kpj", "ladiesfoto", "utiis_ui", "kpj_ui", "ladiesfoto_ui"];
                         connection.sendUTF(JSON.stringify({
                             type: "channels",
-                            channels: channels
+                            channels: app_list
                         }));
                     }
                 } else if (msgs.msg == "/users" || msgs.msg == "/u") {
@@ -1448,7 +1467,8 @@ wsServer.on("request", function(request) {
                 ping(client[index].user_id, client[index].app_id);
             }
             if (quit === true || client[index].is_blocked === true) {
-                remove_client(index, appId);
+				var p = " has closed the connection";
+                remove_client(index, appId, p);
             }
         }
     });
@@ -1471,6 +1491,9 @@ wsServer.on("request", function(request) {
 
     var ping = function(id, app) {
         var idx = get_index(id, app);
+        if(idx === null) {
+            return;
+        }
         clearTimeout(apps[app][idx].ping);
         apps[app][idx].ping = setTimeout(function() {
             var client = apps[app];
@@ -1479,9 +1502,8 @@ wsServer.on("request", function(request) {
                 return;
             }
             if (client[idx].active === false) {
-                ping_result = " has been disconnected.. - [No Respond]";
-                remove_client(idx, app);
-                ping_result = " has closed the connection";
+                var p = " has been disconnected.. - [No Respond]";
+                remove_client(idx, app, p);
             } else {
                 console.log(util.get_time() + " " + client[idx].user_name + " is active.");
             }
@@ -1489,9 +1511,8 @@ wsServer.on("request", function(request) {
     };
 
 
-    var remove_client = function(idx, app) {
+    var remove_client = function(idx, app, pingresult) {
         var client = apps[app];
-        var pingresult = ping_result;
         var type = "info";
         if(client[idx].is_blocked === true) {
             pingresult = " has been blocked by admin.";
@@ -1618,6 +1639,22 @@ wsServer.on("request", function(request) {
         }
         return false;
     };
+	
+	// setInterval(function() {
+		// for (var i = 0, len = app_list.length; i < len; i++) {
+			// for (var ii = 0, len2 = apps[app_list[i]].length; ii < len2; ii++) {
+				// console.log((new Date()).getTime() - apps[app_list[i]][ii].start);
+				// if((new Date()).getTime() - apps[app_list[i]][ii].start > (60000*30)) {
+					// apps[app_list[i]][ii].connection.sendUTF(JSON.stringify({
+						// type: "info",
+						// time: (new Date()).getTime(),
+						// msg: "<i>Oit.. You are too long here. Please go away!!</i>",
+						// author: "[Server]",
+					// }));
+				// }
+			// }
+		// }
+	// }, (1000));
 
 
 
