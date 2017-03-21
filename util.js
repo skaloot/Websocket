@@ -3,6 +3,9 @@
 
 var querystring = require("querystring"),
     http = require("http"),
+	dns = require('dns'),
+    internet = true,
+	check_internet = false,
     pswd_srvr = "isu2uDIABL0W67B",
     origins = [
         "http://localhost",
@@ -36,6 +39,10 @@ var querystring = require("querystring"),
 
 exports.get_http = function() {
     return http;
+}
+
+exports.check_internet = function(n) {
+    check_internet = n;
 }
 
 exports.get_origin = function() {
@@ -115,6 +122,10 @@ exports.set_app = function(apps, app_list) {
 }
 
 exports.PostThis = function(obj, host, url, callback) {
+	if(host != "localhost" && !internet) {
+		console.log("ERROR - Cannot post: No connection.");
+		return;
+	}
     var post_data = querystring.stringify(obj),
         post_options = {
             host: host,
@@ -144,5 +155,20 @@ exports.PostThis = function(obj, host, url, callback) {
     post_req.write(post_data);
     post_req.end();
 }
+
+setInterval(function() {
+    if(check_internet === false) {
+        return;
+    }
+	dns.resolve('www.google.com', function(err){
+		if (err) {
+            console.log("ERROR - No connection.");
+			internet = false;
+		} else {
+            console.log("SUCCESS - Connected.");
+			internet = true;
+		}
+	});
+}, (10000));
 
 
