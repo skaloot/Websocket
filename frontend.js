@@ -14,7 +14,7 @@ $(function() {
         myName = null,
         myInfo = null,
         sound = false,
-        ip_address = null,
+        ip_address = localStorage.getItem("ip_address"),
         msgs = [],
         id = null,
         sender = null,
@@ -225,12 +225,25 @@ $(function() {
             } else if (json.type === "online") {
                 online = true;
                 window_active = false;
+            } else if (json.type === "online_state") {
+                if(json.state == true) {
+                    $("#chat_icon").show();
+                } else {
+                    $("#chat_icon").hide();
+                }
             } else if (json.type === "typing") {
                 //
             } else if (json.type === "seen") {
                 // 
             } else if (json.type === "users") {
                 //
+            } else if (json.type === "quit") {
+                connection.send(JSON.stringify({
+                    id: id,
+                    msg: "/quit"
+                }));
+                connect = false;
+                online = false;
             } else if (json.type === "message") {
                 console.log(json.author + ": " + strip(json.msg));
                 if (sound === true) {
@@ -319,15 +332,6 @@ $(function() {
         id = create_id();
         localStorage.setItem("myId_ui", id);
         console.log("New Id - " + id);
-    }
-
-    if (localStorage.getItem("ip_address")) {
-        ip_address = localStorage.getItem("ip_address");
-    } else {
-        $.get("http://kpjselangor.com/ip", function(data) {
-            ip_address = data;
-            localStorage.setItem("ip_address", ip_address);
-        });
     }
 
     connect_this(host, port);
