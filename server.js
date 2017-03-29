@@ -24,6 +24,7 @@ var port = 3777,
     blocked_list = [],
     blocked_id = [],
     clients,
+    clean_up,
     msg_count = 0,
     start_time = new Date().getTime(),
     shutdown = false,
@@ -268,6 +269,7 @@ wsServer.on("request", function(request) {
                                 clients[i].active = true;
                                 clients[i].online = true;
                                 clients[i].seen = false;
+                                clients[i].last_seen = new Date().getTime();
                                 reconnect = true;
                                 if (admin === true) {
                                     clients[i].admin = true;
@@ -352,6 +354,7 @@ wsServer.on("request", function(request) {
                             ping: null,
                             is_blocked: false,
                             start: new Date().getTime(),
+                            last_seen: new Date().getTime(),
                             assigned: null,
                             client: null,
                             msg: [],
@@ -462,6 +465,8 @@ wsServer.on("request", function(request) {
                         return;
                     }
                     shutdown = true;
+                    util.clear_interval();
+                    clearInterval(clean_up);
                     for (var i = 0, len = app_list.length; i < len; i++) {
                         for (var ii = 0, len2 = apps[app_list[i]].length; ii < len2; ii++) {
                             apps[app_list[i]][ii].is_blocked = false;
@@ -1640,21 +1645,22 @@ wsServer.on("request", function(request) {
         return false;
     };
 	
-	// setInterval(function() {
-		// for (var i = 0, len = app_list.length; i < len; i++) {
-			// for (var ii = 0, len2 = apps[app_list[i]].length; ii < len2; ii++) {
-				// console.log((new Date()).getTime() - apps[app_list[i]][ii].start);
-				// if((new Date()).getTime() - apps[app_list[i]][ii].start > (60000*30)) {
-					// apps[app_list[i]][ii].connection.sendUTF(JSON.stringify({
-						// type: "info",
-						// time: (new Date()).getTime(),
-						// msg: "<i>Oit.. You are too long here. Please go away!!</i>",
-						// author: "[Server]",
-					// }));
-				// }
-			// }
-		// }
-	// }, (1000));
+	clean_up = setInterval(function() {
+		for (var i = 0, len = app_list.length; i < len; i++) {
+			for (var ii = 0, len2 = apps[app_list[i]].length; ii < len2; ii++) {
+                if(apps[app_list[i]] != "kpj_ui" && apps[app_list[i]] != "ladiesfoto_ui" && apps[app_list[i]] != "utiis_ui") {
+                    return;
+                }
+				if((new Date()).getTime() - apps[app_list[i]][ii].last_seen > (60000*30)) {
+					apps[app_list[i]][ii].connection.sendUTF(JSON.stringify({
+						type: "quit",
+						time: (new Date()).getTime(),
+						author: "[Server]",
+					}));
+				}
+			}
+		}
+	}, (60000));
 
 
 
