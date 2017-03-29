@@ -350,9 +350,9 @@
                 $("#users").html(null);
                 for(var i=0, len=json.users.length; i<len; i++) {
                     if(json.users[i].name == myName) {
-                        $("#users").append("<div class='user'><b>"+json.users[i].name+"</b></div>");
+                        $("#users").append("<div class='user' onclick=\"ch.whois('"+json.users[i].name+"')\"><b>"+json.users[i].name+"</b></div>");
                     } else {
-                        $("#users").append("<div class='user'>"+json.users[i].name+"</div>");
+                        $("#users").append("<div class='user' onclick=\"ch.whois('"+json.users[i].name+"')\">"+json.users[i].name+"</div>");
                     }
                 }
             } else if (json.type === "channels") {
@@ -365,7 +365,8 @@
                     }
                     $("#channels").append("<div class='channel "+c+"' onclick=\"ch.chg_channel('"+json.channels[i]+"')\">"+json.channels[i]+"</div>");
                 }
-                $("#channels").append("<br>");
+                $("#btn-server").show();
+                $("#btn-restart").show();
             } else if (json.type === "typing") {
                 var h = chat.height()-1;
                 if(h < content.height()) {
@@ -395,6 +396,8 @@
                     "client",
                     json.time
                 );
+            } else if (json.type === "quit") {
+                ch.quit();
             } else if (json.type === "message") {
                 sender = json.author_id;
                 addMessage(
@@ -415,9 +418,60 @@
             connection.send(JSON.stringify({
                 id: id,
                 msg: "/ch "+c,
-                channel: channel
             }));
-        }
+        },
+		server_detail: function() {
+			connection.send(JSON.stringify({
+                id: id,
+                msg: "/server"
+            }));
+			content.scrollTop(chat.height());
+		},
+        restart: function() {
+            connection.send(JSON.stringify({
+                id: id,
+                msg: "/restart"
+            }));
+            content.scrollTop(chat.height());
+        },
+		whois: function(u) {
+			connection.send(JSON.stringify({
+                id: id,
+                msg: "/u "+u
+            }));
+			content.scrollTop(chat.height());
+		},
+		quit: function() {
+			if (online === true) {
+				connection.send(JSON.stringify({
+					id: id,
+					msg: "/quit"
+				}));
+				connect = false;
+				online = false;
+				chat.html(null);
+				myName = null;
+				connection = null;
+				$("#login").show();
+				$("#username").focus();
+				$("#bg_login").show();
+				localStorage.removeItem("myName");
+				localStorage.removeItem("myPassword");
+				localStorage.removeItem("myId");
+				localStorage.removeItem("channel");
+				localStorage.removeItem("app_id");
+				$("#channels-title").hide();
+				$("#btn-server").hide();
+                $("#btn-restart").hide();
+				$("#channels").html(null);
+				chat.removeAttr("id");
+				chat = $(".chat");
+				if (window.opener !== null) {
+					localStorage.removeItem("chat");
+					window.close();
+				}
+			}
+		},
     }
 
 
@@ -463,33 +517,7 @@
                         (new Date()).getTime()
                     );
                     if (msg == "/quit" || msg == "/q") {
-                        if (online === true) {
-                            connection.send(JSON.stringify({
-                                id: id,
-                                msg: "/quit"
-                            }));
-                            connect = false;
-                            online = false;
-                            chat.html(null);
-                            myName = null;
-                            connection = null;
-                            $("#login").show();
-                            $("#username").focus();
-                            $("#bg_login").show();
-                            localStorage.removeItem("myName");
-                            localStorage.removeItem("myPassword");
-                            localStorage.removeItem("myId");
-                            localStorage.removeItem("channel");
-                            localStorage.removeItem("app_id");
-                            $("#channels-title").hide();
-                            $("#channels").html(null);
-                            chat.removeAttr("id");
-                            chat = $(".chat");
-                            if (window.opener !== null) {
-                                localStorage.removeItem("chat");
-                                window.close();
-                            }
-                        }
+                        ch.quit();
                     } else if (msg == "/reload" || msg == "/r") {
                         connection.send(JSON.stringify({
                             id: id,
