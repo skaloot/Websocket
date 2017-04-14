@@ -1,0 +1,15 @@
+events.js:141
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE :::3777
+    at Object.exports._errnoException (util.js:907:11)
+    at exports._exceptionWithHostPort (util.js:930:20)
+    at Server._listen2 (net.js:1250:14)
+    at listen (net.js:1286:10)
+    at Server.listen (net.js:1382:5)
+    at Object.<anonymous> (C:\xampp\htdocs\websocket\server.js:70:8)
+    at Module._compile (module.js:409:26)
+    at Object.Module._extensions..js (module.js:416:10)
+    at Module.load (module.js:343:32)
+    at Function.Module._load (module.js:300:12)

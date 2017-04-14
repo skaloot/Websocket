@@ -6,6 +6,7 @@ var querystring = require("querystring"),
 	dns = require('dns'),
     internet = true,
 	check_internet = false,
+    interval_internet,
     pswd_srvr = "isu2uDIABL0W67B",
     origins = [
         "http://localhost",
@@ -39,6 +40,10 @@ var querystring = require("querystring"),
 
 exports.get_http = function() {
     return http;
+}
+
+exports.clear_interval = function() {
+    clearInterval(interval_internet);
 }
 
 exports.check_internet = function(n) {
@@ -101,21 +106,21 @@ exports.DateDiff = function(time1, time2) {
     return diffD + " days, " + diffH + " hours, " + diffM + " minutes, " + diffS + " seconds";
 }
 
-exports.set_app = function(apps, app_list) {
-    for (var i = 0, len = app_list.length; i < len; i++) {
-        console.log(app_list[i]);
-        if (!apps[app_list[i]]) {
-            apps[app_list[i]] = [];
-            apps[app_list[i]].total_user = 0;
-            apps[app_list[i]].online_state = true;
-            apps[app_list[i]].type = "public";
-            apps[app_list[i]].history = {
+exports.set_app = function(a, b) {
+    for (var i = 0, len = b.length; i < len; i++) {
+        console.log(b[i]);
+        if (!a[b[i]]) {
+            a[b[i]] = [];
+            a[b[i]].total_user = 0;
+            a[b[i]].online_state = true;
+            a[b[i]].type = "public";
+            a[b[i]].history = {
                 type: "history",
                 msg: []
             };
-            if(app_list[i] == "kpj") {
-                apps[app_list[i]].online_state = false;
-                apps[app_list[i]].type = "private";
+            if(b[i] == "kpj") {
+                a[b[i]].online_state = false;
+                a[b[i]].type = "private";
             }
         }
     }
@@ -156,7 +161,7 @@ exports.PostThis = function(obj, host, url, callback) {
     post_req.end();
 }
 
-setInterval(function() {
+interval_internet = setInterval(function() {
     if(check_internet === false) {
         return;
     }

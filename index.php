@@ -13,7 +13,7 @@
         body { margin: 0;font-family: 'Raleway', sans-serif; font-size:1em; letter-spacing:0.02em; font-size: 1em; }
         * { padding:0px; margin:0px;outline: 0; }
         p { line-height:1.4; }
-        #body { width: 100%; height:100%; margin:0px; }
+        #body { width: 100%; height:100%; margin:0px; position:absolute; overflow:hidden; }
         #content { background-color:#FFF; overflow-y: auto; position:absolute; margin:20px; height:auto; bottom:40px; top:0px;left: 220px; right:0px; padding-bottom:25px; }
         #content .chat p { line-height: 1.6; }
         #content .chat p:hover { background-color:#f5f5f5 }
@@ -33,23 +33,37 @@
         #login { position:absolute;top: 30%;text-align: center;width:100%;display:none; }
         #username { padding:10px;font-size:1em;max-width:300px;width:100%;margin:auto; border-radius:3px; border:0px; }
         #wrapper { width:auto;margin:auto 40px auto 20px; }
-        #users-wrapper { position:absolute;left:0px;top:0px;bottom:0px;width:220px;background-color:#303e4d;color:#FFF; }
-        #users-title, #channels-title { font-size: 1em; padding:10px 18px; border-bottom:1px solid #45515f; margin-bottom:10px; background-color:#263442; }
+        #panel { position:absolute;left:0px;top:0px;bottom:0px;width:220px;background-color:#303e4d;color:#FFF; overflow-y:auto; }
+        #users-title, #channels-title { font-size: 1em; padding:10px 20px; border-bottom:1px solid #45515f; margin-bottom:10px; background-color:#263442; }
         #users, #channels { color:#ccc; }
-        #channels-title { display:none; }
+        #channels-title, #btn-server, #btn-restart { display:none; }
+		#btn-quit, #btn-restart { padding-top:0px; }
+		.btn { display:block; border:0px; padding:10px 15px; width:100%; cursor:pointer; font-size:0.9em; background-color:#263442; color:#FFF; }
+		.btn:hover { background-color:#1c2936; }
         .user, .channel { font-size:0.9em; padding:7px 18px; cursor:pointer; transition:background-color 0.2s; }
         .user:hover, .channel:hover, .channel-now { background-color:#3f4e5f; color:#FFF; }
-        @media only screen and (max-width: 400px) {
-            #users { display: none; }
-            #content #chat p { margin-right:20px; }
+		.panel { padding:15px 20px;display:block; }
+        @media only screen and (max-width: 500px) {
+            #panel { display: none; }
+			#content, #input-holder { left:0px; }
+            #content .chat p { margin-right:20px; }
         }
         </style>
     </head>
     <body>
         <div id="body">
-            <div id="users-wrapper">
+            <div id="panel">
                 <div id="channels-title">Channels</div>
                 <div id="channels"></div>
+				<div class="panel" id="btn-server">
+					<button class="btn" onclick="ch.server_detail()">Server Detail</button>
+				</div>
+                <div class="panel" id="btn-restart">
+                    <button class="btn" onclick="ch.restart()">Restart Server</button>
+                </div>
+                <div class="panel" id="btn-quit">
+                    <button class="btn" onclick="ch.quit()">Logout</button>
+                </div>
                 <div id="users-title">Online Users</div>
                 <div id="users"></div>
             </div>
