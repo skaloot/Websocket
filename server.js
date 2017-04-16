@@ -1472,6 +1472,7 @@ wsServer.on("request", function(request) {
                 ping(client[index].user_id, client[index].app_id);
             }
             if (quit === true || client[index].is_blocked === true) {
+                clearTimeout(client[index].ping);
 				var p = " has closed the connection";
                 remove_client(index, appId, p);
             }
@@ -1649,7 +1650,7 @@ wsServer.on("request", function(request) {
 		for (var i = 0, len = app_list.length; i < len; i++) {
 			for (var ii = 0, len2 = apps[app_list[i]].length; ii < len2; ii++) {
                 if(app_list[i] == "kpj_ui" || app_list[i] == "ladiesfoto_ui" || app_list[i] == "utiis_ui") {
-    				if((new Date()).getTime() - apps[app_list[i]][ii].last_seen > 900000) {
+    				if((new Date()).getTime() - apps[app_list[i]][ii].last_seen > 900000 && apps[app_list[i]][ii].admin === false) {
     					apps[app_list[i]][ii].connection.sendUTF(JSON.stringify({
     						type: "quit",
     						time: (new Date()).getTime(),

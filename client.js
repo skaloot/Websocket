@@ -784,11 +784,9 @@
         localStorage.setItem("channel", app_id);
     }
 
-    if (!localStorage.getItem("myName")) {
-        $("#bg_login").show();
-        $("#login").show();
-        $("#username").focus();
-    } else {
+    if (localStorage.getItem("myName")) {
+        $("#bg_login").hide();
+        $("#login").hide();
         if (localStorage.getItem("myId")) {
             id = localStorage.getItem("myId");
             console.log("Existing Id - " + id);

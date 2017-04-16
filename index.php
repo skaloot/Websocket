@@ -29,15 +29,15 @@
         .time { color:#999; opacity: 0;margin-left: 15px;font-size: 1em; float:right; margin-right: 15px; }
         p:hover .time { opacity: 1; }
         #reconnect { padding:7px 10px; border:1px solid #ccc; border-radius:3px; background-color:#fff; font-size:1em; }
-        #bg_login { position: absolute; background-color:#303e4d; width:100%;height:100%;display:none; }
-        #login { position:absolute;top: 30%;text-align: center;width:100%;display:none; }
+        #bg_login { position: absolute; background-color:#303e4d; width:100%;height:100%;display:block; }
+        #login { position:absolute;top: 30%;text-align: center;width:100%;display:block; }
         #username { padding:10px;font-size:1em;max-width:300px;width:100%;margin:auto; border-radius:3px; border:0px; }
-        #wrapper { width:auto;margin:auto 40px auto 20px; }
+        #wrapper { width:auto; margin:auto 20px; }
         #panel { position:absolute;left:0px;top:0px;bottom:0px;width:220px;background-color:#303e4d;color:#FFF; overflow-y:auto; }
         #users-title, #channels-title { font-size: 1em; padding:10px 20px; border-bottom:1px solid #45515f; margin-bottom:10px; background-color:#263442; }
         #users, #channels { color:#ccc; }
         #channels-title, #btn-server, #btn-restart { display:none; }
-		#btn-quit, #btn-restart { padding-top:0px; }
+		#btn-server, #btn-restart { padding-top:0px; }
 		.btn { display:block; border:0px; padding:10px 15px; width:100%; cursor:pointer; font-size:0.9em; background-color:#263442; color:#FFF; }
 		.btn:hover { background-color:#1c2936; }
         .user, .channel { font-size:0.9em; padding:7px 18px; cursor:pointer; transition:background-color 0.2s; }
@@ -55,14 +55,14 @@
             <div id="panel">
                 <div id="channels-title">Channels</div>
                 <div id="channels"></div>
+                <div class="panel" id="btn-quit">
+                    <button class="btn" onclick="ch.quit()">Logout</button>
+                </div>
 				<div class="panel" id="btn-server">
 					<button class="btn" onclick="ch.server_detail()">Server Detail</button>
 				</div>
                 <div class="panel" id="btn-restart">
                     <button class="btn" onclick="ch.restart()">Restart Server</button>
-                </div>
-                <div class="panel" id="btn-quit">
-                    <button class="btn" onclick="ch.quit()">Logout</button>
                 </div>
                 <div id="users-title">Online Users</div>
                 <div id="users"></div>
