@@ -483,13 +483,7 @@
                 return;
             }
             var d = new Date();
-            if (msg == "/connect") {
-                if (connection === null && connect === false && blocked !== true) {
-                    sender = myName;
-                    chat.append("<p class=\"server\"><i>Connecting...</i><span class=\"time\">" + get_time() + "</span></p>");
-                    connect_this(host, port);
-                }
-            } else if (msg == "/mute") {
+            if (msg == "/mute") {
                 sender = null;
                 addMessage("", "<i>You just changed your sound to <b>mute</b></i>", "server", (new Date()).getTime());
                 sound = false;
