@@ -1276,22 +1276,25 @@ wsServer.on("request", function(request) {
                     }
                     var res = msgs.msg.split(" ");
                     var receipient = res[1];
-                    var found = false;
+                    if (userName === receipient) {
+                        return;
+                    }
                     for (var i = 0, len = clients.length; i < len; i++) {
                         if (clients[i].user_name === receipient) {
-                            clients[i].connection.close();
-                            found = true;
-                            break;
+                            clients[i].connection.sendUTF(JSON.stringify({
+                                type: "quit",
+                                time: (new Date()).getTime(),
+                                author: "[Server]",
+                            }));
+                            return;
                         }
                     }
-                    if (found === false) {
-                        connection.sendUTF(JSON.stringify({
-                            type: "info",
-                            time: (new Date()).getTime(),
-                            msg: "<i>Oopss.. username <b>" + receipient + "</b> is not here.</i>",
-                            author: "[Server]",
-                        }));
-                    }
+                    connection.sendUTF(JSON.stringify({
+                        type: "info",
+                        time: (new Date()).getTime(),
+                        msg: "<i>Oopss.. username <b>" + receipient + "</b> is not here.</i>",
+                        author: "[Server]",
+                    }));
                 } else if (msgs.msg == "/typing") {
                     var json = JSON.stringify({
                         type: "typing",
