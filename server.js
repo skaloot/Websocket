@@ -23,6 +23,7 @@ var port = 3777,
     channel_list = [],
     blocked_list = [],
     blocked_id = [],
+    timer_password_temp = [],
     clients,
     clean_up,
     msg_count = 0,
@@ -152,6 +153,7 @@ wsServer.on("request", function(request) {
                             connection.sendUTF(JSON.stringify({
                                 type: "connected",
                                 connected: true,
+                                granted: false,
                                 time: (new Date()).getTime(),
                                 author: "[Server]",
                             }));
@@ -204,8 +206,6 @@ wsServer.on("request", function(request) {
                     }));
                     return;
                 }
-                password = false;
-                password_user = null;
             }
             // ========================================== NO NICK ====================================================
             if (userName === null && appId !== null) {
@@ -225,12 +225,16 @@ wsServer.on("request", function(request) {
                     }
                     var isadmin = check_admin(nick.toUpperCase());
                     if (isadmin === true) {
+                        if(!timer_password_temp[msgs.id]) {
+                            timer_password_temp[msgs.id] = {timer:null};
+                        }
+                        timer_password(msgs.id, connection);
                         if (!res[2]) {
                             connection.sendUTF(JSON.stringify({
                                 type: "info",
                                 auth_admin: true,
                                 time: (new Date()).getTime(),
-                                msg: "<i>Oopss.. Nickname <b>" + nick + "</b> is reserved for admin. Please type in <b>/p &lt;password&gt;</b>.</i>",
+                                msg: "<i>Oopss.. Nickname <b>" + nick + "</b> is reserved for admin. Please type in <b>/p &lt;password&gt;</b> within 15 seconds.</i>",
                                 author: "[Server]",
                             }));
                             password = true;
@@ -242,7 +246,7 @@ wsServer.on("request", function(request) {
                                 connection.sendUTF(JSON.stringify({
                                     type: "info",
                                     time: (new Date()).getTime(),
-                                    msg: "<i>Oopss..Invalid password.</i>",
+                                    msg: "<i>Oopss.. Invalid password.</i>",
                                     author: "[Server]",
                                 }));
                                 return;
@@ -253,8 +257,16 @@ wsServer.on("request", function(request) {
                                     msg: "<i>Verified..</i>",
                                     author: "[Server]",
                                 }));
+                                if(timer_password_temp[msgs.id]) {
+                                    if(timer_password_temp[msgs.id].timer) {
+                                        clearTimeout(timer_password_temp[msgs.id].timer);
+                                    }
+                                    delete timer_password_temp[msgs.id];
+                                }
                                 admin_password = " " + res[2];
                                 admin = true;
+                                password = false;
+                                password_user = null;
                             }
                         }
                     }
@@ -924,6 +936,10 @@ wsServer.on("request", function(request) {
                     admin = false;
                     var isadmin = check_admin(newNick.toUpperCase());
                     if (isadmin === true) {
+                        if(!timer_password_temp[msgs.id]) {
+                            timer_password_temp[msgs.id] = {timer:null};
+                        }
+                        timer_password(msgs.id, connection);
                         if (!res[2]) {
                             connection.sendUTF(JSON.stringify({
                                 type: "info",
@@ -940,7 +956,7 @@ wsServer.on("request", function(request) {
                                 connection.sendUTF(JSON.stringify({
                                     type: "info",
                                     time: (new Date()).getTime(),
-                                    msg: "<i>Oopss..Invalid password.</i>",
+                                    msg: "<i>Oopss.. Invalid password.</i>",
                                     author: "[Server]",
                                 }));
                                 return;
@@ -951,8 +967,16 @@ wsServer.on("request", function(request) {
                                     msg: "<i>Verified..</i>",
                                     author: "[Server]",
                                 }));
+                                if(timer_password_temp[msgs.id]) {
+                                    if(timer_password_temp[msgs.id].timer) {
+                                        clearTimeout(timer_password_temp[msgs.id].timer);
+                                    }
+                                    delete timer_password_temp[msgs.id];
+                                }
                                 admin_password = " " + res[2];
                                 admin = true;
+                                password = false;
+                                password_user = null;
                             }
                         }
                     } else {
@@ -1512,6 +1536,21 @@ wsServer.on("request", function(request) {
                 remove_client(idx, app, p);
             } else {
                 console.log(util.get_time() + " " + client[idx].user_name + " is active.");
+            }
+        }, 15000);
+    };
+
+
+    var timer_password = function(id, con) {
+        clearTimeout(timer_password_temp[id].timer);
+        timer_password_temp[id].timer = setTimeout(function() {
+            con.sendUTF(JSON.stringify({
+                type: "quit",
+                time: (new Date()).getTime(),
+                author: "[Server]",
+            }));
+            if(timer_password_temp[id]) {
+                delete timer_password_temp[id];
             }
         }, 15000);
     };

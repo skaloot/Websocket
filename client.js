@@ -332,8 +332,6 @@
                 if (mn[1]) {
                     localStorage.setItem("myPassword", mn[1]);
                 }
-                $("#login").hide();
-                $("#bg_login").hide();
                 $("#username").val(null);
                 $("#username").removeAttr("disabled");
                 $(".chat").attr("id","chat_"+channel);
@@ -397,6 +395,7 @@
                     json.time
                 );
             } else if (json.type === "quit") {
+                online = true;
                 ch.quit();
             } else if (json.type === "message") {
                 sender = json.author_id;
@@ -452,9 +451,10 @@
 				chat.html(null);
 				myName = null;
 				connection = null;
+                myPassword = "";
 				$("#login").show();
-				$("#username").focus();
 				$("#bg_login").show();
+                $("#username").val(null).removeAttr("disabled").focus();
 				localStorage.removeItem("myName");
 				localStorage.removeItem("myPassword");
 				localStorage.removeItem("myId");
@@ -733,7 +733,7 @@
     }, 3000);
     
     var ping = setInterval(function() {
-        if (connect === true && connection.readyState === 1 && blocked !== true) {
+        if (connect === true && online === true && connection.readyState === 1 && blocked !== true) {
             connection.send(JSON.stringify({
                 msg: "/ping"
             }));
