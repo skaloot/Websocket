@@ -198,13 +198,15 @@ wsServer.on("request", function(request) {
                     var res = msgs.msg.split(" ");
                     msgs.msg = "/n " + password_user + " " + util.htmlEntities(res[1]);
                 } else {
-                    connection.sendUTF(JSON.stringify({
-                        type: "info",
-                        time: (new Date()).getTime(),
-                        msg: "<i>Password is empty. Please type in the password.</i>",
-                        author: "[Server]",
-                    }));
-                    return;
+                    if (msgs.msg != "/quit") {
+                        connection.sendUTF(JSON.stringify({
+                            type: "info",
+                            time: (new Date()).getTime(),
+                            msg: "<i>Password is empty. Please type in the password.</i>",
+                            author: "[Server]",
+                        }));
+                        return;
+                    }
                 }
             }
             // ========================================== NO NICK ====================================================
@@ -225,10 +227,6 @@ wsServer.on("request", function(request) {
                     }
                     var isadmin = check_admin(nick.toUpperCase());
                     if (isadmin === true) {
-                        if(!timer_password_temp[msgs.id]) {
-                            timer_password_temp[msgs.id] = {timer:null};
-                        }
-                        timer_password(msgs.id, connection);
                         if (!res[2]) {
                             connection.sendUTF(JSON.stringify({
                                 type: "info",
@@ -237,6 +235,10 @@ wsServer.on("request", function(request) {
                                 msg: "<i>Oopss.. Nickname <b>" + nick + "</b> is reserved for admin. Please type in <b>/p &lt;password&gt;</b> within 15 seconds.</i>",
                                 author: "[Server]",
                             }));
+                            if(!timer_password_temp[msgs.id]) {
+                                timer_password_temp[msgs.id] = {timer:null};
+                            }
+                            timer_password(msgs.id, connection);
                             password = true;
                             password_user = nick;
                             return;
@@ -936,10 +938,6 @@ wsServer.on("request", function(request) {
                     admin = false;
                     var isadmin = check_admin(newNick.toUpperCase());
                     if (isadmin === true) {
-                        if(!timer_password_temp[msgs.id]) {
-                            timer_password_temp[msgs.id] = {timer:null};
-                        }
-                        timer_password(msgs.id, connection);
                         if (!res[2]) {
                             connection.sendUTF(JSON.stringify({
                                 type: "info",
@@ -947,6 +945,10 @@ wsServer.on("request", function(request) {
                                 msg: "<i>Oopss.. Nickname <b>" + newNick + "</b> is reserved for admin. Please type in <b>/p &lt;password&gt;</b>.</i>",
                                 author: "[Server]",
                             }));
+                            if(!timer_password_temp[msgs.id]) {
+                                timer_password_temp[msgs.id] = {timer:null};
+                            }
+                            timer_password(msgs.id, connection);
                             password = true;
                             password_user = newNick;
                             return;
@@ -1215,6 +1217,9 @@ wsServer.on("request", function(request) {
                         }
                     }
                 } else if (msgs.msg.substring(0, 5) == "/msg " || msgs.msg.substring(0, 3) == "/m ") {
+                    if(clients.type == "private") {
+                        return;
+                    }
                     var res = msgs.msg.split(" ");
                     var receipient = util.htmlEntities(res[1]);
                     res.splice(0, 2);
@@ -1266,6 +1271,9 @@ wsServer.on("request", function(request) {
                         }));
                     }
                 } else if (msgs.msg.substring(0, 7) == "/close ") {
+                    if (admin !== true) {
+                        return;
+                    }
                     var res = msgs.msg.split(" ");
                     var receipient = res[1];
                     var found = false;

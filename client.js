@@ -181,6 +181,10 @@
                         localStorage.removeItem("myPassword");
                     }
                 }
+                $("#channels-title").hide();
+                $("#btn-server").hide();
+                $("#btn-restart").hide();
+                $("#channels").html(null);
             } else if (json.type === "newChannel") {
                 sender = null;
                 addMessage(
@@ -446,6 +450,7 @@
 					id: id,
 					msg: "/quit"
 				}));
+                connection.close();
 				connect = false;
 				online = false;
 				chat.html(null);
@@ -464,6 +469,7 @@
 				$("#btn-server").hide();
                 $("#btn-restart").hide();
 				$("#channels").html(null);
+                $("#users").html(null);
 				chat.removeAttr("id");
 				chat = $(".chat");
 				if (window.opener !== null) {
