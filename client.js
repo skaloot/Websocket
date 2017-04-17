@@ -362,10 +362,13 @@
                 $("#channels").html(null);
                 for(var i=0, len=json.channels.length; i<len; i++) {
                     var c = "";
+                    var d = "";
                     if(json.channels[i] == channel) {
                         c = "channel-now";
+                    } else {
+                        d = "onclick=\"ch.chg_channel('"+json.channels[i]+"')\"";
                     }
-                    $("#channels").append("<div class='channel "+c+"' onclick=\"ch.chg_channel('"+json.channels[i]+"')\">"+json.channels[i]+"</div>");
+                    $("#channels").append("<div class='channel "+c+"' "+d+">"+json.channels[i]+"</div>");
                 }
                 $("#btn-server").show();
                 $("#btn-restart").show();
@@ -422,6 +425,13 @@
                 id: id,
                 msg: "/ch "+c,
             }));
+            channel = c;
+            app_id = c;
+            console.log(channel);
+            localStorage.setItem("channel", channel);
+            localStorage.setItem("app_id", app_id);
+            $(".chat").attr("id","chat_"+channel);
+            chat = $("#chat_"+channel);
         },
 		server_detail: function() {
 			connection.send(JSON.stringify({
@@ -518,6 +528,10 @@
                     );
                     if (msg == "/quit" || msg == "/q") {
                         ch.quit();
+                    } else if (msg.substring(0, 9) == "/channel " || msg.substring(0, 4) == "/ch ") {
+                        var res = msg.split(" ");
+                        var c = res[1];
+                        ch.chg_channel(c);
                     } else if (msg == "/reload" || msg == "/r") {
                         connection.send(JSON.stringify({
                             id: id,
