@@ -1034,6 +1034,15 @@ wsServer.on("request", function(request) {
                         }));
                         return;
                     }
+                    if (!apps[chnl]) {
+                        connection.sendUTF(JSON.stringify({
+                            type: "info",
+                            time: (new Date()).getTime(),
+                            msg: "<i>Oopss.. Channel is not valid.",
+                            author: "[Server]",
+                        }));
+                        return;
+                    }
                     for (var i = 0, len = apps[chnl].length; i < len; i++) {
                         if (apps[chnl][i].user_id !== userId && userName === apps[chnl][i].user_name) {
                             connection.sendUTF(JSON.stringify({
@@ -1085,7 +1094,7 @@ wsServer.on("request", function(request) {
                     // apps[old_channel].splice(index, 1);
                     // index = get_index(userId, appId);
                     // clients = apps[appId];
-                    
+
                     console.log(util.get_time() + " User " + userName + " has changed channel to " + channel);
                     var users = "";
                     var n = 1;

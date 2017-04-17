@@ -427,7 +427,6 @@
             }));
             channel = c;
             app_id = c;
-            console.log(channel);
             localStorage.setItem("channel", channel);
             localStorage.setItem("app_id", app_id);
             $(".chat").attr("id","chat_"+channel);
