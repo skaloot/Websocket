@@ -6,7 +6,7 @@
         chat = $(".chat"),
         seentyping = $("#seen-typing"),
         input = $("#input"),
-        host = location.host,
+        host = "//127.0.0.1",
         // host = "//artinity.dtdns.net",
         port = 3777,
         app_id = "utiis",
@@ -16,7 +16,7 @@
         window_active = null,
         myName = null,
         myInfo = null,
-        ip_address = $("#ip_address").val(),
+        ip_address = localStorage.getItem("ip_address"),
         screen = $(window).width(),
         myPassword = "",
         sound = false,
@@ -209,43 +209,6 @@
                         json.msg[i].time
                     );
                 }
-            } else if (json.type === "my-info") {
-                sender = null;
-                if(myInfo !== null) {
-                    myInfo.active = window_active;
-                    connection.send(JSON.stringify({
-                        id: id,
-                        msg: "/info",
-                        myinfo: myInfo,
-                        receipient: json.author_id,
-                    }));
-                    return;
-                }
-                $.getJSON("http://ipinfo.io", function(data) {
-                    data.agent = navigator.userAgent;
-                    data.screen = screen;
-                    data.active = window_active;
-                    console.log(data);
-                    myInfo = data;
-                    connection.send(JSON.stringify({
-                        id: id,
-                        msg: "/info",
-                        myinfo: myInfo,
-                        receipient: json.author_id,
-                    }));
-                }).error(function(){
-                    myInfo = {};
-                    myInfo.agent = navigator.userAgent;
-                    myInfo.screen = screen;
-                    myInfo.active = window_active;
-                    myInfo.ip = ip_address;
-                    connection.send(JSON.stringify({
-                        id: id,
-                        msg: "/info",
-                        myinfo: myInfo,
-                        receipient: json.author_id,
-                    }));
-                });
             } else if (json.type === "info") {
                 sender = null;
                 addMessage(
@@ -316,7 +279,9 @@
                     id: id,
                     channel: channel,
                     msg: "/nick " + myName + myPassword,
-                    ip_address: ip_address
+                    ip_address: ip_address,
+					agent: navigator.userAgent,
+                    screen: screen,
                 }));
                 $("#login").hide();
                 $("#bg_login").hide();
@@ -481,6 +446,8 @@
                 $("#users").html(null);
 				chat.removeAttr("id");
 				chat = $(".chat");
+				msgs = [];
+				historys = 0;
 				if (window.opener !== null) {
 					localStorage.removeItem("chat");
 					window.close();
@@ -491,6 +458,9 @@
 
 
     input.keydown(function(e) {
+		if(window_active !== true) {
+			window_active = true;
+		}
         var msg = $(this).val();
         if (e.keyCode === 13) {
             msg = msg.trim().replace(/\s+/g, " ");
@@ -536,32 +506,6 @@
                             id: id,
                             msg: "/reload"
                         }));
-                    } else if (msg == "/info" || msg == "/i") {
-                        $.getJSON("http://ipinfo.io", function(data) {
-                            data.agent = navigator.userAgent;
-                            data.screen = screen;
-                            data.active = window_active;
-                            console.log(data);
-                            myInfo = data;
-                            connection.send(JSON.stringify({
-                                id: id,
-                                msg: "/info",
-                                myinfo: myInfo,
-                                receipient: null,
-                            }));
-                        }).error(function(){
-                            myInfo = {};
-                            myInfo.agent = navigator.userAgent;
-                            myInfo.screen = screen;
-                            myInfo.active = window_active;
-                            myInfo.ip = ip_address;
-                            connection.send(JSON.stringify({
-                                id: id,
-                                msg: "/info",
-                                myinfo: myInfo,
-                                receipient: null,
-                            }));
-                        });
                     } else {
                         connection.send(JSON.stringify({
                             id: id,
@@ -677,6 +621,7 @@
             if(connect === false && myName === null) {
                 id = create_id();
                 connect_this(host, port);
+				$("#username").attr("disabled","disabled");
             }
         }
     });
