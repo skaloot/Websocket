@@ -6,7 +6,7 @@
         chat = $(".chat"),
         seentyping = $("#seen-typing"),
         input = $("#input"),
-        host = "//127.0.0.1",
+        host = location.host,
         // host = "//artinity.dtdns.net",
         port = 3777,
         app_id = "utiis",
