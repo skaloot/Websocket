@@ -6,11 +6,13 @@
         chat = $(".chat"),
         seentyping = $("#seen-typing"),
         input = $("#input"),
+		// host = "//127.0.0.1",
         host = location.host,
         // host = "//artinity.dtdns.net",
         port = 3777,
         app_id = "utiis",
         channel = "utiis",
+		channels = [],
         connect = false,
         online = false,
         window_active = null,
@@ -185,20 +187,25 @@
                 $("#btn-server").hide();
                 $("#btn-restart").hide();
                 $("#channels").html(null);
-            } else if (json.type === "newChannel") {
+            } else if (json.type === "leave_channel") {
                 sender = null;
-                addMessage(
+				chat.hide();
+				channel = json.channel;
+				app_id = json.channel;
+				localStorage.setItem("channel", channel);
+				localStorage.setItem("app_id", app_id);
+				if(channels.indexOf(channel) !== -1) {
+					//
+				}
+				chat = $("#chat_"+channel);
+				chat.show();
+				content.scrollTop(chat.height());
+				addMessage(
                     "",
                     json.msg,
                     "server",
                     json.time
                 );
-                channel = json.channel;
-                app_id = json.channel;
-                localStorage.setItem("channel", channel);
-                localStorage.setItem("app_id", app_id);
-                $(".chat").attr("id","chat_"+channel);
-                chat = $("#chat_"+channel);
             } else if (json.type === "history") {
                 sender = null;
                 for (var i = 0; i < json.msg.length; i++) {
@@ -303,12 +310,14 @@
                 }
                 $("#username").val(null);
                 $("#username").removeAttr("disabled");
+				channels.push(channel);
                 $(".chat").attr("id","chat_"+channel);
                 chat = $("#chat_"+channel);
                 input.focus();
             } else if (json.type === "online") {
                 online = true;
                 window_active = false;
+				channels.push(channel);
                 $(".chat").attr("id","chat_"+channel);
                 chat = $("#chat_"+channel);
             } else if (json.type === "online_state") {
@@ -331,9 +340,9 @@
                     if(json.channels[i] == channel) {
                         c = "channel-now";
                     } else {
-                        d = "onclick=\"ch.chg_channel('"+json.channels[i]+"')\"";
+                        d = "onclick=\"ch.chg_channel(this,'"+json.channels[i]+"');\"";
                     }
-                    $("#channels").append("<div class='channel "+c+"' "+d+">"+json.channels[i]+"</div>");
+                    $("#channels").append("<div class='channel "+c+"' onclick=\"ch.chg_channel(this,'"+json.channels[i]+"');\">"+json.channels[i]+"</div>");
                 }
                 $("#btn-server").show();
                 $("#btn-restart").show();
@@ -375,7 +384,8 @@
                     json.author + ": ",
                     json.msg,
                     "client",
-                    json.time
+                    json.time,
+					json.channel
                 );
             } else {
                 console.log("Hmm..., I\"ve never seen JSON like this: ", json);
@@ -385,17 +395,26 @@
 
 
     global.ch = {
-        chg_channel: function(c) {
+        chg_channel: function(e,c) {
+			$(".channel").removeClass("channel-now");
+			$(e).addClass("channel-now");
             connection.send(JSON.stringify({
                 id: id,
                 msg: "/ch "+c,
             }));
-            channel = c;
-            app_id = c;
-            localStorage.setItem("channel", channel);
-            localStorage.setItem("app_id", app_id);
-            $(".chat").attr("id","chat_"+channel);
+			chat.hide();
+			channel = c;
+			app_id = c;
+			localStorage.setItem("channel", channel);
+			localStorage.setItem("app_id", app_id);
+			if(channels.indexOf(channel) !== -1) {
+				$("#chat_"+channel).show();
+			} else {
+				$("#content").append("<div class=\"chat\" id=\"chat_"+channel+"\"></div>");
+				channels.push(channel);
+			}
             chat = $("#chat_"+channel);
+			content.scrollTop(chat.height());
         },
 		server_detail: function() {
 			connection.send(JSON.stringify({
@@ -427,27 +446,24 @@
                 connection.close();
 				connect = false;
 				online = false;
-				chat.html(null);
 				myName = null;
 				connection = null;
                 myPassword = "";
 				$("#login").show();
 				$("#bg_login").show();
                 $("#username").val(null).removeAttr("disabled").focus();
-				localStorage.removeItem("myName");
-				localStorage.removeItem("myPassword");
-				localStorage.removeItem("myId");
-				localStorage.removeItem("channel");
-				localStorage.removeItem("app_id");
 				$("#channels-title").hide();
 				$("#btn-server").hide();
                 $("#btn-restart").hide();
 				$("#channels").html(null);
                 $("#users").html(null);
+				chat.html(null);
 				chat.removeAttr("id");
 				chat = $(".chat");
 				msgs = [];
+				channels = [];
 				historys = 0;
+				localStorage.clear();
 				if (window.opener !== null) {
 					localStorage.removeItem("chat");
 					window.close();
@@ -493,7 +509,8 @@
                         myName + ": ",
                         addmsg,
                         "client",
-                        (new Date()).getTime()
+                        (new Date()).getTime(),
+						channel
                     );
                     if (msg == "/quit" || msg == "/q") {
                         ch.quit();
@@ -550,10 +567,18 @@
         }
     });
 
-    var addMessage = function(author, message, textClass, time) {
+    var addMessage = function(author, message, textClass, time, chnl=null) {
         seentyping.html(null);
-        var h = chat.height()-1;
-        chat.append("<p class=\"" + textClass + "\"><b>" + author + "</b> " + message + " <span class=\"time\">" + get_time(time) + "</span></p>");
+		var c = chat;
+		if(chnl !== null) {
+			if(channels.indexOf(chnl) === -1) {
+				$("#content").append("<div class=\"chat\" id=\"chat_"+chnl+"\"></div>");
+				channels.push(chnl);
+			}
+			c = $("#chat_"+chnl);
+		}
+        var h = c.height()-1;
+        c.append("<p class=\"" + textClass + "\"><b>" + author + "</b> " + message + " <span class=\"time\">" + get_time(time) + "</span></p>");
         scroll(h);
         if (window_active === false) {
             document.title = "..New Message..";
@@ -571,7 +596,8 @@
             connection.send(JSON.stringify({
                 id: id,
                 receipient: sender,
-                msg: "/seen"
+                msg: "/seen",
+				channel: channel
             }));
         }
     }
