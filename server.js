@@ -1360,18 +1360,19 @@ wsServer.on("request", function(request) {
                         type: "typing",
                         author: userName
                     });
-                    if (clients.type == "private") {
-                        if (clients[index].assigned !== null) {
-                            for (var i = 0, len = clients.length; i < len; i++) {
-                                if (clients[index].assigned === clients[i].user_id) {
-                                    clients[i].connection.sendUTF(json);
+					var idx = get_index(userId, msgs.channel);
+                    if (apps[msgs.channel].type == "private") {
+                        if (apps[msgs.channel][idx].assigned !== null) {
+                            for (var i = 0, len = apps[msgs.channel].length; i < len; i++) {
+                                if (apps[msgs.channel][idx].assigned === apps[msgs.channel][i].user_id) {
+                                    apps[msgs.channel][i].connection.sendUTF(json);
                                 }
                             }
                         }
-                        if (clients[index].operator === true && clients[index].client !== null) {
-                            for (var i = 0, len = clients.length; i < len; i++) {
-                                if (clients[index].client === clients[i].user_id) {
-                                    clients[i].connection.sendUTF(json);
+                        if (apps[msgs.channel][idx].operator === true && apps[msgs.channel][idx].client !== null) {
+                            for (var i = 0, len = apps[msgs.channel].length; i < len; i++) {
+                                if (apps[msgs.channel][idx].client === apps[msgs.channel][i].user_id) {
+                                    apps[msgs.channel][i].connection.sendUTF(json);
                                 }
                             }
                         }
@@ -1391,27 +1392,27 @@ wsServer.on("request", function(request) {
                         type: "seen",
                         author: userName
                     });
+					var idx = get_index(userId, msgs.channel);
                     if (apps[msgs.channel].type == "private") {
-                        if (apps[msgs.channel][index].assigned !== null) {
+                        if (apps[msgs.channel][idx].assigned !== null) {
                             for (var i = 0, len = apps[msgs.channel].length; i < len; i++) {
-                                if (apps[msgs.channel][index].assigned === apps[msgs.channel][i].user_id) {
+                                if (apps[msgs.channel][idx].assigned === apps[msgs.channel][i].user_id) {
                                     apps[msgs.channel][i].connection.sendUTF(json);
                                 }
                             }
                         }
-                        if (apps[msgs.channel][index].operator === true && apps[msgs.channel][index].client !== null) {
+                        if (apps[msgs.channel][idx].operator === true && apps[msgs.channel][idx].client !== null) {
                             for (var i = 0, len = apps[msgs.channel].length; i < len; i++) {
-                                if (apps[msgs.channel][index].client === apps[msgs.channel][i].user_id) {
+                                if (apps[msgs.channel][idx].client === apps[msgs.channel][i].user_id) {
                                     apps[msgs.channel][i].connection.sendUTF(json);
                                 }
                             }
                         }
-                        apps[msgs.channel][index].seen = true;
+                        apps[msgs.channel][idx].seen = true;
                         return;
                     }
                     var all = true;
                     var receipient = msgs.receipient;
-					var idx = get_index(userId, msgs.channel);
                     apps[msgs.channel][idx].seen = true;
                     var client_count = 0;
                     for (var i = 0, len = apps[msgs.channel].length; i < len; i++) {
