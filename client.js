@@ -31,6 +31,7 @@
         timer_reconnect,
         reconnect_count = 1,
         pending_seen = false,
+		pending_seen_channel = false,
         assigned = null,
         blocked = false,
         audio = new Audio("toing.mp3");
@@ -415,6 +416,11 @@
 			}
             chat = $("#chat_"+channel);
 			content.scrollTop(chat.height());
+			if(pending_seen_channel === true) {
+                pending_seen_channel = false;
+                seen();
+				console.log("pending_seen_channel - "+pending_seen_channel);
+            }
         },
 		server_detail: function() {
 			connection.send(JSON.stringify({
@@ -562,7 +568,8 @@
         if (msg.length === 1 && msg !== "/" && myName !== null && online === true) {
             connection.send(JSON.stringify({
                 id: id,
-                msg: "/typing"
+                msg: "/typing",
+				channel: channel
             }));
         }
     });
@@ -579,7 +586,7 @@
 		}
         var h = c.height()-1;
         c.append("<p class=\"" + textClass + "\"><b>" + author + "</b> " + message + " <span class=\"time\">" + get_time(time) + "</span></p>");
-        scroll(h);
+        scroll(h, chnl);
         if (window_active === false) {
             document.title = "..New Message..";
             if (sound === true) {
@@ -592,7 +599,7 @@
 
 
     function seen() {
-        if (window_active === true && sender !== null && sender != "me" && pending_seen === false) {
+        if (window_active === true && sender !== null && sender != "me" && pending_seen === false && pending_seen_channel === false) {
             connection.send(JSON.stringify({
                 id: id,
                 receipient: sender,
@@ -603,8 +610,11 @@
     }
 
 
-    function scroll(h) {
-        if(sender == "me" || h < content.height()) {
+    function scroll(h, chnl=null) {
+		if(chnl !== null && channel != chnl) {
+			pending_seen_channel = true;
+			console.log("pending_seen_channel - "+pending_seen_channel);
+		} else if(sender == "me" || h < content.height()) {
             content.scrollTop(chat.height());
         } else if(content.scrollTop()+content.height() >= h) {
             content.scrollTop(chat.height());
@@ -627,6 +637,11 @@
             if(pending_seen === true) {
                 pending_seen = false;
                 seen();
+            }
+			if(pending_seen_channel === true) {
+                pending_seen_channel = false;
+                seen();
+				console.log("pending_seen_channel - "+pending_seen_channel);
             }
         }
     });
