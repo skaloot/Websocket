@@ -8,7 +8,7 @@
         input = $("#input"),
 		// host = "//127.0.0.1",
         host = location.host,
-        // host = "//artinity.dtdns.net",
+        // host = "//utiis.dyndns.org",
         port = 3777,
         app_id = "utiis",
         channel = "utiis",
@@ -219,11 +219,16 @@
                 }
             } else if (json.type === "info") {
                 sender = null;
+                var chnl = null;
+                if(json.channel) {
+                    chnl = json.channel;
+                }
                 addMessage(
                     "",
                     json.msg,
                     "server",
-                    json.time
+                    json.time,
+                    chnl
                 );
             } else if (json.type === "leave") {
                 if(localStorage.getItem("client_chat_with_id")) {
@@ -421,7 +426,6 @@
 			if(pending_seen_channel === true) {
                 pending_seen_channel = false;
                 seen();
-				console.log("pending_seen_channel - "+pending_seen_channel);
             }
         },
 		server_detail: function() {
@@ -615,7 +619,6 @@
     function scroll(h, chnl=null) {
 		if(chnl !== null && channel != chnl) {
 			pending_seen_channel = true;
-			console.log("pending_seen_channel - "+pending_seen_channel);
 		} else if(sender == "me" || h < content.height()) {
             content.scrollTop(chat.height());
         } else if(content.scrollTop()+content.height() >= h) {

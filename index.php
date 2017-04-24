@@ -84,11 +84,12 @@
                     <input id="username" autofocus autocomplete="off" placeholder="Your name please..">
                 </div>
             </div>
-
-            <input id="ip_address" type="hidden" value="<?php echo $_SERVER["REMOTE_ADDR"]; ?>">
         </div>
 
         <script src="jquery-1.11.3.min.js"></script>
+        <script type="text/javascript">
+            localStorage.setItem("ip_address", "<?php echo $_SERVER["REMOTE_ADDR"]; ?>");
+        </script>
         <script src="client.js"></script>
     </body>
 </html>

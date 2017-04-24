@@ -418,6 +418,7 @@ wsServer.on("request", function(request) {
                             time: (new Date()).getTime(),
                             msg: "<i><b>" + userName + "</b> just connected..</i>",
                             author: "[Server]",
+                            channel: channel
                         });
                         if (clients.type != "private") {
                             for (var i = 0, len = clients.length; i < len; i++) {
@@ -1095,6 +1096,7 @@ wsServer.on("request", function(request) {
                         time: (new Date()).getTime(),
                         msg: "<i><b>" + userName + "</b> has joined the channel..</i>",
                         author: "[Server]",
+                        channel: channel,
                     });
                     if (clients.type != "private" && check === false) {
                         for (var i = 0, len = clients.length; i < len; i++) {
@@ -1154,6 +1156,7 @@ wsServer.on("request", function(request) {
                         time: (new Date()).getTime(),
                         msg: "<i><b>" + userName + "</b> has left the channel..</i>",
                         author: "[Server]",
+                        channel: chnl
                     });
                     for (var i = 0, len = apps[chnl].length; i < len; i++) {
                         if (userId !== apps[chnl][i].user_id && apps[chnl][i].active === true) {
@@ -1675,6 +1678,7 @@ var remove_client = function(idx, app, pingresult) {
                         time: (new Date()).getTime(),
                         msg: "<i>Your session has ended due to <b>" + userName + "'s</b> connectivity.</i>",
                         author: "[Server]",
+                        channel: app
                     }));
                     break;
                 }
@@ -1687,6 +1691,7 @@ var remove_client = function(idx, app, pingresult) {
         time: (new Date()).getTime(),
         msg: "<i><b>" + client[idx].user_name + "</b>" + pingresult + "</i>",
         author: "[server]",
+        channel: app
     });
     console.log(util.get_time() + " " + client[idx].user_name + pingresult);
     client.splice(idx, 1);
