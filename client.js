@@ -184,29 +184,22 @@
                         localStorage.removeItem("myPassword");
                     }
                 }
-                $("#channels-title").hide();
+                $("#channels-title-admin").hide();
                 $("#btn-server").hide();
                 $("#btn-restart").hide();
-                $("#channels").html(null);
+                $("#channels-admin").html(null);
             } else if (json.type === "leave_channel") {
                 sender = null;
-				chat.hide();
-				channel = json.channel;
-				app_id = json.channel;
-				localStorage.setItem("channel", channel);
-				localStorage.setItem("app_id", app_id);
-				if(channels.indexOf(channel) !== -1) {
-					//
-				}
-				chat = $("#chat_"+channel);
-				chat.show();
-				content.scrollTop(chat.height());
-				addMessage(
-                    "",
-                    json.msg,
-                    "server",
-                    json.time
-                );
+                chat.hide();
+                channel = json.new_channel;
+                app_id = json.new_channel;
+                localStorage.setItem("channel", channel);
+                localStorage.setItem("app_id", app_id);
+
+                $("#c_"+channel).addClass("channel-now");
+                chat = $("#chat_"+channel);
+                chat.show();
+                content.scrollTop(chat.height());
             } else if (json.type === "history") {
                 sender = null;
                 for (var i = 0; i < json.msg.length; i++) {
@@ -316,16 +309,40 @@
                 }
                 $("#username").val(null);
                 $("#username").removeAttr("disabled");
-				channels.push(channel);
                 $(".chat").attr("id","chat_"+channel);
                 chat = $("#chat_"+channel);
+                $("#channels-title").show();
+                for(var i=0, len=json.channels.length; i<len; i++) {
+                    var c = "";
+                    if(json.channels[i] == channel) {
+                        c = " channel-now";
+                    } else {
+                        $("#content").append("<div class=\"chat\" id=\"chat_"+json.channels[i]+"\"></div>");
+                    }
+                    $("#channels").append("<div class='channel"+c+"' id=\"c_"+json.channels[i]+"\" onclick=\"ch.chg_channel('"+json.channels[i]+"');\">"+json.channels[i]+"</div>");
+                }
+                $(".chat").hide();
+                channels = json.channels;
+                chat.show();
                 input.focus();
             } else if (json.type === "online") {
                 online = true;
                 window_active = false;
-				channels.push(channel);
                 $(".chat").attr("id","chat_"+channel);
                 chat = $("#chat_"+channel);
+                $("#channels-title").show();
+                for(var i=0, len=json.channels.length; i<len; i++) {
+                    var c = "";
+                    if(json.channels[i] == channel) {
+                        c = " channel-now";
+                    } else {
+                        $("#content").append("<div class=\"chat\" id=\"chat_"+json.channels[i]+"\"></div>");
+                    }
+                    $("#channels").append("<div class='channel"+c+"' id=\"c_"+json.channels[i]+"\" onclick=\"ch.chg_channel('"+json.channels[i]+"');\">"+json.channels[i]+"</div>");
+                }
+                $(".chat").hide();
+                channels = json.channels;
+                chat.show();
             } else if (json.type === "online_state") {
                 //
             } else if (json.type === "users") {
@@ -338,17 +355,26 @@
                     }
                 }
             } else if (json.type === "channels") {
+                // return;
                 $("#channels-title").show();
                 $("#channels").html(null);
                 for(var i=0, len=json.channels.length; i<len; i++) {
                     var c = "";
-                    var d = "";
                     if(json.channels[i] == channel) {
-                        c = "channel-now";
-                    } else {
-                        d = "onclick=\"ch.chg_channel(this,'"+json.channels[i]+"');\"";
+                        c = " channel-now";
                     }
-                    $("#channels").append("<div class='channel "+c+"' onclick=\"ch.chg_channel(this,'"+json.channels[i]+"');\">"+json.channels[i]+"</div>");
+                    $("#channels").append("<div class='channel"+c+"' id=\"c_"+json.channels[i]+"\" onclick=\"ch.chg_channel('"+json.channels[i]+"');\">"+json.channels[i]+"</div>");
+                }
+                channels = json.channels;
+            } else if (json.type === "channels_admin") {
+                $("#channels-title-admin").show();
+                $("#channels-admin").html(null);
+                for(var i=0, len=json.channels.length; i<len; i++) {
+                    var c = "";
+                    if(json.channels[i] == channel) {
+                        c = " channel-now";
+                    }
+                    $("#channels-admin").append("<div class='channel"+c+"' id=\"ca_"+json.channels[i]+"\" onclick=\"ch.chg_channel('"+json.channels[i]+"');\">"+json.channels[i]+"</div>");
                 }
                 $("#btn-server").show();
                 $("#btn-restart").show();
@@ -401,11 +427,8 @@
 
 
     global.ch = {
-        chg_channel: function(e = null, c) {
+        chg_channel: function(c) {
 			$(".channel").removeClass("channel-now");
-            if(e !== null) {
-                $(e).addClass("channel-now");
-            }
             connection.send(JSON.stringify({
                 id: id,
                 msg: "/ch "+c,
@@ -417,8 +440,11 @@
 			localStorage.setItem("app_id", app_id);
 			if(channels.indexOf(channel) !== -1) {
 				$("#chat_"+channel).show();
+                $("#c_"+c).addClass("channel-now");
+                $("#ca_"+c).addClass("channel-now");
 			} else {
 				$("#content").append("<div class=\"chat\" id=\"chat_"+channel+"\"></div>");
+                // $("#channels").append("<div class='channel channel-now' id=\"c_"+channel+"\" onclick=\"ch.chg_channel('"+channel+"');\">"+channel+"</div>");
 				channels.push(channel);
 			}
             chat = $("#chat_"+channel);
@@ -526,10 +552,10 @@
                     );
                     if (msg == "/quit" || msg == "/q") {
                         ch.quit();
-                    } else if (msg.substring(0, 9) == "/channel " || msg.substring(0, 4) == "/ch ") {
+                    } else if (msg.substring(0, 9) == "/channel " || msg.substring(0, 4) == "/ch " || msg.substring(0, 3) == "/j " || msg.substring(0, 6) == "/join ") {
                         var res = msg.split(" ");
                         var c = res[1];
-                        ch.chg_channel(null, c);
+                        ch.chg_channel(c);
                     } else if (msg == "/reload" || msg == "/r") {
                         connection.send(JSON.stringify({
                             id: id,

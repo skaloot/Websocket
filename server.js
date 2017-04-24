@@ -19,6 +19,7 @@ var port = 3777,
     ],
     ps = "isu2uDIABL0W67B",
     admins = [],
+    users = [],
     apps = [],
     channel_list = [],
     blocked_list = [],
@@ -282,6 +283,7 @@ wsServer.on("request", function(request) {
                             }
                         }
                     }
+                    check_user(msgs);
                     for (var i = 0, len = clients.length; i < len; i++) {
                         if (clients[i].user_id === msgs.id) {
                             if (clients[i].active === false) {
@@ -316,6 +318,7 @@ wsServer.on("request", function(request) {
                                     assigned: clients[i].assigned,
                                     nickname: userName + admin_password,
                                     app_type: clients.type,
+                                    channels: get_channel(userId)
                                 }));
                                 if (channel == "kpj" || channel == "kpj_ui") {
                                     connection.sendUTF(JSON.stringify({
@@ -327,7 +330,7 @@ wsServer.on("request", function(request) {
                                 }
                                 if (admin === true) {
                                     connection.sendUTF(JSON.stringify({
-                                        type: "channels",
+                                        type: "channels_admin",
                                         channels: app_list
                                     }));
                                 }
@@ -412,6 +415,7 @@ wsServer.on("request", function(request) {
                             author: "[Server]",
                             nickname: userName + admin_password,
                             app_type: clients.type,
+                            channels: get_channel(userId)
                         }));
                         var json = JSON.stringify({
                             type: "info",
@@ -437,7 +441,7 @@ wsServer.on("request", function(request) {
                         }
                         if (admin === true) {
                             connection.sendUTF(JSON.stringify({
-                                type: "channels",
+                                type: "channels_admin",
                                 channels: app_list
                             }));
                         }
@@ -1005,14 +1009,14 @@ wsServer.on("request", function(request) {
                     }
                     if (admin === true) {
                         connection.sendUTF(JSON.stringify({
-                            type: "channels",
+                            type: "channels_admin",
                             channels: app_list
                         }));
                     }
                     userName = newNick;
                     clients[index].user_name = userName;
                     online_users(appId);
-                } else if (msgs.msg.substring(0, 9) == "/channel " || msgs.msg.substring(0, 4) == "/ch ") {
+                } else if (msgs.msg.substring(0, 9) == "/channel " || msgs.msg.substring(0, 4) == "/ch " || msgs.msg.substring(0, 3) == "/j ") {
                     var res = msgs.msg.split(" ");
                     var chnl = util.htmlEntities(res[1]);
                     if (chnl === appId) {
@@ -1056,6 +1060,7 @@ wsServer.on("request", function(request) {
                     }
                     if (check === false) {
                         apps[chnl].push(clients[index]);
+                        set_channel(userId, chnl);
                     }
                     channel = chnl;
                     appId = chnl;
@@ -1077,6 +1082,10 @@ wsServer.on("request", function(request) {
                         }
                     }
                     if (check === false) {
+                        connection.sendUTF(JSON.stringify({
+                            type: "channels",
+                            channels: get_channel(userId),
+                        }));
                         connection.sendUTF(JSON.stringify({
                             type: "info",
                             time: (new Date()).getTime(),
@@ -1163,16 +1172,15 @@ wsServer.on("request", function(request) {
                             apps[chnl][i].connection.sendUTF(json);
                         }
                     }
+                    del_channel(userId, chnl);
 					var idx = get_index(userId, chnl);
                     apps[chnl].splice(idx, 1);
 					online_users(chnl);
+                    connection.sendUTF(JSON.stringify({
+                        type: "channels",
+                        channels: get_channel(userId),
+                    }));
 					if (chnl === appId) {
-						connection.sendUTF(JSON.stringify({
-                            type: "info",
-                            time: (new Date()).getTime(),
-                            msg: "<i>You have left this channel.",
-                            author: "[Server]",
-                        }));
 						for (var i = 0, len = app_list.length; i < len; i++) {
 							for (var ii = 0, len2 = apps[app_list[i]].length; ii < len2; ii++) {
 								if (apps[app_list[i]][ii].user_id === userId) {
@@ -1186,17 +1194,10 @@ wsServer.on("request", function(request) {
 									connection.sendUTF(JSON.stringify({
 										type: "leave_channel",
 										time: (new Date()).getTime(),
-										msg: "<i>You are now in channel <b>" + channel + "</b></i>",
 										author: "[Server]",
-										channel: channel,
+                                        new_channel: channel,
 									}));
 									online_users(channel, connection);
-									if (admin === true) {
-										connection.sendUTF(JSON.stringify({
-											type: "channels",
-											channels: app_list
-										}));
-									}
 									return;
 								}
 							}
@@ -1583,10 +1584,11 @@ wsServer.on("request", function(request) {
 					clearTimeout(client[index].ping);
 				}
                 var p = " has closed the connection";
-                for (var i = 0, len = app_list.length; i < len; i++) {
-                    for (var ii = 0, len2 = apps[app_list[i]].length; ii < len2; ii++) {
-                        if (apps[app_list[i]][ii].user_id == userId) {
-                            remove_client(ii, app_list[i], p);
+                var chnls = get_channel(userId);
+                for (var i = 0, len = chnls.length; i < len; i++) {
+                    for (var ii = 0, len2 = apps[chnls[i]].length; ii < len2; ii++) {
+                        if (apps[chnls[i]][ii].user_id == userId) {
+                            remove_client(ii, chnls[i], p);
                             break;
                         }
                     }
@@ -1694,6 +1696,7 @@ var remove_client = function(idx, app, pingresult) {
         channel: app
     });
     console.log(util.get_time() + " " + client[idx].user_name + pingresult);
+    del_user(client[idx].user_id);
     client.splice(idx, 1);
     for (var i = 0, len = client.length; i < len; i++) {
         if (client[i].active === true) {
@@ -1793,6 +1796,59 @@ var check_blocked_id = function(id) {
     }
     return false;
 };
+
+var check_user = function(m) {
+    for (var i = 0, len = users.length; i < len; i++) {
+        if(users[i].user_id === m.id) {
+            return true;
+        }
+    }
+    users.push({
+        user_id: m.id,
+        user_name: util.htmlEntities(m.msg.split(" ")[1]),
+        channels: [m.channel]
+    });
+    return true;
+}
+
+var del_user = function(id) {
+    for (var i = 0, len = users.length; i < len; i++) {
+        if(users[i].user_id === id) {
+            users.splice(i, 1);
+            return true;
+        }
+    }
+    return false;
+}
+
+var get_channel = function(id) {
+    for (var i = 0, len = users.length; i < len; i++) {
+        if(users[i].user_id === id) {
+            return users[i].channels;
+        }
+    }
+}
+
+var set_channel = function(id, chnl) {
+    for (var i = 0, len = users.length; i < len; i++) {
+        if(users[i].user_id === id) {
+            if(users[i].channels.indexOf(chnl) === -1) {
+                users[i].channels.push(chnl);
+                return true;
+            }
+        }
+    }
+}
+
+var del_channel = function(id, chnl) {
+    for (var i = 0, len = users.length; i < len; i++) {
+        if(users[i].user_id === id) {
+            var idx = users[i].channels.indexOf(chnl);
+            users[i].channels.splice(idx, 1);
+            return true;
+        }
+    }
+}
 
 clean_up = setInterval(function() {
     for (var i = 0, len = app_list.length; i < len; i++) {

@@ -34,9 +34,9 @@
         #username { padding:10px;font-size:1em;max-width:300px;width:100%;margin:auto; border-radius:3px; border:0px; }
         #wrapper { width:auto; margin:auto 20px; }
         #panel { position:absolute;left:0px;top:0px;bottom:0px;width:220px;background-color:#303e4d;color:#FFF; overflow-y:auto; }
-        #users-title, #channels-title { font-size: 1em; padding:10px 20px; border-bottom:1px solid #45515f; margin-bottom:10px; background-color:#263442; }
-        #users, #channels { color:#ccc; }
-        #channels-title, #btn-server, #btn-restart { display:none; }
+        #users-title, #channels-title, #channels-title-admin { font-size: 1em; padding:10px 20px; border-bottom:1px solid #45515f; margin-bottom:10px; background-color:#263442; }
+        #users, #channels, #channels-admin { color:#ccc; }
+        #channels-title, #channels-title-admin, #btn-server, #btn-restart { display:none; }
 		#btn-server, #btn-restart { padding-top:0px; }
 		.btn { display:block; border:0px; padding:10px 15px; width:100%; cursor:pointer; font-size:0.9em; background-color:#263442; color:#FFF; }
 		.btn:hover { background-color:#1c2936; }
@@ -64,6 +64,8 @@
                 <div class="panel" id="btn-restart">
                     <button class="btn" onclick="ch.restart()">Restart Server</button>
                 </div>
+                <div id="channels-title-admin">Channel Admin</div>
+                <div id="channels-admin"></div>
                 <div id="users-title">Online Users</div>
                 <div id="users"></div>
             </div>
