@@ -396,9 +396,11 @@
 
 
     global.ch = {
-        chg_channel: function(e,c) {
+        chg_channel: function(e = null, c) {
 			$(".channel").removeClass("channel-now");
-			$(e).addClass("channel-now");
+            if(e !== null) {
+                $(e).addClass("channel-now");
+            }
             connection.send(JSON.stringify({
                 id: id,
                 msg: "/ch "+c,
@@ -523,7 +525,7 @@
                     } else if (msg.substring(0, 9) == "/channel " || msg.substring(0, 4) == "/ch ") {
                         var res = msg.split(" ");
                         var c = res[1];
-                        ch.chg_channel(c);
+                        ch.chg_channel(null, c);
                     } else if (msg == "/reload" || msg == "/r") {
                         connection.send(JSON.stringify({
                             id: id,

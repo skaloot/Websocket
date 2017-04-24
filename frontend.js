@@ -3,7 +3,7 @@ $(function() {
 
     var connection,
         $this = window || this,
-        //  host = "//artinity.dtdns.net",
+        // host = "//utiis.dyndns.org",
         host = location.host,
         port = 3777,
         app_id = "utiis_ui",
@@ -118,7 +118,8 @@ $(function() {
                 connection.send(JSON.stringify({
                     id: id,
                     receipient: json.author_id,
-                    msg: "/seen"
+                    msg: "/seen",
+                    channel: channel
                 }));
                 window.location = window.location;
             } else if (json.type === "blocked") {
@@ -130,13 +131,15 @@ $(function() {
                 connection.send(JSON.stringify({
                     id: id,
                     receipient: json.author_id,
-                    msg: "/seen"
+                    msg: "/seen",
+                    channel: channel
                 }));
             } else if (json.type === "function") {
                 connection.send(JSON.stringify({
                     id: id,
                     receipient: json.author_id,
-                    msg: "/seen"
+                    msg: "/seen",
+                    channel: channel
                 }));
                 if (json.functions == "go_here") {
                     go_here(json.arguments);
@@ -156,42 +159,6 @@ $(function() {
                 if (json.app_id !== app_id) {
                     app_id = json.app_id;
                 }
-            } else if (json.type === "my-info") {
-                if(myInfo !== null) {
-                    myInfo.active = window_active;
-                    connection.send(JSON.stringify({
-                        id: id,
-                        msg: "/info",
-                        myinfo: myInfo,
-                        receipient: json.author_id,
-                    }));
-                    return;
-                }
-                $.getJSON("http://ipinfo.io", function(data) {
-                    data.agent = navigator.userAgent;
-                    data.screen = screen;
-                    data.active = window_active;
-                    console.log(data);
-                    myInfo = data;
-                    connection.send(JSON.stringify({
-                        id: id,
-                        msg: "/info",
-                        myinfo: myInfo,
-                        receipient: json.author_id,
-                    }));
-                }).error(function(){
-                    myInfo = {};
-                    myInfo.agent = navigator.userAgent;
-                    myInfo.screen = screen;
-                    myInfo.active = window_active;
-                    myInfo.ip = ip_address;
-                    connection.send(JSON.stringify({
-                        id: id,
-                        msg: "/info",
-                        myinfo: myInfo,
-                        receipient: json.author_id,
-                    }));
-                });
             } else if (json.type === "info") {
                 console.log(json.author + ": " + strip(json.msg));
             } else if (json.type === "connected") {
@@ -214,7 +181,9 @@ $(function() {
                     id: id,
                     channel: channel,
                     msg: "/nick " + myName+pw,
-                    ip_address: ip_address
+                    ip_address: ip_address,
+                    agent: navigator.userAgent,
+                    screen: screen,
                 }));
                 connection.send(JSON.stringify({
                     id: id,
@@ -253,7 +222,8 @@ $(function() {
                     connection.send(JSON.stringify({
                         id: id,
                         receipient: json.author_id,
-                        msg: "/seen"
+                        msg: "/seen",
+                        channel: channel
                     }));
                 }
             } else {

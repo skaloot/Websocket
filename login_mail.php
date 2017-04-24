@@ -25,7 +25,7 @@ if(isset($_POST["username"]) && isset($_POST["channel"])) {
 		if($username == "skaloot" || $username == "ska" || $username == "hudajamal" || $username == "admin" || $username == "huda") {
 			exit;
 		}
-		file_get_contents("http://www.ladiesfoto.com/websocket/login_mail.php?username=".$username);
+		file_get_contents("http://www.ladiesfoto.com/chat/login_mail.php?username=".$username);
 	}
 }
 

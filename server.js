@@ -1356,6 +1356,9 @@ wsServer.on("request", function(request) {
                         author: "[Server]",
                     }));
                 } else if (msgs.msg == "/typing") {
+                    if(!apps[msgs.channel]) {
+                        return;
+                    }
                     var json = JSON.stringify({
                         type: "typing",
                         author: userName
@@ -1388,6 +1391,9 @@ wsServer.on("request", function(request) {
                         type: "pong",
                     }));
                 } else if (msgs.msg == "/seen") {
+                    if(!apps[msgs.channel]) {
+                        return;
+                    }
                     var json = JSON.stringify({
                         type: "seen",
                         author: userName
