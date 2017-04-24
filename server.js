@@ -168,20 +168,23 @@ wsServer.on("request", function(request) {
                 }
                 if (msgs.msg == "/appid") {
                     var found = false;
-                    for (var i = 0, len = app_list.length; i < len; i++) {
-                        if (app_list[i] == msgs.app_id) {
+                    // for (var i = 0, len = app_list.length; i < len; i++) {
+                    //     if (app_list[i] == msgs.app_id) {
+                        if(!apps[msgs.app_id]) {
+                            util.add_app(apps, msgs.app_id);
+                        }
                             found = true;
                             appId = util.htmlEntities(msgs.app_id);
-                            clients = apps[app_list[i]];
+                            clients = apps[appId];
                             connection.sendUTF(JSON.stringify({
                                 type: "app_id",
                                 time: (new Date()).getTime(),
                                 app_id: appId,
                                 author: "[Server]",
                             }));
-                            break;
-                        }
-                    }
+                    //         break;
+                    //     }
+                    // }
                     if (found === false) {
                         connection.sendUTF(JSON.stringify({
                             type: "appid_invalid",
@@ -1032,13 +1035,7 @@ wsServer.on("request", function(request) {
                         return;
                     }
                     if (!apps[chnl]) {
-                        connection.sendUTF(JSON.stringify({
-                            type: "info",
-                            time: (new Date()).getTime(),
-                            msg: "<i>Oopss.. Channel is not valid.",
-                            author: "[Server]",
-                        }));
-                        return;
+                        util.add_app(apps, chnl);
                     }
                     for (var i = 0, len = apps[chnl].length; i < len; i++) {
                         if (apps[chnl][i].user_id !== userId && userName === apps[chnl][i].user_name) {
@@ -1060,7 +1057,7 @@ wsServer.on("request", function(request) {
                     }
                     if (check === false) {
                         apps[chnl].push(clients[index]);
-                        set_channel(userId, chnl);
+                        add_channel(userId, chnl);
                     }
                     channel = chnl;
                     appId = chnl;
@@ -1131,6 +1128,15 @@ wsServer.on("request", function(request) {
                         }));
                         return;
                     }
+                    if (get_channel(userId).length == 1) {
+                        connection.sendUTF(JSON.stringify({
+                            type: "info",
+                            time: (new Date()).getTime(),
+                            msg: "<i>Oopss.. Cant leave this channel.",
+                            author: "[Server]",
+                        }));
+                        return;
+                    }
                     if (!apps[chnl]) {
                         connection.sendUTF(JSON.stringify({
                             type: "info",
@@ -1181,12 +1187,13 @@ wsServer.on("request", function(request) {
                         channels: get_channel(userId),
                     }));
 					if (chnl === appId) {
-						for (var i = 0, len = app_list.length; i < len; i++) {
-							for (var ii = 0, len2 = apps[app_list[i]].length; ii < len2; ii++) {
-								if (apps[app_list[i]][ii].user_id === userId) {
-									channel = app_list[i];
-									appId = app_list[i];
-									clients = apps[app_list[i]];
+                        var chnls = get_channel(userId);
+						for (var i = 0, len = chnls.length; i < len; i++) {
+							for (var ii = 0, len2 = apps[chnls[i]].length; ii < len2; ii++) {
+								if (apps[chnls[i]][ii].user_id === userId) {
+									channel = chnls[i];
+									appId = chnls[i];
+									clients = apps[chnls[i]];
 									index = get_index(userId, appId);
 									clients[index].app_id = appId;
 									clients[index].channel = appId;
@@ -1246,7 +1253,8 @@ wsServer.on("request", function(request) {
                         time: (new Date()).getTime(),
                         msg: "<i><b>" + userName + "</b> needs your attention.</i>",
                         author: userName,
-                        author_id: userId
+                        author_id: userId,
+                        channel: msgs.channel
                     });
                     if (clients.type == "private") {
                         receipient = (clients[index].assigned !== null) ? clients[index].assigned : ((clients[index].client !== null) ? clients[index].client : null);
@@ -1829,7 +1837,7 @@ var get_channel = function(id) {
     }
 }
 
-var set_channel = function(id, chnl) {
+var add_channel = function(id, chnl) {
     for (var i = 0, len = users.length; i < len; i++) {
         if(users[i].user_id === id) {
             if(users[i].channels.indexOf(chnl) === -1) {
@@ -1845,9 +1853,10 @@ var del_channel = function(id, chnl) {
         if(users[i].user_id === id) {
             var idx = users[i].channels.indexOf(chnl);
             users[i].channels.splice(idx, 1);
-            return true;
+            break;
         }
     }
+    return true;
 }
 
 clean_up = setInterval(function() {

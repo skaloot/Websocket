@@ -125,7 +125,8 @@
                     "",
                     json.msg,
                     "server",
-                    json.time
+                    json.time,
+                    json.channel
                 );
                 audio.play();
             } else if (json.type === "assigned") {
@@ -188,18 +189,6 @@
                 $("#btn-server").hide();
                 $("#btn-restart").hide();
                 $("#channels-admin").html(null);
-            } else if (json.type === "leave_channel") {
-                sender = null;
-                chat.hide();
-                channel = json.new_channel;
-                app_id = json.new_channel;
-                localStorage.setItem("channel", channel);
-                localStorage.setItem("app_id", app_id);
-
-                $("#c_"+channel).addClass("channel-now");
-                chat = $("#chat_"+channel);
-                chat.show();
-                content.scrollTop(chat.height());
             } else if (json.type === "history") {
                 sender = null;
                 for (var i = 0; i < json.msg.length; i++) {
@@ -355,7 +344,6 @@
                     }
                 }
             } else if (json.type === "channels") {
-                // return;
                 $("#channels-title").show();
                 $("#channels").html(null);
                 for(var i=0, len=json.channels.length; i<len; i++) {
@@ -378,6 +366,8 @@
                 }
                 $("#btn-server").show();
                 $("#btn-restart").show();
+            } else if (json.type === "leave_channel") {
+                ch.chg_channel(json.new_channel);
             } else if (json.type === "typing") {
                 var h = chat.height()-1;
                 if(h < content.height()) {
@@ -444,8 +434,6 @@
                 $("#ca_"+c).addClass("channel-now");
 			} else {
 				$("#content").append("<div class=\"chat\" id=\"chat_"+channel+"\"></div>");
-                // $("#channels").append("<div class='channel channel-now' id=\"c_"+channel+"\" onclick=\"ch.chg_channel('"+channel+"');\">"+channel+"</div>");
-				channels.push(channel);
 			}
             chat = $("#chat_"+channel);
 			content.scrollTop(chat.height());
@@ -554,7 +542,7 @@
                         ch.quit();
                     } else if (msg.substring(0, 9) == "/channel " || msg.substring(0, 4) == "/ch " || msg.substring(0, 3) == "/j " || msg.substring(0, 6) == "/join ") {
                         var res = msg.split(" ");
-                        var c = res[1];
+                        var c = res[1].replace(/[^\w\s]/gi, '');
                         ch.chg_channel(c);
                     } else if (msg == "/reload" || msg == "/r") {
                         connection.send(JSON.stringify({

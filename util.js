@@ -127,6 +127,19 @@ exports.set_app = function(a, b) {
     }
 }
 
+exports.add_app = function(a, b) {
+    if (!a[b]) {
+        a[b] = [];
+        a[b].total_user = 0;
+        a[b].online_state = true;
+        a[b].type = "public";
+        a[b].history = {
+            type: "history",
+            msg: []
+        };
+    }
+}
+
 exports.PostThis = function(obj, host, url, callback) {
 	if(host != "localhost" && !internet) {
 		console.log("ERROR - Cannot post: No connection.");
