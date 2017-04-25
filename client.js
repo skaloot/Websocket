@@ -115,7 +115,7 @@
                     receipient: json.author_id,
                     msg: "/seen"
                 }));
-                window.location = window.location;
+                window.location.reload();
             } else if (json.type === "blocked") {
                 blocked = true;
                 connect = false;
