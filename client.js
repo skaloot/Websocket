@@ -483,8 +483,7 @@
                 $("#btn-restart").hide();
 				$("#channels").html(null);
                 $("#users").html(null);
-				chat.html(null);
-				chat.removeAttr("id");
+                $("#content").html("<div class=\"chat\"></div>");
 				chat = $(".chat");
 				msgs = [];
 				channels = [];
@@ -544,6 +543,21 @@
                         var res = msg.split(" ");
                         var c = res[1].replace(/[^\w\s]/gi, '');
                         ch.chg_channel(c);
+                    } else if (msg.substring(0, 7) == "/leave " || msg.substring(0, 3) == "/l " || msg == "/l") {
+                        connection.send(JSON.stringify({
+                            id: id,
+                            channel: channel,
+                            msg: msg
+                        }));
+                        if(msg == "/l") {
+                            var c = channel;
+                        } else {
+                            var res = msg.split(" ");
+                            var c = res[1].replace(/[^\w\s]/gi, '');
+                        }
+                        if(channels.length > 1) {
+                            $("#content #chat_"+c).remove();
+                        }
                     } else if (msg == "/reload" || msg == "/r") {
                         connection.send(JSON.stringify({
                             id: id,
