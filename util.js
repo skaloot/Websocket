@@ -140,6 +140,21 @@ exports.add_app = function(a, b) {
     }
 }
 
+exports.censor = function(a) {
+    var i = 0;
+
+    return function(key, value) {
+        if(i !== 0 && typeof(a) === 'object' && typeof(value) == 'object' && a == value) 
+            return '[Circular]'; 
+
+        if(i >= 29) // seems to be a harded maximum of 30 serialized objects?
+            return '[Unknown]';
+
+        ++i; 
+        return value;  
+    }
+}
+
 exports.PostThis = function(obj, host, url, callback) {
 	if(host != "localhost" && !internet) {
 		console.log("ERROR - Cannot post: No connection.");

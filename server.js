@@ -25,7 +25,6 @@ var port = 3777,
     blocked_list = [],
     blocked_id = [],
     timer_password_temp = [],
-    clients,
     clean_up,
     msg_count = 0,
     start_time = new Date().getTime(),
@@ -45,7 +44,16 @@ var options = {
 
 // var server = https.createServer(options, function(request, response) {
 var server = http.createServer(function(request, response) {
-
+    if (request.url === '/users') {
+        response.writeHead(200, {'Content-Type': 'application/json'});
+        response.end(JSON.stringify(users));
+    } else if (request.url === '/channels') {
+        response.writeHead(200, {'Content-Type': 'application/json'});
+        response.end(JSON.stringify(channel_list));
+    } else {
+        response.writeHead(404, {'Content-Type': 'text/plain'});
+        response.end('Sorry, unknown url');
+    }
 });
 
 server.listen(port, function() {
@@ -99,6 +107,7 @@ wsServer.on("request", function(request) {
         password = false,
         password_user = null,
         detail,
+        clients,
         index = 0,
         is_blocked = false,
         admin = false,
@@ -497,11 +506,15 @@ wsServer.on("request", function(request) {
                     shutdown = true;
                     util.clear_interval();
                     clearInterval(clean_up);
-                    for (var i = 0, len = app_list.length; i < len; i++) {
-                        for (var ii = 0, len2 = apps[app_list[i]].length; ii < len2; ii++) {
-                            apps[app_list[i]][ii].is_blocked = false;
-                            clearTimeout(apps[app_list[i]][ii].ping);
-                            apps[app_list[i]][ii].connection.close();
+                    for (var i = 0, len = channel_list.length; i < len; i++) {
+                        for (var ii = 0, len2 = apps[channel_list[i].name].length; ii < len2; ii++) {
+                            var user = apps[channel_list[i].name][ii];
+                            if(timer_password_temp[user.user_id] && timer_password_temp[user.user_id].timer) {
+                                clearTimeout(timer_password_temp[user.user_id].timer);
+                            }
+                            user.is_blocked = false;
+                            clearTimeout(user.ping);
+                            user.connection.close();
                         }
                     }
                     server.close();
@@ -1767,14 +1780,9 @@ var setup_channel = function(chnl) {
             return;
         }
     }
-    var obj = {
-        type: "history",
-        msg: []
-    };
     channel_list.push({
         name: chnl,
         users: 1,
-        history: obj
     });
     console.log("Channel created - " + chnl);
 };
