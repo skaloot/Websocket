@@ -44,6 +44,3 @@ if(isset($_POST["payload"])) {
 
 	echo json_encode(["status"=>"Done"]);
 }
-
-echo httpGet("https://raw.githubusercontent.com/skaloot/Websocket/master/server.js");
-
