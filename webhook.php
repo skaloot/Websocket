@@ -30,9 +30,10 @@ if(isset($_POST["payload"])) {
 			if($modified == "webhook.php") {
 				continue;
 			}
+			chmod($modified, 0777);
 			$a .= $date." - ".$modified."\n";
 			$data = httpGet("https://raw.githubusercontent.com/skaloot/Websocket/master/".$modified);
-			$fh = fopen($modified, 'w+') or die("can't open file");
+			$fh = fopen($modified, 'w') or die("can't open file");
 			fwrite($fh, $data);
 			fclose($fh);
 		}
@@ -40,6 +41,9 @@ if(isset($_POST["payload"])) {
 	$fh = fopen($github, 'a+') or die("can't open file");
 	fwrite($fh, $a);
 	fclose($fh);
+
+	echo json_encode(["status"=>"Done"]);
 }
 
-echo json_encode(["status"=>"Done"]);
+echo httpGet("https://raw.githubusercontent.com/skaloot/Websocket/master/server.js");
+
