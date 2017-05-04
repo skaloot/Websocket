@@ -2,7 +2,7 @@
 
 // =========================================================================================================
 
-process.title = "node-chat";
+process.title = "skachat";
 var port = 3777,
     webSocketServer = require("websocket").server,
     util = require("./util.js"),

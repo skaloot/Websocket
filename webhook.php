@@ -27,6 +27,9 @@ if(isset($_POST["payload"])) {
 	$a = "";
 	if($payload["repository"]["name"] == "Websocket") {
 		foreach($payload["commits"][0]["modified"] as $modified) {
+			if($modified == "webhook.php") {
+				continue;
+			}
 			$a .= $date." - ".$modified."\n";
 			$data = httpGet("https://raw.githubusercontent.com/skaloot/Websocket/master/".$modified);
 			$fh = fopen($modified, 'w+') or die("can't open file");
