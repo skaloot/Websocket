@@ -469,6 +469,7 @@ wsServer.on("request", function(request) {
                 index = get_index(userId, appId);
                 if(index === null) {
                     return;
+                    // haha
                 }
                 if (clients.type == "private" && clients[index].assigned === null && clients[index].operator === false && admin === false) {
                     if (msgs.msg != "/typing" && msgs.msg != "/seen" && msgs.msg != "/quit" && msgs.msg != "/ping") {
