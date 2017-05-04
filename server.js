@@ -470,15 +470,17 @@ wsServer.on("request", function(request) {
                 if(index === null) {
                     return;
                 }
-                if (clients.type == "private" && clients[index].assigned === null && clients[index].operator === false && admin === false) {
-                    if (msgs.msg != "/typing" && msgs.msg != "/seen" && msgs.msg != "/quit" && msgs.msg != "/ping") {
-                        connection.sendUTF(JSON.stringify({
-                            type: "info",
-                            time: (new Date()).getTime(),
-                            msg: "<i>Please hold on. Our staff will be with you in a moment.</i>",
-                            author: "[Server]",
-                        }));
-                        return;
+                if (clients.type == "private") {
+                    if(clients[index].assigned === null && clients[index].operator === false && admin === false) {
+                        if (msgs.msg != "/typing" && msgs.msg != "/seen" && msgs.msg != "/quit" && msgs.msg != "/ping") {
+                            connection.sendUTF(JSON.stringify({
+                                type: "info",
+                                time: (new Date()).getTime(),
+                                msg: "<i>Please hold on. Our staff will be with you in a moment.</i>",
+                                author: "[Server]",
+                            }));
+                            return;
+                        }
                     }
                 }
                 if (msgs.msg == "/quit") {
