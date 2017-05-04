@@ -23,7 +23,7 @@ ini_set("error_reporting", E_ALL);
 
 	$myFile = "github.log";
 	$fh = fopen($myFile, 'w') or die("can't open file");
-	$msg = json_encode(apache_request_headers());
+	$msg = json_encode($_POST);
 	// $msg = "hahaha";
 	fwrite($fh, $msg);
 	fclose($fh);
