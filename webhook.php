@@ -20,8 +20,10 @@ function httpGet($url) {
 }
 
 
-if(isset($_POST["payload"]) && $_POST["payload"]["repository"]["name"] == "Websocket") {
-	foreach($_POST["payload"]["commits"]["modified"] as $modified) {
+if(isset($_POST["payload"])) {
+	$payload = json_decode($_POST["payload"], true);
+	$payload["repository"]["name"] == "Websocket") {
+	foreach($payload["commits"]["modified"] as $modified) {
 		$myFile = "github.log";
 		$file = httpGet("https://raw.githubusercontent.com/skaloot/Websocket/master/".$modified);
 		$fh = fopen($modified, 'w') or die("can't open file");
