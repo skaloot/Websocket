@@ -14,12 +14,18 @@ $db->connect();
 	$username = "Github";
 	$channel = "Webhook";
 	$ip_address = "";
-	$db->insert("message", [
-		"msg"=>$msg,
-		"username"=>$username,
-		"channel"=>$channel,
-		"ip_address"=>$ip_address
-	]);
+	// $db->insert("message", [
+	// 	"msg"=>$msg,
+	// 	"username"=>$username,
+	// 	"channel"=>$channel,
+	// 	"ip_address"=>$ip_address
+	// ]);
+
+	$myFile = "github.log";
+	$fh = fopen($myFile, 'w') or die("can't open file");
+	$msg = json_encode($_POST);
+	fwrite($fh, $msg);
+	fclose($fh);
 // }
 
 
