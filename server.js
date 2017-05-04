@@ -471,6 +471,7 @@ wsServer.on("request", function(request) {
                     return;
                     // haha
                     // 2nd test
+                    // 3rd test
                 }
                 if (clients.type == "private" && clients[index].assigned === null && clients[index].operator === false && admin === false) {
                     if (msgs.msg != "/typing" && msgs.msg != "/seen" && msgs.msg != "/quit" && msgs.msg != "/ping") {
