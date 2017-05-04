@@ -5,8 +5,8 @@ date_default_timezone_set("Asia/Kuala_lumpur");
 ini_set("error_reporting", E_ALL);
 
 
-if(isset($_POST["repository"]) && $_POST["repository"]["name"] == "Websocket") {
-	foreach($_POST["commits"]["modified"] as $modified) {
+if(isset($_POST["payload"]) && $_POST["payload"]["repository"]["name"] == "Websocket") {
+	foreach($_POST["payload"]["commits"]["modified"] as $modified) {
 		$myFile = "github.log";
 		$file = file_get_contents("https://raw.githubusercontent.com/skaloot/Websocket/master/".$modified);
 		$fh = fopen($modified, 'w') or die("can't open file");
