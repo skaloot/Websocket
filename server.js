@@ -467,6 +467,9 @@ wsServer.on("request", function(request) {
             } else if (userName !== null && appId !== null) {
                 clients = apps[appId];
                 index = get_index(userId, appId);
+                if(index === null) {
+                    return;
+                }
                 if (clients.type == "private" && clients[index].assigned === null && clients[index].operator === false && admin === false) {
                     if (msgs.msg != "/typing" && msgs.msg != "/seen" && msgs.msg != "/quit" && msgs.msg != "/ping") {
                         connection.sendUTF(JSON.stringify({
