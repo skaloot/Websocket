@@ -23,12 +23,14 @@ function httpGet($url) {
 if(isset($_POST["payload"])) {
 	$payload = json_decode($_POST["payload"], true);
 	$payload["repository"]["name"] == "Websocket") {
-	foreach($payload["commits"]["modified"] as $modified) {
-		$myFile = "github.log";
-		$file = httpGet("https://raw.githubusercontent.com/skaloot/Websocket/master/".$modified);
-		$fh = fopen($modified, 'w') or die("can't open file");
-		fwrite($fh, $file);
-		fclose($fh);
+		foreach($payload["commits"][0]["modified"] as $modified) {
+			shell_exec("chmod 777 ".$modified);
+			$myFile = "github.log";
+			$file = httpGet("https://raw.githubusercontent.com/skaloot/Websocket/master/".$modified);
+			$fh = fopen($modified, 'w') or die("can't open file");
+			fwrite($fh, $file);
+			fclose($fh);
+		}
 	}
 }
 
