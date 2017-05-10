@@ -223,7 +223,7 @@ wsServer.on("request", function(request) {
                 }
             }
             if (password_shutdown === true) {
-                if (msgs.msg == "/typing" || msgs.msg == "/ping") {
+                if (msgs.msg == "/typing" || msgs.msg == "/ping" || msgs.msg == "/seen") {
                     return;
                 }
                 password_shutdown = false;
