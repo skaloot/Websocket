@@ -47,6 +47,8 @@
         .user, .channel { font-size:0.9em; padding:7px 18px; cursor:pointer; transition:background-color 0.2s; }
         .user:hover, .channel:hover, .channel-now { background-color:#3f4e5f; color:#FFF; }
 		.panel { padding:15px 20px;display:block; }
+        .close-channel { position:absolute;margin: -25px 0 0 200px; cursor: pointer; opacity:0.3; }
+        .close-channel:hover { opacity:1; }
         @media only screen and (max-width: 500px) {
             #panel { display: none; }
 			#content, #input-holder { left:0px; }

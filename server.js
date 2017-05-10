@@ -111,7 +111,9 @@ wsServer.on("request", function(request) {
         index = 0,
         is_blocked = false,
         admin = false,
-        temp_detail = null;
+        temp_detail = null,
+        password_shutdown = false,
+        shutdown_verified = false;
 
     connection.sendUTF(JSON.stringify({
         type: "connected",
@@ -218,6 +220,25 @@ wsServer.on("request", function(request) {
                         }));
                         return;
                     }
+                }
+            }
+            if (password_shutdown === true) {
+                if (msgs.msg == "/typing" || msgs.msg == "/ping") {
+                    return;
+                }
+                password_shutdown = false;
+                var verified = check_password(userName.toUpperCase(), msgs.msg);
+                if (verified === false) {
+                    connection.sendUTF(JSON.stringify({
+                        type: "info",
+                        time: (new Date()).getTime(),
+                        msg: "<i>Password is invalid.</i>",
+                        author: "[Server]",
+                    }));
+                    return;
+                } else {
+                    shutdown_verified = true;
+                    msgs.msg = "/shutdown";
                 }
             }
             // ========================================== NO NICK ====================================================
@@ -506,6 +527,16 @@ wsServer.on("request", function(request) {
                             msg: "<i>Oopss.. you're not authorized.</i>",
                             author: "[Server]",
                         }));
+                        return;
+                    }
+                    if(shutdown_verified === false) {
+                        connection.sendUTF(JSON.stringify({
+                            type: "info",
+                            time: (new Date()).getTime(),
+                            msg: "<i>Please type in your password..</i>",
+                            author: "[Server]",
+                        }));
+                        password_shutdown = true;
                         return;
                     }
                     shutdown = true;
