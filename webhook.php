@@ -1,6 +1,6 @@
 <?php (isset($_SERVER['HTTP_ACCEPT_ENCODING'])&&substr_count($_SERVER['HTTP_ACCEPT_ENCODING'], 'gzip'))?ob_start("ob_gzhandler"):ob_start(); 
 
-header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Origin: skaloot.com');
 date_default_timezone_set("Asia/Kuala_lumpur");
 ini_set("error_reporting", -1);
 ini_set("display_errors", -1);

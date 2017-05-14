@@ -1,18 +1,20 @@
 $(function() {
-    "use strict";
+    "use strict"; 
 
     var connection,
         $this = window || this,
-        //  host = "//artinity.dtdns.net",
-        host = location.host,
+        host = "//utiis.dyndns.org",
+        // host = location.host,
         port = 3777,
-        app_id = "ska",
-        channel = "utiis_ui",
+        app_id = "kpj_ui",
+        channel = "kpj_ui",
         connect = false,
         online = false,
-        window_active = true,
-        myName = "You",
+        window_active = null,
+        myName = null,
+        myInfo = null,
         sound = false,
+        ip_address = localStorage.getItem("ip_address"),
         msgs = [],
         id = null,
         sender = null,
@@ -20,7 +22,9 @@ $(function() {
         timer,
         timer_reconnect,
         reconnect_count = 1,
-        audio = new Audio("/websocket/toing.mp3");
+        blocked = false,
+        screen = $(window).width(),
+        audio = new Audio("/chat/toing.mp3");
 
     window.WebSocket = window.WebSocket || window.MozWebSocket;
 
@@ -97,7 +101,7 @@ $(function() {
         }
 
         connection.onerror = function(error) {
-            console.log("Sorry, but there's some problem with your connection or the server is down.");
+            console.error("Sorry, but there's some problem with your connection or the server is down.");
             connect = false;
             reconnect_this();
         }
@@ -114,39 +118,40 @@ $(function() {
                 connection.send(JSON.stringify({
                     id: id,
                     receipient: json.author_id,
-                    msg: "/seen"
+                    msg: "/seen",
+                    channel: channel
                 }));
                 window.location = window.location;
+            } else if (json.type === "blocked") {
+                blocked = true;
+                connect = false;
             } else if (json.type === "alert") {
                 audio.play();
                 console.log(json.author + ": " + strip(json.msg));
                 connection.send(JSON.stringify({
                     id: id,
                     receipient: json.author_id,
-                    msg: "/seen"
+                    msg: "/seen",
+                    channel: channel
                 }));
             } else if (json.type === "function") {
                 connection.send(JSON.stringify({
                     id: id,
                     receipient: json.author_id,
-                    msg: "/seen"
+                    msg: "/seen",
+                    channel: channel
                 }));
-                if (json.function == "go_here") {
+                if (json.functions == "go_here") {
                     go_here(json.arguments);
                     return;
                 }
-                executeFunctionByName(json.function, window, json.arguments);
+                executeFunctionByName(json.functions, window, json.arguments);
             } else if (json.type === "open") {
                 sender = json.author_id;
                 popup = json.url;
             } else if (json.type === "chat") {
                 if (!localStorage.getItem("chat")) {
-                    var chat_window = window.open("/websocket/", "chat_window", "status = 1, height = 400, width = 600, resizable = 1, left = 120px, scroll = 1");
-                    connection.send(JSON.stringify({
-                        id: id,
-                        receipient: json.author_id,
-                        msg: "/seen"
-                    }));
+                    $("#chat_icon").trigger("click");
                 }
             } else if (json.type === "unmute") {
                 sound = true;
@@ -154,17 +159,6 @@ $(function() {
                 if (json.app_id !== app_id) {
                     app_id = json.app_id;
                 }
-            } else if (json.type === "my-info") {
-                $.getJSON("http://ipinfo.io", function(data) {
-                    data.agent = navigator.userAgent;
-                    console.log(data);
-                    connection.send(JSON.stringify({
-                        id: id,
-                        msg: "/info",
-                        myinfo: data,
-                        receipient: json.author_id,
-                    }));
-                });
             } else if (json.type === "info") {
                 console.log(json.author + ": " + strip(json.msg));
             } else if (json.type === "connected") {
@@ -173,6 +167,10 @@ $(function() {
                     msg: "/appid",
                     app_id: app_id
                 }));
+                var pw = "";
+                if (localStorage.getItem("myPassword_ui")) {
+                    pw = " "+localStorage.getItem("myPassword_ui");
+                }
                 if (localStorage.getItem("myName_ui")) {
                     myName = localStorage.getItem("myName_ui");
                 } else {
@@ -182,20 +180,40 @@ $(function() {
                 connection.send(JSON.stringify({
                     id: id,
                     channel: channel,
-                    msg: "/nick " + myName
+                    msg: "/nick " + myName+pw,
+                    ip_address: ip_address,
+                    agent: navigator.userAgent,
+                    screen: screen,
                 }));
                 connection.send(JSON.stringify({
                     id: id,
-                    msg: "Page - " + document.title
+                    msg: "Page - " + document.title,
+                    channel: channel,
                 }));
             } else if (json.type === "welcome") {
                 myName = json.nickname;
             } else if (json.type === "online") {
                 online = true;
+                window_active = false;
+            } else if (json.type === "online_state") {
+                if(json.state == true) {
+                    $("#chat_icon").show();
+                } else {
+                    $("#chat_icon").hide();
+                }
             } else if (json.type === "typing") {
                 //
             } else if (json.type === "seen") {
                 // 
+            } else if (json.type === "users") {
+                //
+            } else if (json.type === "quit") {
+                connection.send(JSON.stringify({
+                    id: id,
+                    msg: "/quit"
+                }));
+                connect = false;
+                online = false;
             } else if (json.type === "message") {
                 console.log(json.author + ": " + strip(json.msg));
                 if (sound === true) {
@@ -205,7 +223,8 @@ $(function() {
                     connection.send(JSON.stringify({
                         id: id,
                         receipient: json.author_id,
-                        msg: "/seen"
+                        msg: "/seen",
+                        channel: channel
                     }));
                 }
             } else {
@@ -225,6 +244,18 @@ $(function() {
         window.location = here;
     }
 
+    $("#chat_icon").click(function() {
+        if (!localStorage.getItem("chat")) {
+            if(channel == "utiis_ui") {
+                localStorage.setItem("myName", myName);
+                if(localStorage.getItem("myPassword_ui")) {
+                    localStorage.setItem("myPassword", localStorage.getItem("myPassword_ui"));
+                }
+            }
+            var chat_window = window.open("/chat/", "chat_window", "status = 1, height = 400, width = 800, resizable = 1, left = 120px, scroll = 1");
+        }
+    });
+
     window.onclick = function() {
         if (popup !== null) {
             window.open(popup);
@@ -235,6 +266,14 @@ $(function() {
                 msg: "/seen"
             }));
         }
+    };
+
+    window.onfocus = function() {
+        window_active = true;
+    };
+
+    window.onblur = function() {
+        window_active = false;
     };
 
 
@@ -269,7 +308,7 @@ $(function() {
     connect_this(host, port);
 
     setInterval(function() {
-        if (connect === true && connection.readyState === 3) {
+        if (connect === true && connection.readyState === 3 && blocked !== true) {
             console.log("You are not connected..");
             console.log("Connecting...");
             connect = false;
@@ -284,5 +323,18 @@ $(function() {
             connect = true;
         }, reconnect_count * 10000);
     }
+
+    window.setTimeout(function(){
+        if(connect === true && connection.readyState === 1) {
+            connection.send(JSON.stringify({
+                id: id,
+                msg: "/quit"
+            }));
+            connection = null;
+            connect = false;
+            online = false;
+            console.log("Disconnected...");
+        }
+    }, 1800000);
 
 });
