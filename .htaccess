@@ -9,6 +9,11 @@ RewriteRule (.*) $1.php [L]
 # RewriteRule ^(\w+)$ ./index.php?p=$1
 
 
+RewriteCond %{HTTP:Authorizationss} ^(.*)
+RewriteRule .* - [e=HTTP_AUTHORIZATION:%1]
+# RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+
 
 
 
