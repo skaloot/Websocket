@@ -31,7 +31,7 @@ if(isset($_POST["payload"])) {
 	$github = "github.log";
 	$date = date("H:i:s d-m-Y");
 	$a = "";
-	if($payload["repository"]["name"] == "Websocket") {
+	if($payload["repository"]["name"] == "Websocket" && $payload["pusher"]["name"] == "skaloot") {
 		foreach($payload["commits"][0]["modified"] as $modified) {
 			if($modified == "webhook.php") {
 				continue;
@@ -51,6 +51,14 @@ if(isset($_POST["payload"])) {
 			$fh = fopen($added, 'w+') or die("can't open file");
 			fwrite($fh, $data);
 			fclose($fh);
+		}
+		foreach($payload["commits"][0]["removed"] as $removed) {
+			if($added == "webhook.php") {
+				continue;
+			}
+			if(file_exists($removed)) {
+				unlink($removed);
+			}
 		}
 	}
 	$fh = fopen($github, 'a+') or die("can't open file");
