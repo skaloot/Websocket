@@ -53,7 +53,7 @@ if(isset($_POST["payload"])) {
 			fclose($fh);
 		}
 		foreach($payload["commits"][0]["removed"] as $removed) {
-			if($added == "webhook.php") {
+			if($removed == "webhook.php") {
 				continue;
 			}
 			if(file_exists($removed)) {
