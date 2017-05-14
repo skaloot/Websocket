@@ -205,22 +205,9 @@ wsServer.on("request", function(request) {
             }
             // ========================================== SET PASSWORD ====================================================
             if (password === true) {
-                // var stop = false;
-                // var pw = "<i>Password Invalid.</i>";
-                // if (msgs.msg.substring(0, 3) == "/p ") {
-                //     var res = msgs.msg.split(" ");
-                msgs.msg = "/n " + password_user + " " + util.htmlEntities(msgs.msg);
-                // } else {
-                /*if (msgs.msg != "/quit") {
-                    connection.sendUTF(JSON.stringify({
-                        type: "info",
-                        time: (new Date()).getTime(),
-                        msg: "<i>Password is empty. Please type in the password.</i>",
-                        author: "[Server]",
-                    }));
-                    return;
-                }*/
-                // }
+                if (msgs.msg != "/typing" && msgs.msg != "/seen") {
+                    msgs.msg = "/n " + password_user + " " + util.htmlEntities(msgs.msg);
+                }
             }
             if (password_shutdown === true) {
                 if (msgs.msg == "/typing" || msgs.msg == "/ping" || msgs.msg == "/seen") {

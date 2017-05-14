@@ -2,25 +2,20 @@
 
 header('Access-Control-Allow-Origin: *');
 date_default_timezone_set("Asia/Kuala_lumpur");
-header("Content-Type: application/json");
-ini_set("error_reporting", E_ALL);
+ini_set("error_reporting", -1);
+ini_set("display_errors", -1);
 
 
-function httpGet($url) {
-    $ch = curl_init();  
- 
-    curl_setopt($ch,CURLOPT_URL,$url);
-    curl_setopt($ch,CURLOPT_RETURNTRANSFER,true);
-	curl_setopt($ch,CURLOPT_HEADER, false);
- 
-    $output=curl_exec($ch);
- 
-    curl_close($ch);
-    return $output;
-}
+$arrContextOptions = array(
+    "ssl"=>array(
+        "verify_peer"=>false,
+        "verify_peer_name"=>false,
+    ),
+);
 
 
 if(isset($_POST["payload"])) {
+	header("Content-Type: application/json");
 	$payload = json_decode($_POST["payload"], true);
 	$github = "github.log";
 	$date = date("H:i:s d-m-Y");
@@ -30,10 +25,9 @@ if(isset($_POST["payload"])) {
 			if($modified == "webhook.php") {
 				continue;
 			}
-			chmod($modified, 0777);
 			$a .= $date." - ".$modified."\n";
-			$data = httpGet("https://raw.githubusercontent.com/skaloot/Websocket/master/".$modified);
-			$fh = fopen("git_".$modified, 'w+') or die("can't open file");
+			$data = file_get_contents("https://raw.githubusercontent.com/skaloot/Websocket/master/".$modified, false, stream_context_create($arrContextOptions));
+			$fh = fopen($modified, 'w+') or die("can't open file");
 			fwrite($fh, $data);
 			fclose($fh);
 		}
@@ -43,4 +37,15 @@ if(isset($_POST["payload"])) {
 	fclose($fh);
 
 	echo json_encode(["status"=>"Done"]);
+	exit;
 }
+
+
+header("Content-Type: text/plain");
+echo file_get_contents("https://raw.githubusercontent.com/skaloot/Websocket/master/server.js", false, stream_context_create($arrContextOptions));
+
+
+
+
+
+
