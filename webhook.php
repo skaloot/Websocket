@@ -63,7 +63,7 @@ if(isset($_POST["payload"])) {
 
 
 header("Content-Type: text/plain");
-echo file_get_contents("https://raw.githubusercontent.com/skaloot/Websocket/master/server.js", false, stream_context_create($arrContextOptions));
+echo file_get_contents("https://raw.githubusercontent.com/skaloot/Websocket/master/server.js?".rand(), false, stream_context_create($arrContextOptions));
 
 
 
