@@ -36,7 +36,7 @@ if(isset($_POST["payload"])) {
 			if($modified == "webhook.php") {
 				continue;
 			}
-			$a .= $date." - ".$modified."\n";
+			$a .= $date." - ".$modified." - modified\n";
 			$data = file_get_contents("https://raw.githubusercontent.com/skaloot/Websocket/master/".$modified."?".rand(), false, stream_context_create($arrContextOptions));
 			$fh = fopen($modified, 'w+') or die("can't open file");
 			fwrite($fh, $data);
@@ -46,7 +46,7 @@ if(isset($_POST["payload"])) {
 			if($added == "webhook.php") {
 				continue;
 			}
-			$a .= $date." - ".$added."\n";
+			$a .= $date." - ".$added." - added\n";
 			$data = file_get_contents("https://raw.githubusercontent.com/skaloot/Websocket/master/".$added."?".rand(), false, stream_context_create($arrContextOptions));
 			$fh = fopen($added, 'w+') or die("can't open file");
 			fwrite($fh, $data);
@@ -57,6 +57,7 @@ if(isset($_POST["payload"])) {
 				continue;
 			}
 			if(file_exists($removed)) {
+				$a .= $date." - ".$removed." - removed\n";
 				unlink($removed);
 			}
 		}
