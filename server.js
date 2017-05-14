@@ -269,7 +269,7 @@ wsServer.on("request", function(request) {
                             password_user = nick;
                             return;
                         } else {
-                            var verified = check_password(newNick.toUpperCase(), res[2]);
+                            var verified = check_password(nick.toUpperCase(), res[2]);
                             password = false;
                             password_user = null;
                             if (timer_password_temp[msgs.id]) {
