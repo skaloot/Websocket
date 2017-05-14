@@ -26,7 +26,7 @@ if(isset($_POST["payload"])) {
 				continue;
 			}
 			$a .= $date." - ".$modified."\n";
-			$data = file_get_contents("https://raw.githubusercontent.com/skaloot/Websocket/master/".$modified, false, stream_context_create($arrContextOptions));
+			$data = file_get_contents("https://raw.githubusercontent.com/skaloot/Websocket/master/".$modified."?".rand(), false, stream_context_create($arrContextOptions));
 			$fh = fopen($modified, 'w+') or die("can't open file");
 			fwrite($fh, $data);
 			fclose($fh);
