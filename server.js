@@ -269,7 +269,15 @@ wsServer.on("request", function(request) {
                             password_user = nick;
                             return;
                         } else {
-                            var verified = check_password(nick.toUpperCase(), res[2]);
+                            var verified = check_password(newNick.toUpperCase(), res[2]);
+                            password = false;
+                            password_user = null;
+                            if (timer_password_temp[msgs.id]) {
+                                if (timer_password_temp[msgs.id].timer) {
+                                    clearTimeout(timer_password_temp[msgs.id].timer);
+                                }
+                                delete timer_password_temp[msgs.id];
+                            }
                             if (verified === false) {
                                 connection.sendUTF(JSON.stringify({
                                     type: "info",
@@ -285,16 +293,8 @@ wsServer.on("request", function(request) {
                                     msg: "<i>Verified..</i>",
                                     author: "[Server]",
                                 }));
-                                if (timer_password_temp[msgs.id]) {
-                                    if (timer_password_temp[msgs.id].timer) {
-                                        clearTimeout(timer_password_temp[msgs.id].timer);
-                                    }
-                                    delete timer_password_temp[msgs.id];
-                                }
                                 admin_password = " " + res[2];
                                 admin = true;
-                                password = false;
-                                password_user = null;
                             }
                         }
                     }
@@ -971,7 +971,7 @@ wsServer.on("request", function(request) {
                             connection.sendUTF(JSON.stringify({
                                 type: "info",
                                 time: (new Date()).getTime(),
-                                msg: "<i>Oopss.. Nickname <b>" + newNick + "</b> is reserved for admin. Please type in <b>/p &lt;password&gt;</b>.</i>",
+                                msg: "<i>Oopss.. Nickname <b>" + newNick + "</b> is reserved for admin. Please type in your password.</i>",
                                 author: "[Server]",
                             }));
                             if (!timer_password_temp[msgs.id]) {
@@ -985,6 +985,14 @@ wsServer.on("request", function(request) {
                             return;
                         } else {
                             var verified = check_password(newNick.toUpperCase(), res[2]);
+                            password = false;
+                            password_user = null;
+                            if (timer_password_temp[msgs.id]) {
+                                if (timer_password_temp[msgs.id].timer) {
+                                    clearTimeout(timer_password_temp[msgs.id].timer);
+                                }
+                                delete timer_password_temp[msgs.id];
+                            }
                             if (verified === false) {
                                 connection.sendUTF(JSON.stringify({
                                     type: "info",
@@ -1000,16 +1008,8 @@ wsServer.on("request", function(request) {
                                     msg: "<i>Verified..</i>",
                                     author: "[Server]",
                                 }));
-                                if (timer_password_temp[msgs.id]) {
-                                    if (timer_password_temp[msgs.id].timer) {
-                                        clearTimeout(timer_password_temp[msgs.id].timer);
-                                    }
-                                    delete timer_password_temp[msgs.id];
-                                }
                                 admin_password = " " + res[2];
                                 admin = true;
-                                password = false;
-                                password_user = null;
                             }
                         }
                     } else {
