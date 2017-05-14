@@ -94,7 +94,8 @@
             </div>
         </div>
 
-        <script src="jquery-1.11.3.min.js"></script>
+        <script type="text/javascript" src="jquery-1.11.3.min.js"></script>
+        <script type="text/javascript" src="offline.js"></script>
         <script type="text/javascript">
             localStorage.setItem("ip_address", "<?php echo $_SERVER["REMOTE_ADDR"]; ?>");
         </script>

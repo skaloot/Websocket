@@ -301,6 +301,7 @@
                 $(".chat").attr("id","chat_"+channel);
                 chat = $("#chat_"+channel);
                 $("#channels-title").show();
+                $("#channels").html(null);
                 for(var i=0, len=json.channels.length; i<len; i++) {
                     var c = "";
                     if(json.channels[i] == channel) {
@@ -320,6 +321,7 @@
                 $(".chat").attr("id","chat_"+channel);
                 chat = $("#chat_"+channel);
                 $("#channels-title").show();
+                $("#channels").html(null);
                 for(var i=0, len=json.channels.length; i<len; i++) {
                     var c = "";
                     if(json.channels[i] == channel) {

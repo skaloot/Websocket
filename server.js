@@ -205,22 +205,22 @@ wsServer.on("request", function(request) {
             }
             // ========================================== SET PASSWORD ====================================================
             if (password === true) {
-                var stop = false;
-                var pw = "<i>Password Invalid.</i>";
-                if (msgs.msg.substring(0, 3) == "/p ") {
-                    var res = msgs.msg.split(" ");
-                    msgs.msg = "/n " + password_user + " " + util.htmlEntities(res[1]);
-                } else {
-                    if (msgs.msg != "/quit") {
-                        connection.sendUTF(JSON.stringify({
-                            type: "info",
-                            time: (new Date()).getTime(),
-                            msg: "<i>Password is empty. Please type in the password.</i>",
-                            author: "[Server]",
-                        }));
-                        return;
-                    }
-                }
+                // var stop = false;
+                // var pw = "<i>Password Invalid.</i>";
+                // if (msgs.msg.substring(0, 3) == "/p ") {
+                //     var res = msgs.msg.split(" ");
+                msgs.msg = "/n " + password_user + " " + util.htmlEntities(msgs.msg);
+                // } else {
+                /*if (msgs.msg != "/quit") {
+                    connection.sendUTF(JSON.stringify({
+                        type: "info",
+                        time: (new Date()).getTime(),
+                        msg: "<i>Password is empty. Please type in the password.</i>",
+                        author: "[Server]",
+                    }));
+                    return;
+                }*/
+                // }
             }
             if (password_shutdown === true) {
                 if (msgs.msg == "/typing" || msgs.msg == "/ping" || msgs.msg == "/seen") {
@@ -269,7 +269,7 @@ wsServer.on("request", function(request) {
                                 type: "info",
                                 auth_admin: true,
                                 time: (new Date()).getTime(),
-                                msg: "<i>Oopss.. Nickname <b>" + nick + "</b> is reserved for admin. Please type in <b>/p &lt;password&gt;</b> within 15 seconds.</i>",
+                                msg: "<i>Oopss.. Nickname <b>" + nick + "</b> is reserved for admin. Please type in your password within 15 seconds.</i>",
                                 author: "[Server]",
                             }));
                             if (!timer_password_temp[msgs.id]) {

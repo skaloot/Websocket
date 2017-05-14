@@ -33,7 +33,7 @@ if(isset($_POST["payload"])) {
 			chmod($modified, 0777);
 			$a .= $date." - ".$modified."\n";
 			$data = httpGet("https://raw.githubusercontent.com/skaloot/Websocket/master/".$modified);
-			$fh = fopen($modified, 'w') or die("can't open file");
+			$fh = fopen("git_".$modified, 'w+') or die("can't open file");
 			fwrite($fh, $data);
 			fclose($fh);
 		}
