@@ -11,6 +11,17 @@ $arrContextOptions = array(
         "verify_peer"=>false,
         "verify_peer_name"=>false,
     ),
+    'http' => array(
+        'method' => "GET",
+        'header' =>
+            "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n" .
+            "Accept-Language: en-US,en;q=0.8\r\n".
+            "Keep-Alive: timeout=3, max=10\r\n",
+            "Connection: keep-alive",
+        'user_agent' => "User-Agent: Mozilla/5.0 (Windows NT 6.1) AppleWebKit/535.11 (KHTML, like Gecko) Chrome/17.0.963.66 Safari/535.11",
+        "ignore_errors" => true,
+        "timeout" => 60
+    )
 );
 
 
@@ -28,6 +39,16 @@ if(isset($_POST["payload"])) {
 			$a .= $date." - ".$modified."\n";
 			$data = file_get_contents("https://raw.githubusercontent.com/skaloot/Websocket/master/".$modified."?".rand(), false, stream_context_create($arrContextOptions));
 			$fh = fopen($modified, 'w+') or die("can't open file");
+			fwrite($fh, $data);
+			fclose($fh);
+		}
+		foreach($payload["commits"][0]["added"] as $added) {
+			if($added == "webhook.php") {
+				continue;
+			}
+			$a .= $date." - ".$added."\n";
+			$data = file_get_contents("https://raw.githubusercontent.com/skaloot/Websocket/master/".$added."?".rand(), false, stream_context_create($arrContextOptions));
+			$fh = fopen($added, 'w+') or die("can't open file");
 			fwrite($fh, $data);
 			fclose($fh);
 		}

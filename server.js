@@ -147,7 +147,6 @@ wsServer.on("request", function(request) {
                 connection.close();
                 return;
             }
-
             // ========================================== NO APP ID ====================================================
             if (appId === null && userName === null) {
                 if (msgs.msg == "/login") {
