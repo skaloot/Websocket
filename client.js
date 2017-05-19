@@ -1,5 +1,5 @@
 (function(global) {
-    "use strict";
+    // "use strict";
 
     var connection = null,
         content = $("#content"),
@@ -100,7 +100,6 @@
         connection.onerror = function(error) {
             chat.html("<p class=\"server\"><i>Sorry, but there's some problem with your connection or the server is down.<br> Reconnecting in " + (reconnect_count * 10) + " seconds. Thank You.</i></p>");
             online = false;
-            reconnect_this();
         };
 
         connection.onmessage = function(message) {
@@ -768,7 +767,7 @@
         }
     }
 
-    var check_con = setInterval(function() {
+    /*var check_con = setInterval(function() {
         var h = chat.height()-1;
         if (connect === true && connection.readyState === 3 && blocked !== true) {
             connect = false;
@@ -783,7 +782,7 @@
                 content.scrollTop(chat.height());
             }
         }
-    }, 3000);
+    }, 3000);*/
     
     var ping = setInterval(function() {
         if (connect === true && online === true && connection.readyState === 1 && blocked !== true) {
@@ -794,16 +793,31 @@
     }, 60000);
 
     var reconnect_this = function() {
-        reconnect_count++;
-        clearTimeout(timer_reconnect);
-        timer_reconnect = setTimeout(function() {
-            connect = true;
-        }, reconnect_count * 10000);
+        // reconnect_count++;
+        // clearTimeout(timer_reconnect);
+        // timer_reconnect = setTimeout(function() {
+        //     connect = true;
+        // }, reconnect_count * 10000);
     };
 
     function go_here(here) {
         window.location = here;
     }
+
+    window.addEventListener("offline", function () {
+        console.log("Offline..");
+        if(connection && connect === true && connection.readyState === 1) {
+            connection.close();
+            chat.append("<p class=\"server\"><i>You are not connected..</i><span class=\"time\">" + get_time() + "</span></p>");
+            connection.readyState = 3;
+        }
+    }, false);
+    window.addEventListener("online", function () {
+        console.log("Online..");
+        if(connection && connect === true && connection.readyState === 3) {
+            ch.init();
+        }
+    }, false);
 
 
     console.log("\n" +
@@ -820,7 +834,6 @@
         "      -- https://www.facebook.com/skaloot --              \n");
 
 })(this);
-
 
 ch.init();
 
