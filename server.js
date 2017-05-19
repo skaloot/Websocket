@@ -115,14 +115,6 @@ wsServer.on("request", function(request) {
         password_shutdown = false,
         shutdown_verified = false;
 
-    connection.sendUTF(JSON.stringify({
-        type: "connected",
-        time: (new Date()).getTime(),
-        msg: "<i>Connected...</i>",
-        author: "[Server]",
-        requests: request.accept
-    }));
-
     total_connection++;
 
     // ========================================== GET MSG ====================================================
@@ -185,10 +177,12 @@ wsServer.on("request", function(request) {
                     appId = util.htmlEntities(msgs.app_id);
                     clients = apps[appId];
                     connection.sendUTF(JSON.stringify({
-                        type: "app_id",
+                        type: "connected",
                         time: (new Date()).getTime(),
+                        msg: "<i>Connected...</i>",
                         app_id: appId,
                         author: "[Server]",
+                        requests: request.accept
                     }));
                     if (found === false) {
                         connection.sendUTF(JSON.stringify({

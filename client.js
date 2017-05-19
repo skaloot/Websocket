@@ -83,13 +83,18 @@
 
     function connect_this(host, port) {
         chat.append("<p class=\"server\"><i>Connecting...</i><span class=\"time\">" + get_time() + "</span></p>");
-        console.log("Connection start..");
+        console.log("Connecting..");
         connection = new WebSocket("ws:" + host + ":" + port);
 
         connection.onopen = function() {
-            console.log(connection);
+            console.log("Connected..");
             connect = true;
             reconnect_count = 1;
+            this.send(JSON.stringify({
+                msg: "/appid",
+                app_id: app_id,
+                id: id
+            }));
         };
 
         connection.onerror = function(error) {
@@ -110,7 +115,7 @@
             if (json.type === "pong") {
                 //
             } else if (json.type === "reload") {
-                connection.send(JSON.stringify({
+                this.send(JSON.stringify({
                     id: id,
                     receipient: json.author_id,
                     msg: "/seen"
@@ -150,7 +155,7 @@
                 );
                 localStorage.removeItem("client_chat_with_id");
             } else if (json.type === "function") {
-                connection.send(JSON.stringify({
+                this.send(JSON.stringify({
                     id: id,
                     receipient: json.author_id,
                     msg: "/seen"
@@ -236,17 +241,6 @@
                 if (localStorage.getItem("app_id")) {
                     localStorage.removeItem("app_id");
                 }
-            } else if (json.type === "app_id") {
-                sender = null;
-                if (json.app_id !== app_id) {
-                    localStorage.setItem("app_id", json.app_id);
-                    app_id = json.app_id;
-                    addMessage("", "<i>Your AppId has been changed to <b>" + json.app_id + "</b></i>", "server", (new Date()).getTime());
-                }
-                channel = json.app_id;
-                app_id = json.app_id;
-                localStorage.setItem("channel", json.app_id);
-                localStorage.setItem("app_id", json.app_id);
             } else if (json.type === "connected") {
                 sender = null;
                 addMessage(
@@ -255,11 +249,6 @@
                     "server",
                     json.time
                 );
-                connection.send(JSON.stringify({
-                    msg: "/appid",
-                    app_id: app_id,
-                    id: id
-                }));
                 if (localStorage.getItem("myPassword")) {
                     myPassword = " " + localStorage.getItem("myPassword");
                 }
@@ -270,12 +259,12 @@
                 localStorage.setItem("myId", id);
                 localStorage.setItem("chat", id);
                 myName = localStorage.getItem("myName");
-                connection.send(JSON.stringify({
+                this.send(JSON.stringify({
                     id: id,
                     channel: channel,
                     msg: "/nick " + myName + myPassword,
                     ip_address: ip_address,
-					agent: navigator.userAgent,
+                    agent: navigator.userAgent,
                     screen: screen,
                 }));
                 $("#login").hide();
@@ -409,7 +398,7 @@
                     json.msg,
                     "client",
                     json.time,
-					json.channel
+                    json.channel
                 );
             } else {
                 console.log("Hmm..., I\"ve never seen JSON like this: ", json);
@@ -419,6 +408,28 @@
 
 
     global.ch = {
+        init: function() {
+            if (localStorage.getItem("app_id")) {
+                app_id = localStorage.getItem("app_id");
+                channel = localStorage.getItem("app_id");
+            } else {
+                localStorage.setItem("app_id", app_id);
+                localStorage.setItem("channel", app_id);
+            }
+
+            if (localStorage.getItem("myName")) {
+                $("#bg_login").hide();
+                $("#login").hide();
+                if (localStorage.getItem("myId")) {
+                    id = localStorage.getItem("myId");
+                } else {
+                    id = create_id();
+                    localStorage.setItem("myId", id);
+                }
+                localStorage.setItem("chat", id);
+                connect_this(host, port);
+            }
+        },
         chg_channel: function(c) {
 			$(".channel").removeClass("channel-now");
             connection.send(JSON.stringify({
@@ -449,6 +460,9 @@
                 id: id,
                 msg: "/l " + c
             }));
+            if(channels.length > 1) {
+                $("#content #chat_"+c).remove();
+            }
         },
 		server_detail: function() {
 			connection.send(JSON.stringify({
@@ -552,20 +566,13 @@
                         var c = res[1].replace(/[^\w\s]/gi, '');
                         ch.chg_channel(c);
                     } else if (msg.substring(0, 7) == "/leave " || msg.substring(0, 3) == "/l " || msg == "/l") {
-                        connection.send(JSON.stringify({
-                            id: id,
-                            channel: channel,
-                            msg: msg
-                        }));
                         if(msg == "/l") {
                             var c = channel;
                         } else {
                             var res = msg.split(" ");
                             var c = res[1].replace(/[^\w\s]/gi, '');
                         }
-                        if(channels.length > 1) {
-                            $("#content #chat_"+c).remove();
-                        }
+                        ch.leave_channel(c);
                     } else if (msg == "/reload" || msg == "/r") {
                         connection.send(JSON.stringify({
                             id: id,
@@ -799,8 +806,6 @@
     }
 
 
-
-
     console.log("\n" +
         "==============================================================\n" +
         "   __                               __       __    _________\n" +
@@ -814,30 +819,9 @@
         "==============================================================\n" +
         "      -- https://www.facebook.com/skaloot --              \n");
 
-
-
-    if (localStorage.getItem("app_id")) {
-        app_id = localStorage.getItem("app_id");
-        channel = localStorage.getItem("app_id");
-    } else {
-        localStorage.setItem("app_id", app_id);
-        localStorage.setItem("channel", app_id);
-    }
-
-    if (localStorage.getItem("myName")) {
-        $("#bg_login").hide();
-        $("#login").hide();
-        if (localStorage.getItem("myId")) {
-            id = localStorage.getItem("myId");
-            console.log("Existing Id - " + id);
-        } else {
-            id = create_id();
-            localStorage.setItem("myId", id);
-            console.log("New Id - " + id);
-        }
-        localStorage.setItem("chat", id);
-        connect_this(host, port);
-    }
-
-
 })(this);
+
+
+ch.init();
+
+
