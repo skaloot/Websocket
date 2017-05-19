@@ -95,10 +95,15 @@ $(function() {
         connection = new WebSocket("ws:" + host + ":" + port);
 
         connection.onopen = function() {
-            console.log(connection);
+            console.log("Connected..");
             connect = true;
             reconnect_count = 1;
-        }
+            this.send(JSON.stringify({
+                msg: "/appid",
+                app_id: app_id,
+                id: id
+            }));
+        };
 
         connection.onerror = function(error) {
             console.error("Sorry, but there's some problem with your connection or the server is down.");
