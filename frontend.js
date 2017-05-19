@@ -167,11 +167,6 @@ $(function() {
             } else if (json.type === "info") {
                 console.log(json.author + ": " + strip(json.msg));
             } else if (json.type === "connected") {
-                connection.send(JSON.stringify({
-                    id: id,
-                    msg: "/appid",
-                    app_id: app_id
-                }));
                 var pw = "";
                 if (localStorage.getItem("myPassword_ui")) {
                     pw = " "+localStorage.getItem("myPassword_ui");
