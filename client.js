@@ -23,6 +23,7 @@
         myPassword = "",
         sound = false,
         msgs = [],
+        users = [],
         historys = 0,
         id = null,
         sender = null,
@@ -295,8 +296,6 @@
                     var c = "";
                     if(json.channels[i] == channel) {
                         c = " channel-now";
-                    } else {
-                        $("#content").append("<div class=\"chat\" id=\"chat_"+json.channels[i]+"\"></div>");
                     }
                     $("#channels").append("<div class='channel"+c+"' id=\"c_"+json.channels[i]+"\" onclick=\"ch.chg_channel('"+json.channels[i]+"');\">"+json.channels[i]+"</div><span onclick=\"ch.leave_channel('"+json.channels[i]+"');\" class=\"close-channel\">x</span>");
                 }
@@ -315,8 +314,6 @@
                     var c = "";
                     if(json.channels[i] == channel) {
                         c = " channel-now";
-                    } else {
-                        $("#content").append("<div class=\"chat\" id=\"chat_"+json.channels[i]+"\"></div>");
                     }
                     $("#channels").append("<div class='channel"+c+"' id=\"c_"+json.channels[i]+"\" onclick=\"ch.chg_channel('"+json.channels[i]+"');\">"+json.channels[i]+"</div><span onclick=\"ch.leave_channel('"+json.channels[i]+"');\" class=\"close-channel\">x</span>");
                 }
@@ -353,7 +350,7 @@
                     if(json.channels[i] == channel) {
                         c = " channel-now";
                     }
-                    $("#channels-admin").append("<div class='channel"+c+"' id=\"ca_"+json.channels[i]+"\" onclick=\"ch.chg_channel('"+json.channels[i]+"');\">"+json.channels[i]+"</div><span onclick=\"ch.leave_channel('"+json.channels[i]+"');\" class=\"close-channel\">x</span>");
+                    $("#channels-admin").append("<div class='channel"+c+"' id=\"ca_"+json.channels[i]+"\" onclick=\"ch.chg_channel('"+json.channels[i]+"');\">"+json.channels[i]+"</div>");
                 }
                 $("#btn-server").show();
                 $("#btn-restart").show();
@@ -443,11 +440,11 @@
 			localStorage.setItem("app_id", app_id);
 			if(channels.indexOf(channel) !== -1) {
 				$("#chat_"+channel).show();
-                $("#c_"+c).addClass("channel-now");
-                $("#ca_"+c).addClass("channel-now");
 			} else {
 				$("#content").append("<div class=\"chat\" id=\"chat_"+channel+"\"></div>");
 			}
+            $("#c_"+c).addClass("channel-now");
+            $("#ca_"+c).addClass("channel-now");
             chat = $("#chat_"+channel);
 			content.scrollTop(chat.height());
 			if(pending_seen_channel === true) {
