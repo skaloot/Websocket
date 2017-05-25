@@ -1746,6 +1746,7 @@ var online_users = function(app, conn) {
             users.push({
                 name: client[i].user_name,
                 id: client[i].user_id,
+                ip_address: client[i].ip_address,
                 assigned: client[i].assigned,
                 operator: client[i].operator,
                 admin: client[i].admin,
