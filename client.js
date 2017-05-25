@@ -296,6 +296,8 @@
                     var c = "";
                     if(json.channels[i] == channel) {
                         c = " channel-now";
+                    } else {
+                        $("#content").append("<div class=\"chat\" id=\"chat_"+json.channels[i]+"\"></div>");
                     }
                     $("#channels").append("<div class='channel"+c+"' id=\"c_"+json.channels[i]+"\" onclick=\"ch.chg_channel('"+json.channels[i]+"');\">"+json.channels[i]+"</div><span onclick=\"ch.leave_channel('"+json.channels[i]+"');\" class=\"close-channel\">x</span>");
                 }
@@ -314,6 +316,8 @@
                     var c = "";
                     if(json.channels[i] == channel) {
                         c = " channel-now";
+                    } else {
+                        $("#content").append("<div class=\"chat\" id=\"chat_"+json.channels[i]+"\"></div>");
                     }
                     $("#channels").append("<div class='channel"+c+"' id=\"c_"+json.channels[i]+"\" onclick=\"ch.chg_channel('"+json.channels[i]+"');\">"+json.channels[i]+"</div><span onclick=\"ch.leave_channel('"+json.channels[i]+"');\" class=\"close-channel\">x</span>");
                 }

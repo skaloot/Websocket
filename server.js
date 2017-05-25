@@ -140,34 +140,7 @@ wsServer.on("request", function(request) {
                 return;
             }
             // ========================================== NO APP ID ====================================================
-            if (appId === null && userName === null) {
-                if (msgs.msg == "/login") {
-                    util.PostThis({
-                        email: msgs.email
-                    }, "www.kpjselangor.com", "/chat/login.php", function(data) {
-                        if (data.success === true) {
-                            connection.sendUTF(JSON.stringify({
-                                type: "connected",
-                                connected: true,
-                                granted: true,
-                                time: (new Date()).getTime(),
-                                author: "[Server]",
-                                name: data.name,
-                                msg: "<i>Connected...</i>",
-                            }));
-                        } else {
-                            connection.sendUTF(JSON.stringify({
-                                type: "connected",
-                                connected: true,
-                                granted: false,
-                                time: (new Date()).getTime(),
-                                author: "[Server]",
-                            }));
-                            connection.close();
-                        }
-                    });
-                    return;
-                }
+            if (appId === null) {
                 if (msgs.msg == "/appid") {
                     var found = false;
                     if(!apps[msgs.app_id]) {
@@ -184,15 +157,6 @@ wsServer.on("request", function(request) {
                         author: "[Server]",
                         requests: request.accept
                     }));
-                    if (found === false) {
-                        connection.sendUTF(JSON.stringify({
-                            type: "appid_invalid",
-                            time: (new Date()).getTime(),
-                            msg: "<i>Your App ID is invalid!..",
-                            author: "[Server]",
-                        }));
-                        return;
-                    }
                 }
                 return;
             }
@@ -222,8 +186,34 @@ wsServer.on("request", function(request) {
                 }
             }
             // ========================================== NO NICK ====================================================
-            if (userName === null && appId !== null) {
-                if (msgs.msg.substring(0, 6) == "/nick " || msgs.msg.substring(0, 3) == "/n ") {
+            if (userName === null) {
+                if (msgs.msg == "/login") {
+                    util.PostThis({
+                        email: msgs.email
+                    }, "www.kpjselangor.com", "/chat/login.php", function(data) {
+                        console.log("Posting..");
+                        if (data.success === true) {
+                            connection.sendUTF(JSON.stringify({
+                                type: "connected",
+                                connected: true,
+                                granted: true,
+                                time: (new Date()).getTime(),
+                                author: "[Server]",
+                                name: data.name,
+                                msg: "<i>Connected...</i>",
+                            }));
+                        } else {
+                            connection.sendUTF(JSON.stringify({
+                                type: "connected",
+                                connected: true,
+                                granted: false,
+                                time: (new Date()).getTime(),
+                                author: "[Server]",
+                            }));
+                            connection.close();
+                        }
+                    });
+                } else if (msgs.msg.substring(0, 6) == "/nick " || msgs.msg.substring(0, 3) == "/n ") {
                     var reconnect = false,
                         admin_password = "",
                         res = msgs.msg.split(" "),

@@ -100,6 +100,6 @@ date_default_timezone_set("Asia/Kuala_lumpur");
         <script type="text/javascript">
             localStorage.setItem("ip_address", "<?php echo $_SERVER["REMOTE_ADDR"]; ?>");
         </script>
-        <script src="client.js?<?php echo date("Y-m-d H"); ?>"></script>
+        <script src="client.js?<?php echo date("Y-m-d H:i"); ?>"></script>
     </body>
 </html>
