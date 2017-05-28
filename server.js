@@ -5,7 +5,7 @@
 process.title = "node-chat";
 var port = 3777,
     webSocketServer = require("websocket").server,
-    util = require("./util.js"),
+    util = require("./config"),
     http = util.get_http(),
     fs = require("fs"),
     app_list = [

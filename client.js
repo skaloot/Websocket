@@ -1,6 +1,8 @@
 (function(global) {
     // "use strict";
 
+    const $ = window.$;
+    const jQuery = window.jQuery;
     var connection = null,
         content = $("#content"),
         chat = $(".chat"),
@@ -826,6 +828,8 @@
 
 })(this);
 
+
 ch.init();
+
 
 
