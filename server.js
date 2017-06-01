@@ -8,6 +8,7 @@ var port = 3777,
     util = require("./config"),
     http = util.get_http(),
     fs = require("fs"),
+    mysql = require("mysql"),
     app_list = [
         "ska",
         "utiis",
@@ -17,6 +18,7 @@ var port = 3777,
         "ladiesfoto",
         "ladiesfoto_ui",
     ],
+    con,
     ps = "isu2uDIABL0W67B",
     admins = [],
     users = [],
@@ -75,6 +77,45 @@ util.PostThis(admins, "localhost", "/websocket/admin.php", function(data) {
         });
     }
 });
+
+
+/* ========================================= CONNECT TO MYSQL ==================================================== */
+
+function db(sql, callback) {
+    con = mysql.createConnection({
+        host: "kpjselangor.com",
+        user: "amirosol_kpj",
+        password: "kpjselangor123",
+        insecureAuth: true
+    });
+    con.connect(function(err) {
+        if (err) {
+            console.log(err);
+            return false;
+        }
+        console.log("Mysql Connected!");
+        con.query("USE amirosol_newkpj;", function(err) {
+            if (err) {
+                console.log(err);
+                return false;
+            }
+            console.log("Connected to db - amirosol_newkpj");
+            con.query(sql, function(err, result) {
+                if (err) {
+                    console.log(err);
+                    return false;
+                }
+                if(typeof callback == "function") {
+                    con.end();
+                    return callback(result);
+                }
+            });
+        });
+    });
+    con.on('error', function(err) {
+        console.log(err);
+    });
+}
 
 
 // ========================================== CONNECT ====================================================
@@ -188,18 +229,16 @@ wsServer.on("request", function(request) {
             // ========================================== NO NICK ====================================================
             if (userName === null) {
                 if (msgs.msg == "/login") {
-                    util.PostThis({
-                        email: msgs.email
-                    }, "www.kpjselangor.com", "/chat/login.php", function(data) {
-                        console.log("Posting..");
-                        if (data.success === true) {
+                    var sql = "SELECT * FROM chat WHERE email = '" + msgs.email + "';";
+                    var result = db(sql, function(result){
+                        if (result.length > 0) {
                             connection.sendUTF(JSON.stringify({
                                 type: "connected",
                                 connected: true,
                                 granted: true,
                                 time: (new Date()).getTime(),
                                 author: "[Server]",
-                                name: data.name,
+                                name: result.name,
                                 msg: "<i>Connected...</i>",
                             }));
                         } else {

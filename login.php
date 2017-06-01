@@ -5,10 +5,19 @@ header('Content-Type: application/json');
 
 
 
+require_once("../db.php");
+$db = new Database();
+$db->connect();
+
+
 if(isset($_POST["email"])) {
-	if($_POST["email"] == "tatiana@gmail.com") {
-		echo json_encode(["success"=>true,"name"=>"Tatiana"]);
-		exit;
+	$q = $db->select("chat","*","","email = '".$_POST["email"]."'");
+	if($q) {
+		$db->insert("chat_log", array("email"=>$_POST["email"],"time"=>date("Y-m-d H:i:s")));
+		echo json_encode(array("success"=>true,"name"=>$q[0]["name"]));
+	} else {
+		echo json_encode(array("success"=>false));
 	}
-	echo json_encode(["success"=>false]);
+} else {
+	echo json_encode(array("success"=>false));
 }

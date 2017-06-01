@@ -175,10 +175,10 @@ exports.PostThis = function(obj, host, url, callback) {
                 console.log("This doesn\'t look like a valid JSON: ", data);
                 return;
             }
-            console.log(data);
             if(typeof callback === "function") {
                 callback(data);
             }
+            console.log(data);
         });
     });
     post_req.write(post_data);
