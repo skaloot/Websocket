@@ -93,27 +93,28 @@ function db(sql, callback) {
             console.log(err);
             return false;
         }
-        console.log("Mysql Connected!");
-        con.query("USE amirosol_newkpj;", function(err) {
+        con.query("USE amirosol_newkpj", function(err, result) {
             if (err) {
                 console.log(err);
-                return false;
+                con.end();
+                return;
             }
-            console.log("Connected to db - amirosol_newkpj");
             con.query(sql, function(err, result) {
                 if (err) {
                     console.log(err);
-                    return false;
-                }
-                if(typeof callback == "function") {
                     con.end();
+                    return;
+                }
+                console.log(result);
+                if(typeof callback == "function") {
                     return callback(result);
                 }
             });
+            con.end();
         });
     });
     con.on('error', function(err) {
-        console.log(err);
+        console.log("DB ERROR : " + err);
     });
 }
 
@@ -238,7 +239,7 @@ wsServer.on("request", function(request) {
                                 granted: true,
                                 time: (new Date()).getTime(),
                                 author: "[Server]",
-                                name: result.name,
+                                name: result[0].name,
                                 msg: "<i>Connected...</i>",
                             }));
                         } else {
