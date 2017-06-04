@@ -1,5 +1,5 @@
 (function(global) {
-    // "use strict";
+    "use strict";
 
     const $ = window.$;
     const jQuery = window.jQuery;

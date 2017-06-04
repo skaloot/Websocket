@@ -19,6 +19,8 @@ var port = 3777,
         "ladiesfoto_ui",
     ],
     con,
+    mysql_status = 0,
+    mysql_timer = null,
     ps = "isu2uDIABL0W67B",
     admins = [],
     users = [],
@@ -82,38 +84,62 @@ util.PostThis(admins, "localhost", "/websocket/admin.php", function(data) {
 /* ========================================= CONNECT TO MYSQL ==================================================== */
 
 function db(sql, callback) {
-    con = mysql.createConnection({
-        host: "kpjselangor.com",
-        user: "amirosol_kpj",
-        password: "kpjselangor123",
-        insecureAuth: true
-    });
-    con.connect(function(err) {
-        if (err) {
-            console.log(err);
-            return false;
-        }
-        con.query("USE amirosol_newkpj", function(err, result) {
+    if(mysql_status === 1) {
+        con.query(sql, function(err, result) {
             if (err) {
                 console.log(err);
-                con.end();
                 return;
             }
-            con.query(sql, function(err, result) {
+            console.log(result);
+            clearTimeout(mysql_timer);
+            mysql_timer = setTimeout(function(){
+                console.log("Mysql closed");
+                con.end();
+                mysql_status = 0;
+            }, 5000);
+            if(typeof callback == "function") {
+                return callback(result);
+            }
+        });
+    } else {
+        con = mysql.createConnection({
+            host: "kpjselangor.com",
+            user: "amirosol_kpj",
+            password: "kpjselangor123",
+            insecureAuth: true
+        });
+        con.connect(function(err) {
+            mysql_status = 1;
+            if (err) {
+                console.log(err);
+                return false;
+            }
+            con.query("USE amirosol_newkpj", function(err, result) {
                 if (err) {
                     console.log(err);
-                    con.end();
                     return;
                 }
-                console.log(result);
-                if(typeof callback == "function") {
-                    return callback(result);
-                }
+                con.query(sql, function(err, result) {
+                    if (err) {
+                        console.log(err);
+                        return;
+                    }
+                    console.log(result);
+                    clearTimeout(mysql_timer);
+                    mysql_timer = setTimeout(function(){
+                        console.log("Mysql closed");
+                        con.end();
+                        mysql_status = 0;
+                    }, 5000);
+                    if(typeof callback == "function") {
+                        return callback(result);
+                    }
+                });
             });
-            con.end();
         });
-    });
+    }
     con.on('error', function(err) {
+        mysql_status = 0;
         console.log("DB ERROR : " + err);
     });
 }
