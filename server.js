@@ -48,6 +48,15 @@ var options = {
 
 // var server = https.createServer(options, function(request, response) {
 var server = http.createServer(function(request, response) {
+    if(request.method == 'POST') {
+        util.processPost(request, response, function() {
+            console.log(request.post);
+            // Use request.post here
+
+            response.writeHead(200, "OK", {'Content-Type': 'text/plain'});
+            response.end();
+        });
+    }
     if (request.url === '/users') {
         response.writeHead(200, {'Content-Type': 'application/json'});
         response.end(JSON.stringify(users));
