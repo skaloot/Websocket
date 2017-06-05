@@ -169,9 +169,6 @@ exports.processPost = function(request, response, callback) {
             callback();
         });
 
-    } else {
-        response.writeHead(405, {'Content-Type': 'text/plain'});
-        response.end();
     }
 }
 
