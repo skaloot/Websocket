@@ -1,6 +1,7 @@
 
 var querystring = require("querystring"),
     http = require("http"),
+    https = require("https"),
 	dns = require('dns'),
     internet = true,
 	check_internet = false,
@@ -39,6 +40,10 @@ var querystring = require("querystring"),
 
 exports.get_http = function() {
     return http;
+}
+
+exports.get_https = function() {
+    return https;
 }
 
 exports.clear_interval = function() {

@@ -7,6 +7,7 @@ var port = 3777,
     webSocketServer = require("websocket").server,
     util = require("./config"),
     http = util.get_http(),
+    https = util.get_https(),
     fs = require("fs"),
     mysql = require("mysql"),
     app_list = [
