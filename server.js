@@ -3,6 +3,8 @@
 // =========================================================================================================
 
 process.title = "node-chat";
+process.env.TZ = 'Asia/Kuala_Lumpur';
+
 var port = 3777,
     webSocketServer = require("websocket").server,
     util = require("./config"),
@@ -1928,6 +1930,15 @@ var del_channel = function(id, chnl) {
         }
     }
     return true;
+}
+
+var date_std = function (timestamp) {
+    if(!timestamp) timestamp = new Date().getTime();
+    if(Math.ceil(timestamp).toString().length == 10) timestamp *= 1000;
+    var tzoffset = (new Date()).getTimezoneOffset() * 60000;
+    var date = new Date(timestamp - tzoffset);
+    var iso = date.toISOString().match(/(\d{4}\-\d{2}\-\d{2})T(\d{2}:\d{2}:\d{2})/);
+    return iso[1] + ' ' + iso[2];
 }
 
 clean_up = setInterval(function() {
