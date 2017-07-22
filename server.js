@@ -36,6 +36,7 @@ var port = 3777,
     msg_count = 0,
     start_time = new Date().getTime(),
     shutdown = false,
+	store_msg = false,
     max_connection = 200,
     total_connection = 1,
     origins = util.get_origin(),
@@ -1407,8 +1408,10 @@ wsServer.on("request", function(request) {
                                 channel: channel,
                                 ip_address: ip_address
                             };
-                            util.PostThis(obj, "localhost", "/websocket/msgs.php");
-                            break;
+							if (store_msg) {
+								util.PostThis(obj, "localhost", "/websocket/msgs.php");
+								break;
+							}
                         }
                     }
                     if (found === false) {
@@ -1527,6 +1530,10 @@ wsServer.on("request", function(request) {
                             apps[msgs.channel][i].connection.sendUTF(json);
                         }
                     }
+				} else if (msgs.msg.substring(0, 11) == "/store_msg ") {
+					if(!admin) return;
+					var a = msgs.msg.split(" ");
+					store_msg = (a[0] == "on") ? true : false;
                 } else if (msgs.msg == "/flood") {
                     if (admin !== true) {
                         connection.sendUTF(JSON.stringify({
@@ -1639,10 +1646,12 @@ wsServer.on("request", function(request) {
                         channel: channel,
                         ip_address: ip_address
                     };
-                    if (clients.type == "private") {
-                        util.PostThis(obj, "www.kpjselangor.com", "/chat/msgs.php");
-                    } else {
-                        util.PostThis(obj, "localhost", "/websocket/msgs.php");
+                    if (store_msg) {
+                        if (clients.type == "private") {
+                            util.PostThis(obj, "www.kpjselangor.com", "/chat/msgs.php");
+                        } else {
+                            util.PostThis(obj, "localhost", "/websocket/msgs.php");
+                        }
                     }
                 }
             }
