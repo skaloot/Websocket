@@ -155,7 +155,28 @@ exports.censor = function(a) {
     }
 }
 
-exports.processPost = function(request, response, callback) {
+exports.handle_request = function(request, response, users, channel_list) {
+    if(request.method == 'POST') {
+        processPost(request, response, function() {
+            console.log(request.post);
+            response.writeHead(200, "OK", {'Content-Type': 'text/plain'});
+            response.end();
+        });
+        return;
+    }
+    if (request.url === '/users') {
+        response.writeHead(200, {'Content-Type': 'application/json'});
+        response.end(JSON.stringify(users));
+    } else if (request.url === '/channels') {
+        response.writeHead(200, {'Content-Type': 'application/json'});
+        response.end(JSON.stringify(channel_list));
+    } else {
+        response.writeHead(404, {'Content-Type': 'text/plain'});
+        response.end('Sorry, unknown url');
+    }
+}
+
+var processPost = function(request, response, callback) {
     var queryData = "";
     if(typeof callback !== 'function') return null;
 
@@ -176,6 +197,7 @@ exports.processPost = function(request, response, callback) {
 
     }
 }
+exports.processPost = processPost;
 
 exports.PostThis = function(obj, host, url, callback) {
 	if(host != "localhost" && !internet) {
