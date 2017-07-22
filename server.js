@@ -52,24 +52,7 @@ var options = {
 
 // var server = https.createServer(options, function(request, response) {
 var server = http.createServer(function(request, response) {
-    if(request.method == 'POST') {
-        util.processPost(request, response, function() {
-            console.log(request.post);
-            response.writeHead(200, "OK", {'Content-Type': 'text/plain'});
-            response.end();
-        });
-        return;
-    }
-    if (request.url === '/users') {
-        response.writeHead(200, {'Content-Type': 'application/json'});
-        response.end(JSON.stringify(users));
-    } else if (request.url === '/channels') {
-        response.writeHead(200, {'Content-Type': 'application/json'});
-        response.end(JSON.stringify(channel_list));
-    } else {
-        response.writeHead(404, {'Content-Type': 'text/plain'});
-        response.end('Sorry, unknown url');
-    }
+	util.handle_request(request, response, users, channel_list);
 });
 
 server.listen(port, function() {
