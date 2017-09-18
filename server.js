@@ -547,6 +547,8 @@ wsServer.on("request", function(request) {
                         return;
                     }
                     shutdown = true;
+                    process.exit(0);
+                    
                     util.clear_interval();
                     clearInterval(clean_up);
                     for (var i = 0, len = channel_list.length; i < len; i++) {
@@ -1938,11 +1940,7 @@ clean_up = setInterval(function() {
         for (var ii = 0, len2 = apps[app_list[i]].length; ii < len2; ii++) {
             if (app_list[i] == "kpj_ui" || app_list[i] == "ladiesfoto_ui" || app_list[i] == "utiis_ui") {
                 if ((new Date()).getTime() - apps[app_list[i]][ii].last_seen > 900000 && apps[app_list[i]][ii].admin === false) {
-                    apps[app_list[i]][ii].connection.sendUTF(JSON.stringify({
-                        type: "quit",
-                        time: (new Date()).getTime(),
-                        author: "[Server]",
-                    }));
+                    apps[app_list[i]][ii].connection.close();
                 }
             }
         }
