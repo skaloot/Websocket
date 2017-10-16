@@ -110,6 +110,17 @@ exports.DateDiff = function(time1, time2) {
     return diffD + " days, " + diffH + " hours, " + diffM + " minutes, " + diffS + " seconds";
 }
 
+var date_std = function (timestamp) {
+    if(!timestamp) timestamp = new Date().getTime();
+    if(Math.ceil(timestamp).toString().length == 10) timestamp *= 1000;
+    var tzoffset = (new Date()).getTimezoneOffset() * 60000;
+    var date = new Date(timestamp - tzoffset);
+    var iso = date.toISOString().match(/(\d{4}\-\d{2}\-\d{2})T(\d{2}:\d{2}:\d{2})/);
+    return iso[1] + ' ' + iso[2];
+}
+
+exports.date_std;
+
 exports.set_app = function(a, b) {
     for (var i = 0, len = b.length; i < len; i++) {
         console.log(b[i]);
@@ -176,7 +187,7 @@ exports.handle_request = function(request, response, users, channel_list) {
     }
 }
 
-var processPost = function(request, response, callback) {
+exports.processPost = function(request, response, callback) {
     var queryData = "";
     if(typeof callback !== 'function') return null;
 
@@ -197,7 +208,6 @@ var processPost = function(request, response, callback) {
 
     }
 }
-exports.processPost = processPost;
 
 exports.PostThis = function(obj, host, url, callback) {
 	if(host != "localhost" && !internet) {
@@ -230,8 +240,62 @@ exports.PostThis = function(obj, host, url, callback) {
             console.log(data);
         });
     });
+
+    post_req.on('error', function(err) {
+        if (err.code === "ECONNRESET") {
+            console.log(date_std() + " Timeout occurs");
+        }
+        console.log(date_std() + " POST - Socket error.", err);
+    });
+
+    post_req.setTimeout(10000, function() {
+        this.abort();
+    });
+
     post_req.write(post_data);
     post_req.end();
+}
+
+exports.GetThis = function(host, path, callback) {
+    var options = {
+        host: host,
+        path: path
+    };
+
+    var req = http.request(options, function(response) {
+        var data = '';
+        response.on('data', function(chunk) {
+            data += chunk;
+        });
+
+        response.on('end', function() {
+            console.log(data);
+            if (data !== '') {
+                try {
+                    data = JSON.parse(data);
+                } catch (e) {
+                    console.log(date_std() + 'This doesn\'t look like a valid JSON: - ' + host + path);
+                    return;
+                }
+            }
+            if (typeof callback === "function") {
+                callback(data);
+            }
+        });
+    });
+
+    req.on('error', function(err) {
+        if (err.code === "ECONNRESET") {
+            console.log(date_std() + " Timeout occurs");
+        }
+        console.log(date_std() + " GET - Socket error.", err);
+    });
+
+    req.setTimeout(10000, function() {
+        this.abort();
+    });
+
+    req.end();
 }
 
 interval_internet = setInterval(function() {

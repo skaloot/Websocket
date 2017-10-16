@@ -25,7 +25,11 @@ var port = 3777,
     mysql_status = 0,
     mysql_timer = null,
     ps = "isu2uDIABL0W67B",
-    admins = [],
+    admins = [
+        {username:"SKALOOT", password:"phpmysql"},
+        {username:"ADMINISTRATOR", password:"phpmysql"},
+        {username:"ADMIN", password:"phpmysql"},
+    ],
     users = [],
     apps = [],
     channel_list = [],
@@ -66,14 +70,6 @@ var wsServer = new webSocketServer({
 
 
 util.set_app(apps, app_list);
-util.PostThis(admins, "localhost", "/websocket/admin.php", function(data) {
-    for (var i = 0, len = data.length; i < len; i++) {
-        admins.push({
-            username: data[i].username,
-            password: data[i].password
-        });
-    }
-});
 
 
 /* ========================================= CONNECT TO MYSQL ==================================================== */
@@ -432,11 +428,11 @@ wsServer.on("request", function(request) {
                         setup_channel(appId);
                         clients.push(detail);
                         clients.total_user++;
-                        var obj = {
-                            username: userName,
-                            channel: channel
-                        };
-                        util.PostThis(obj, "localhost", "/websocket/login_mail.php");
+
+                        if (channel == "ladiesfoto") {
+                            util.GetThis("www.ladiesfoto.com", "/websocket/login_mail.php?username=" + userName);
+                        }
+                        
                         var m = "Type <b>/help</b> for list of command.";
                         if (clients.type == "private") {
                             m = "Please wait. Our staff will be with you shortly. Thank You.";
@@ -1677,6 +1673,10 @@ wsServer.on("request", function(request) {
     });
 
 });
+
+
+
+// =========================================================== FUNCTIONS ===========================================================
 
 
 var get_index = function(id, app) {
