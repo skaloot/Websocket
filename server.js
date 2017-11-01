@@ -1733,9 +1733,7 @@ var timer_password = function(id, con) {
     clearTimeout(timer_password_temp[id].timer);
     timer_password_temp[id].timer = setTimeout(function() {
         con.sendUTF(JSON.stringify({
-            type: "quit",
-            time: (new Date()).getTime(),
-            author: "[Server]",
+            type: "quit"
         }));
         if (timer_password_temp[id]) {
             delete timer_password_temp[id];

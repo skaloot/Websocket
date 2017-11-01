@@ -490,37 +490,37 @@
 		},
 		quit: function() {
 			if (online === true) {
-				connection.send(JSON.stringify({
-					id: id,
-					msg: "/quit"
-				}));
+                connection.send(JSON.stringify({
+                    id: id,
+                    msg: "/quit"
+                }));
                 connection.close();
-				connect = false;
-				online = false;
-				myName = null;
-				connection = null;
+                connect = false;
+                online = false;
+                myName = null;
+                connection = null;
                 myPassword = "";
-				$("#login").show();
-				$("#bg_login").show();
+                $("#login").show();
+                $("#bg_login").show();
                 $("#username").val(null).removeAttr("disabled").focus();
-				$("#channels-title").hide();
-				$("#btn-server").hide();
+                $("#channels-title").hide();
+                $("#btn-server").hide();
                 $("#btn-restart").hide();
                 $("#channels").html(null);
-				$("#channels-admin").html(null);
-                $("#users").html(null);
+                $("#channels-admin").html(null);
                 $("#channels-title-admin").hide();
+                $("#users").html(null);
                 $("#content").html("<div class=\"chat\"></div>");
-				chat = $(".chat");
-				msgs = [];
-				channels = [];
-				historys = 0;
-				localStorage.clear();
-				if (window.opener !== null) {
-					localStorage.removeItem("chat");
-					window.close();
-				}
-			}
+                chat = $(".chat");
+                msgs = [];
+                channels = [];
+                historys = 0;
+                localStorage.clear();
+                if (window.opener !== null) {
+                    localStorage.removeItem("chat");
+                    window.close();
+                }
+            }
 		},
     }
 
@@ -551,9 +551,6 @@
             } else {
                 sender = "me";
                 var addmsg = msg;
-                if (msg == "/quit" || msg == "/q") {
-                    ch.quit();
-                }
                 if (connect === true) {
                     if (msg.substring(0, 9) == "/youtube " || msg.substring(0, 4) == "/yt ") {
                         var res = msg.split(" ");
@@ -567,7 +564,9 @@
                         (new Date()).getTime(),
 						channel
                     );
-                    if (msg.substring(0, 9) == "/channel " || msg.substring(0, 4) == "/ch " || msg.substring(0, 3) == "/j " || msg.substring(0, 6) == "/join ") {
+                    if (msg == "/quit" || msg == "/q") {
+                        ch.quit();
+                    } else if (msg.substring(0, 9) == "/channel " || msg.substring(0, 4) == "/ch " || msg.substring(0, 3) == "/j " || msg.substring(0, 6) == "/join ") {
                         var res = msg.split(" ");
                         var c = res[1].replace(/[^\w\s]/gi, '');
                         ch.chg_channel(c);
