@@ -786,6 +786,7 @@ wsServer.on("request", function(request) {
                         }
                         blocked += "</b>";
                     }
+                    var store_msg_stat = (store_msg) ? "On" : "Off";
                     connection.sendUTF(JSON.stringify({
                         type: "info",
                         time: (new Date()).getTime(),
@@ -796,6 +797,7 @@ wsServer.on("request", function(request) {
                             "<br> - Channel List : " + chnl_list +
                             "<br> - Current Connection : <b>" + (total_connection - 1) + "</b>" +
                             "<br> - Current Channel : <b>" + channel + "</b>" +
+                            "<br> - Store Message : <b>" + store_msg_stat + "</b>" +
                             blocked +
                             "<br>----------------------------------------------------------------</i>",
                         author: "[Server]",
@@ -1519,7 +1521,13 @@ wsServer.on("request", function(request) {
 				} else if (msgs.msg.substring(0, 11) == "/store_msg ") {
 					if(!admin) return;
 					var a = msgs.msg.split(" ");
-					store_msg = (a[0] == "on") ? true : false;
+					store_msg = (a[1] == "on") ? true : false;
+                    connection.sendUTF(JSON.stringify({
+                        type: "info",
+                        time: (new Date()).getTime(),
+                        msg: "<i>Done..</i>",
+                        author: "[Server]",
+                    }));
                 } else if (msgs.msg == "/flood") {
                     if (admin !== true) {
                         connection.sendUTF(JSON.stringify({
