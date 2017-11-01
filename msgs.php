@@ -16,7 +16,7 @@ if(isset($_POST["msg"])) {
 	$channel = $_POST["channel"];
 	$ip_address = $_POST["ip_address"];
 
-	if($channel == "kpj_ui" || $channel == "utiis_ui" || $channel == "ladiesfoto_ui") {
+	if($channel == "kpj_ui" || $channel == "utiis_ui" || $channel == "ladiesfoto_ui" || $channel == "debunga_cms") {
 		exit;
 	}
 
