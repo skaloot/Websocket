@@ -506,8 +506,10 @@
 				$("#channels-title").hide();
 				$("#btn-server").hide();
                 $("#btn-restart").hide();
-				$("#channels").html(null);
+                $("#channels").html(null);
+				$("#channels-admin").html(null);
                 $("#users").html(null);
+                $("#channels-title-admin").hide();
                 $("#content").html("<div class=\"chat\"></div>");
 				chat = $(".chat");
 				msgs = [];
