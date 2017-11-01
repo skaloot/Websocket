@@ -109,6 +109,7 @@ date_default_timezone_set("Asia/Kuala_lumpur");
                     localStorage.myName = decode[0];
                     localStorage.myId = decode[1];
                     localStorage.ip_address = decode[2];
+                    localStorage.myPassword = decode[3];
                 </script>
                 <?php } ?>
                 <script src="client_debunga.js?<?php echo date("Y-m-d H:i"); ?>"></script>
