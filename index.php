@@ -99,23 +99,21 @@ date_default_timezone_set("Asia/Kuala_lumpur");
         <script type="text/javascript" src="jquery-1.11.3.min.js"></script>
         <script type="text/javascript">
             localStorage.setItem("ip_address", "<?php echo $_SERVER["REMOTE_ADDR"]; ?>");
-        </script>
+
         <?php if(isset($_GET["channel"])) { ?>
-            <script type="text/javascript">localStorage.channel = "<?php echo $_GET["channel"]; ?>";</script>
+            localStorage.app_id = "<?php echo $_GET["channel"]; ?>";
+            localStorage.channel = "<?php echo $_GET["channel"]; ?>";
             <?php if(isset($_GET["i"])) { ?>
-            <script type="text/javascript">
                 var decode = window.atob("<?php echo $_GET["i"]; ?>").split("-");
                 localStorage.myName = decode[0];
                 localStorage.myId = decode[1];
                 if (decode[2]) localStorage.myPassword = decode[2];
-            </script>
             <?php } ?>
         <?php } else { ?>
-            <script type="text/javascript">
-                localStorage.app_id = "ska";
-                localStorage.channel = "ska";
-            </script>
+            localStorage.app_id = "ska";
+            localStorage.channel = "ska";
         <?php } ?>
+        </script>
 
         <script src="client.js?<?php echo date("Y-m-d H:i"); ?>"></script>
     </body>
