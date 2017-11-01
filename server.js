@@ -303,7 +303,9 @@ wsServer.on("request", function(request) {
                                     msg: "<i>Oopss.. Invalid password.</i>",
                                     author: "[Server]",
                                 }));
-                                connection.sendUTF({type: "quit"});
+                                connection.sendUTF(JSON.stringify({
+                                    type: "quit"
+                                }));
                                 return;
                             } else {
                                 connection.sendUTF(JSON.stringify({
