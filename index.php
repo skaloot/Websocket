@@ -103,6 +103,14 @@ date_default_timezone_set("Asia/Kuala_lumpur");
         <?php if(isset($_GET["channel"])) { ?>
             <?php if($_GET["channel"] == "debunga") { ?>
                 <script type="text/javascript">localStorage.channel = "debunga";</script>
+                <?php if(isset($_GET["i"])) { ?>
+                <script type="text/javascript">
+                    var decode = window.atob("<?php echo $_GET["i"]; ?>").split("-");
+                    localStorage.myName = decode[0];
+                    localStorage.myId = decode[1];
+                    localStorage.ip_address = decode[2];
+                </script>
+                <?php } ?>
                 <script src="client_debunga.js?<?php echo date("Y-m-d H:i"); ?>"></script>
             <?php } ?>
         <?php } else { ?>
