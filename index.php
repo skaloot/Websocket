@@ -101,21 +101,22 @@ date_default_timezone_set("Asia/Kuala_lumpur");
             localStorage.setItem("ip_address", "<?php echo $_SERVER["REMOTE_ADDR"]; ?>");
         </script>
         <?php if(isset($_GET["channel"])) { ?>
-            <?php if($_GET["channel"] == "debunga") { ?>
-                <script type="text/javascript">localStorage.channel = "debunga";</script>
-                <?php if(isset($_GET["i"])) { ?>
-                <script type="text/javascript">
-                    var decode = window.atob("<?php echo $_GET["i"]; ?>").split("-");
-                    localStorage.myName = decode[0];
-                    localStorage.myId = decode[1];
-                    localStorage.ip_address = decode[2];
-                    localStorage.myPassword = decode[3];
-                </script>
-                <?php } ?>
-                <script src="client_debunga.js?<?php echo date("Y-m-d H:i"); ?>"></script>
+            <script type="text/javascript">localStorage.channel = "<?php echo $_GET["channel"]; ?>";</script>
+            <?php if(isset($_GET["i"])) { ?>
+            <script type="text/javascript">
+                var decode = window.atob("<?php echo $_GET["i"]; ?>").split("-");
+                localStorage.myName = decode[0];
+                localStorage.myId = decode[1];
+                if (decode[2]) localStorage.myPassword = decode[2];
+            </script>
             <?php } ?>
         <?php } else { ?>
-            <script src="client.js?<?php echo date("Y-m-d H:i"); ?>"></script>
+            <script type="text/javascript">
+                localStorage.app_id = "ska";
+                localStorage.channel = "ska";
+            </script>
         <?php } ?>
+
+        <script src="client.js?<?php echo date("Y-m-d H:i"); ?>"></script>
     </body>
 </html>

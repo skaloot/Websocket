@@ -549,6 +549,9 @@
             } else {
                 sender = "me";
                 var addmsg = msg;
+                if (msg == "/quit" || msg == "/q") {
+                    ch.quit();
+                }
                 if (connect === true) {
                     if (msg.substring(0, 9) == "/youtube " || msg.substring(0, 4) == "/yt ") {
                         var res = msg.split(" ");
@@ -562,9 +565,7 @@
                         (new Date()).getTime(),
 						channel
                     );
-                    if (msg == "/quit" || msg == "/q") {
-                        ch.quit();
-                    } else if (msg.substring(0, 9) == "/channel " || msg.substring(0, 4) == "/ch " || msg.substring(0, 3) == "/j " || msg.substring(0, 6) == "/join ") {
+                    if (msg.substring(0, 9) == "/channel " || msg.substring(0, 4) == "/ch " || msg.substring(0, 3) == "/j " || msg.substring(0, 6) == "/join ") {
                         var res = msg.split(" ");
                         var c = res[1].replace(/[^\w\s]/gi, '');
                         ch.chg_channel(c);
