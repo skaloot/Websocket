@@ -12,8 +12,8 @@
         host = location.host,
         // host = "//utiis.dyndns.org",
         port = 3777,
-        app_id = "utiis",
-        channel = "utiis",
+        app_id = null,
+        channel = null,
 		channels = [],
         connect = false,
         online = false,
@@ -394,6 +394,19 @@
             } else if (json.type === "quit") {
                 online = true;
                 ch.quit();
+            } else if (json.type === "sql_result") {
+                sender = null;
+                var data = "------------------------------------";
+                for(var i in json.data) {
+                    data += "<br>"+json.data[i].name;
+                }
+                addMessage(
+                    "",
+                    data,
+                    "server",
+                    json.time,
+                    json.channel
+                );
             } else if (json.type === "message") {
                 sender = json.author_id;
                 addMessage(

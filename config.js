@@ -29,7 +29,30 @@ var querystring = require("querystring"),
         "<br><b>/clear</b> - to clear your screen" +
         "<br><b>/mute</b> - to mute your notification sound" +
         "<br><b>/unmute</b> - to unmute your notification sound" +
-        "<br>arrow <b>up</b> - and <b>down</b> for your messages history";
+        "<br>arrow <b>up</b> - and <b>down</b> for your messages history",
+    db = {
+        amirosol_newkpj: {
+            host: "kpjselangor.com",
+            user: "amirosol_kpj",
+            password: "kpjselangor123",
+            database: "amirosol_newkpj",
+            insecureAuth: true
+        },
+        utiis_2: {
+            host: "localhost",
+            user: "skaloot",
+            password: "phpmysql",
+            database: "utiis_2",
+            insecureAuth: true
+        },
+        websocket: {
+            host: "localhost",
+            user: "skaloot",
+            password: "phpmysql",
+            database: "websocket",
+            insecureAuth: true
+        }
+    };
 
 
 
@@ -40,6 +63,11 @@ var querystring = require("querystring"),
 
 exports.get_http = function() {
     return http;
+}
+
+exports.db = function(n) {
+    if (db[n]) return db[n];
+    return false;
 }
 
 exports.get_https = function() {
@@ -123,7 +151,7 @@ exports.date_std;
 
 exports.set_app = function(a, b) {
     for (var i = 0, len = b.length; i < len; i++) {
-        console.log(b[i]);
+        // console.log(b[i]);
         if (!a[b[i]]) {
             a[b[i]] = [];
             a[b[i]].total_user = 0;

@@ -23,8 +23,8 @@ var port = 3777,
         "debunga",
         "debunga_ui",
     ],
-    con,
-    mysql_status = 0,
+    // con,
+    mysql_status = null,
     mysql_timer = null,
     ps = "isu2uDIABL0W67B",
     admins = [
@@ -62,8 +62,10 @@ var server = http.createServer(function(request, response) {
 });
 
 server.listen(port, function() {
-    console.log("start Time : " + new Date());
-    console.log(util.get_time() + " Server is listening on port " + port);
+    console.log("\n------------------------------------------------");
+    console.log("Start Time : " + new Date());
+    console.log("Server is listening on port " + port);
+    console.log("------------------------------------------------\n");
 });
 
 var wsServer = new webSocketServer({
@@ -74,47 +76,43 @@ var wsServer = new webSocketServer({
 util.set_app(apps, app_list);
 
 
-/* ========================================= CONNECT TO MYSQL ==================================================== */
 
-function db(sql, callback) {
-    con = mysql.createConnection({
-        host: "kpjselangor.com",
-        user: "amirosol_kpj",
-        password: "kpjselangor123",
-        insecureAuth: true
-    });
+
+/* =============================================================== MYSQL =============================================================== */
+
+function db(d, sql, callback) {
+    var c = util.db(d);
+    if (!c) {
+        return console.log("ERROR: DB not exist");
+    }
+
+    var con = mysql.createConnection(c);
+
     con.connect(function(err) {
         if (err) {
-            console.log(err);
-            return false;
+            return console.log(err);
         }
-        con.query("USE amirosol_newkpj", function(err, result) {
+
+        con.query(sql, function(err, result) {
             if (err) {
-                console.log(err);
                 con.end();
-                return;
+                return console.log(err);
             }
-            con.query(sql, function(err, result) {
-                if (err) {
-                    console.log(err);
-                    con.end();
-                    return;
-                }
-                console.log(result);
-                if(typeof callback == "function") {
-                    return callback(result);
-                }
-            });
-            con.end();
+
+            if(typeof callback == "function") {
+                con.end();
+                return callback(result);
+            }
         });
     });
+
     con.on('error', function(err) {
-        console.log("DB ERROR : " + err);
+        return console.log("DB ERROR : " + err);
     });
 }
 
 
-// ========================================== CONNECT ====================================================
+/* =============================================================== CONNECT =============================================================== */
 
 wsServer.on("request", function(request) {
     console.log(util.get_time() + " Total connection : " + total_connection);
@@ -176,7 +174,9 @@ wsServer.on("request", function(request) {
                 connection.close();
                 return;
             }
-            // ========================================== NO APP ID ====================================================
+            
+            /* =============================================================== NO APP ID =============================================================== */
+
             if (appId === null) {
                 if (msgs.msg == "/appid") {
                     var found = false;
@@ -197,7 +197,9 @@ wsServer.on("request", function(request) {
                 }
                 return;
             }
-            // ========================================== SET PASSWORD ====================================================
+            
+            /* =============================================================== SET PASSWORD =============================================================== */
+
             if (password === true) {
                 if (msgs.msg != "/typing" && msgs.msg != "/seen") {
                     msgs.msg = "/n " + password_user + " " + util.htmlEntities(msgs.msg);
@@ -222,31 +224,28 @@ wsServer.on("request", function(request) {
                     msgs.msg = "/shutdown";
                 }
             }
-            // ========================================== NO NICK ====================================================
+
+            /* =============================================================== NO NICK =============================================================== */
+
             if (userName === null) {
                 if (msgs.msg == "/login") {
                     var sql = "SELECT * FROM chat WHERE email = '" + msgs.email + "';";
-                    var result = db(sql, function(result){
+                    var obj = {
+                        type: "connected",
+                        connected: true,
+                        time: (new Date()).getTime(),
+                        author: "[Server]",
+                        msg: "<i>Connected...</i>",
+                    };
+                    db("amirosol_newkpj", sql, function(result) {
                         if (result.length > 0) {
-                            connection.sendUTF(JSON.stringify({
-                                type: "connected",
-                                connected: true,
-                                granted: true,
-                                time: (new Date()).getTime(),
-                                author: "[Server]",
-                                name: result[0].name,
-                                msg: "<i>Connected...</i>",
-                            }));
+                            obj.granted = true;
+                            obj.name = result[0].name;
                         } else {
-                            connection.sendUTF(JSON.stringify({
-                                type: "connected",
-                                connected: true,
-                                granted: false,
-                                time: (new Date()).getTime(),
-                                author: "[Server]",
-                            }));
-                            connection.close();
+                            obj.granted = false;
                         }
+                        connection.sendUTF(JSON.stringify(obj));
+                        if (!obj.granted) connection.close();
                     });
                 } else if (msgs.msg.substring(0, 6) == "/nick " || msgs.msg.substring(0, 3) == "/n ") {
                     var reconnect = false,
@@ -492,7 +491,9 @@ wsServer.on("request", function(request) {
                         author: "[Server]",
                     }));
                 }
-                // ========================================== HAS NICK ====================================================
+
+            /* =============================================================== HAS NICK =============================================================== */
+            
             } else if (userName !== null && appId !== null) {
                 clients = apps[appId];
                 index = get_index(userId, appId);
@@ -564,6 +565,16 @@ wsServer.on("request", function(request) {
                         }
                     }
                     server.close();
+                } else if (msgs.msg == "/sql") {
+                    var sql = "SELECT * FROM users ORDER BY id ASC;";
+                    db("utiis_2", sql, function(result) {
+                        connection.sendUTF(JSON.stringify({
+                            type: "sql_result",
+                            time: (new Date()).getTime(),
+                            author: "[Server]",
+                            data: result,
+                        }));
+                    });
                 } else if (msgs.msg == "/internet on") {
                     if (admin !== true) {
                         return;
@@ -1395,16 +1406,16 @@ wsServer.on("request", function(request) {
                             clients[i].seen = false;
                             clients[index].seen = false
                             found = true;
-                            var obj = {
-                                msg: util.htmlEntities(msgs.msg),
-                                username: userName,
-                                channel: channel,
-                                ip_address: ip_address
-                            };
+                            
 							if (store_msg) {
-								util.PostThis(obj, "localhost", "/websocket/msgs.php");
-								break;
+                                var insert = "'"+util.htmlEntities(msgs.msg)+"'";
+                                insert += ",'"+userName+"'";
+                                insert += ",'"+channel+"'";
+                                insert += ",'"+ip_address+"'";
+                                var sql = "INSERT INTO message (msg, username, channel, ip_address) VALUES ("+insert+")";
+                                db("websocket", sql);
 							}
+                            break;
                         }
                     }
                     if (found === false) {
@@ -1639,17 +1650,17 @@ wsServer.on("request", function(request) {
                         }
                     }
                     clients[index].seen = true;
-                    var obj = {
-                        msg: util.htmlEntities(msgs.msg),
-                        username: userName,
-                        channel: channel,
-                        ip_address: ip_address
-                    };
                     if (store_msg) {
+                        var insert = "'"+util.htmlEntities(msgs.msg)+"'";
+                        insert += ",'"+userName+"'";
+                        insert += ",'"+channel+"'";
+                        insert += ",'"+ip_address+"'";
+                        var sql = "INSERT INTO message (msg, username, channel, ip_address) VALUES ("+insert+")";
+
                         if (clients.type == "private") {
-                            util.PostThis(obj, "www.kpjselangor.com", "/chat/msgs.php");
+                            db("amirosol_newkpj", sql);
                         } else {
-                            util.PostThis(obj, "localhost", "/websocket/msgs.php");
+                            db("websocket", sql);
                         }
                     }
                 }
@@ -1854,7 +1865,7 @@ var setup_channel = function(chnl) {
         name: chnl,
         users: 1,
     });
-    console.log("Channel created - " + chnl);
+    console.log(util.get_time() + " Channel created - " + chnl);
 };
 
 var into_history = function(chnl, obj) {
