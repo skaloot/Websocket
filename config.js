@@ -19,17 +19,16 @@ var querystring = require("querystring"),
         "http://kpj",
     ],
     helps = "" +
-    "<br><b>/nick</b> - to set or change nickname" +
-    "<br><b>/users</b> - to get online users" +
-    "<br><b>/info</b> - to get your connection info" +
-    "<br><b>/history</b> - to get chat history" +
-    "<br><b>/msg &lt;name&gt; &lt;your message&gt;</b> - for private message" +
-    "<br><b>/alert &lt;name&gt;</b> - to get your friend's attention" +
-    "<br><b>/quit</b> - to close your connection" +
-    "<br><b>/clear</b> - to clear your screen" +
-    "<br><b>/mute</b> - to mute your notification sound" +
-    "<br><b>/unmute</b> - to unmute your notification sound" +
-    "<br>arrow <b>up</b> - and <b>down</b> for your messages history";
+		"<br><b>/nick</b> - to set or change nickname" +
+		"<br><b>/users</b> - to get online users" +
+		"<br><b>/history</b> - to get chat history" +
+		"<br><b>/msg &lt;name&gt; &lt;your message&gt;</b> - for private message" +
+		"<br><b>/alert &lt;name&gt;</b> - to get your friend's attention" +
+		"<br><b>/quit</b> - to close your connection" +
+		"<br><b>/clear</b> - to clear your screen" +
+		"<br><b>/mute</b> - to mute your notification sound" +
+		"<br><b>/unmute</b> - to unmute your notification sound" +
+		"<br>arrow <b>up</b> - and <b>down</b> for your messages history";
 
 
 
