@@ -740,6 +740,11 @@ wsServer.on("request", function(request) {
                         state: clients.online_state,
                     }));
                 } else if (msgs.msg == "/history" || msgs.msg == "/h") {
+                    if (clients.type == "private") {
+                        if (clients[index].assigned !== null || clients[index].operator === true) {
+                            return;
+                        }
+                    }
                     connection.sendUTF(JSON.stringify({
                         type: "info",
                         time: (new Date()).getTime(),
@@ -1131,13 +1136,13 @@ wsServer.on("request", function(request) {
                     clients[index].assigned = null;
 
                     console.log(util.get_time() + " User " + userName + " has changed channel to " + channel);
-                    var users = "";
+                    var users_ = "";
                     var n = 1;
                     for (var i = 0, len = clients.length; i < len; i++) {
                         if (clients[i].user_id === userId) {
-                            users += "<br>" + (n++) + ". <b>" + clients[i].user_name + "</b>";
+                            users_ += "<br>" + (n++) + ". <b>" + clients[i].user_name + "</b>";
                         } else {
-                            users += "<br>" + (n++) + ". " + clients[i].user_name;
+                            users_ += "<br>" + (n++) + ". " + clients[i].user_name;
                         }
                     }
                     if (check === false) {
@@ -1155,7 +1160,7 @@ wsServer.on("request", function(request) {
                         connection.sendUTF(JSON.stringify({
                             type: "info",
                             time: (new Date()).getTime(),
-                            msg: "<i>------------------<br>Online users" + users + "<br>------------------</i>",
+                            msg: "<i>------------------<br>Online users" + users_ + "<br>------------------</i>",
                             author: "[Server]",
                         }));
                     }
@@ -1277,21 +1282,21 @@ wsServer.on("request", function(request) {
                         }
                     }
                 } else if (msgs.msg == "/users" || msgs.msg == "/u") {
-                    var users = "";
+                    var users_ = "";
                     var n = 1;
                     for (var i = 0, len = clients.length; i < len; i++) {
                         if (clients[i].online === true) {
                             if (clients[i].user_id === userId) {
-                                users += "<br>" + (n++) + ". <b>" + clients[i].user_name + "</b>";
+                                users_ += "<br>" + (n++) + ". <b>" + clients[i].user_name + "</b>";
                             } else {
-                                users += "<br>" + (n++) + ". " + clients[i].user_name;
+                                users_ += "<br>" + (n++) + ". " + clients[i].user_name;
                             }
                         }
                     }
                     connection.sendUTF(JSON.stringify({
                         type: "info",
                         time: (new Date()).getTime(),
-                        msg: "<i>------------------<br>Online users" + users + "<br>------------------</i>",
+                        msg: "<i>------------------<br>Online users" + users_ + "<br>------------------</i>",
                         author: "[Server]",
                     }));
                 } else if (msgs.msg.substring(0, 7) == "/alert " || msgs.msg.substring(0, 3) == "/a " || msgs.msg == "/alert" || msgs.msg == "/a") {
@@ -1798,10 +1803,10 @@ var remove_client = function(idx, app, pingresult) {
 
 var online_users = function(app, conn) {
     var client = apps[app];
-    var users = [];
+    var users_ = [];
     for (var i = 0, len = client.length; i < len; i++) {
         if (client[i].active === true) {
-            users.push({
+            users_.push({
                 name: client[i].user_name,
                 id: client[i].user_id,
                 ip_address: client[i].ip_address,
@@ -1815,7 +1820,7 @@ var online_users = function(app, conn) {
         type: "users",
         channel: app,
         time: (new Date()).getTime(),
-        users: users,
+        users: users_,
         author: "[Server]",
     });
     if (conn) {
