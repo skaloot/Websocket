@@ -23,9 +23,6 @@ var port = 3777,
         "debunga",
         "debunga_ui",
     ],
-    // con,
-    mysql_status = null,
-    mysql_timer = null,
     ps = "isu2uDIABL0W67B",
     admins = [
         {username:"SKALOOT", password:"phpmysql"},
@@ -77,39 +74,6 @@ util.set_app(apps, app_list);
 
 
 
-
-/* =============================================================== MYSQL =============================================================== */
-
-function db(d, sql, callback) {
-    var c = util.db(d);
-    if (!c) {
-        return console.log("ERROR: DB not exist");
-    }
-
-    var con = mysql.createConnection(c);
-
-    con.connect(function(err) {
-        if (err) {
-            return console.log(err);
-        }
-
-        con.query(sql, function(err, result) {
-            if (err) {
-                con.end();
-                return console.log(err);
-            }
-
-            if(typeof callback == "function") {
-                con.end();
-                return callback(result);
-            }
-        });
-    });
-
-    con.on('error', function(err) {
-        return console.log("DB ERROR : " + err);
-    });
-}
 
 
 /* =============================================================== CONNECT =============================================================== */
@@ -1406,7 +1370,7 @@ wsServer.on("request", function(request) {
                             clients[i].seen = false;
                             clients[index].seen = false
                             found = true;
-                            
+
 							if (store_msg) {
                                 var insert = "'"+util.htmlEntities(msgs.msg)+"'";
                                 insert += ",'"+userName+"'";
@@ -1973,3 +1937,40 @@ clean_up = setInterval(function() {
         }
     }
 }, 60000);
+
+
+/* =============================================================== MYSQL =============================================================== */
+
+function db(d, sql, callback) {
+    var c = util.db(d);
+    if (!c) {
+        return console.log("ERROR: DB not exist");
+    }
+
+    var con = mysql.createConnection(c);
+
+    con.connect(function(err) {
+        if (err) {
+            return console.log(err);
+        }
+
+        con.query(sql, function(err, result) {
+            if (err) {
+                con.end();
+                return console.log(err);
+            }
+
+            if(typeof callback == "function") {
+                con.end();
+                return callback(result);
+            }
+        });
+    });
+
+    con.on('error', function(err) {
+        return console.log("DB ERROR : " + err);
+    });
+}
+
+
+
