@@ -11,7 +11,7 @@ date_default_timezone_set("Asia/Kuala_lumpur");
         
         <title>Websocket</title>
 
-        <link href="font.css?<?php echo date("Y-m-d H"); ?>" rel="stylesheet" />
+        <link href="font.css" rel="stylesheet" />
         <style>
         html { -webkit-box-sizing: border-box; -moz-box-sizing: border-box; box-sizing: border-box; }
         *, *:before, *:after { -webkit-box-sizing: inherit; -moz-box-sizing: inherit; box-sizing: inherit; }
