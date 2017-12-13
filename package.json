@@ -1,0 +1,18 @@
+{
+ "name": "Ska Chat",
+ "version": "1.0.0",
+ "description": "Websocket Chat",
+ "scripts": {
+  "start": "node server.js"
+  },
+ "author": "Skaloot",
+ "dependencies": [
+  {
+   "name": "Websocket"
+  },
+  {
+   "name": "Mysql"
+  },
+ ],
+ "license": "MIT"
+}
