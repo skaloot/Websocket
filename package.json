@@ -1,31 +1,29 @@
 {
- "name": "Ska Chat",
- "version": "1.0.0",
- "description": "Websocket Chat",
- "main": "server.js",
- "scripts": [
-  {
-   "test": "",
-  },
-  {
-   "start": "node server.js"
-  }
- ],
- "author": "Skaloot",
- "email": "skaloot@gmail.com",
- "dependencies": [
-  {
-   "name": "Websocket"
-  },
-  {
-   "name": "Mysql"
-  },
- ],
- "keywords": [
-    "NodeJs",
-    "Websocket",
-    "Chat",
-    "Skaloot",
-  ],
- "license": "MIT"
+	"name": "Ska-Chat",
+	"version": "1.0.0",
+	"description": "Websocket Chat",
+	"main": "server.js",
+	"scripts": {
+		"test": "",
+		"start": "node server.js"
+	},
+	"env": {
+		"PORT": "3777"
+	},
+	"author": {
+		"name": "Skaloot",
+		"email": "skaloot@gmail.com",
+		"url": "https://www.facebook.com/skaloot"
+	},
+	"dependencies": {
+		"websocket": "^1.0.24",
+		"mysql": "^2.15.0"
+	},
+	"keywords": [
+		"NodeJs",
+		"Websocket",
+		"Chat",
+		"Skaloot"
+	],
+	"license": "MIT"
 }
