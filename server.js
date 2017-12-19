@@ -11,24 +11,9 @@ var port = 3777,
     http = util.get_http(),
     https = util.get_https(),
     fs = require("fs"),
-    mysql = require("mysql"),
-    app_list = [
-        "ska",
-        "utiis",
-        "utiis_ui",
-        "kpj",
-        "kpj_ui",
-        "ladiesfoto",
-        "ladiesfoto_ui",
-        "debunga",
-        "debunga_ui",
-    ],
+    app_list = util.app_list(),
     ps = "isu2uDIABL0W67B",
-    admins = [
-        {username:"SKALOOT", password:"phpmysql"},
-        {username:"ADMINISTRATOR", password:"phpmysql"},
-        {username:"ADMIN", password:"phpmysql"},
-    ],
+    admins = [],
     users = [],
     apps = [],
     channel_list = [],
@@ -39,7 +24,7 @@ var port = 3777,
     msg_count = 0,
     start_time = new Date().getTime(),
     shutdown = false,
-	store_msg = false,
+	store_msg = true,
     max_connection = 200,
     total_connection = 1,
     origins = util.get_origin(),
@@ -72,7 +57,9 @@ var wsServer = new webSocketServer({
 
 util.set_app(apps, app_list);
 
-
+util.sql("websocket", "SELECT * FROM users", function(data) {
+    admins = data;
+});
 
 
 
@@ -165,7 +152,7 @@ wsServer.on("request", function(request) {
             /* =============================================================== SET PASSWORD =============================================================== */
 
             if (password === true) {
-                if (msgs.msg != "/typing" && msgs.msg != "/seen") {
+                if (msgs.msg != "/typing" && msgs.msg != "/ping" && msgs.msg != "/seen") {
                     msgs.msg = "/n " + password_user + " " + util.htmlEntities(msgs.msg);
                 }
             }
@@ -174,7 +161,7 @@ wsServer.on("request", function(request) {
                     return;
                 }
                 password_shutdown = false;
-                var verified = check_password(userName.toUpperCase(), msgs.msg);
+                var verified = check_password(userName, msgs.msg);
                 if (verified === false) {
                     connection.sendUTF(JSON.stringify({
                         type: "info",
@@ -201,7 +188,7 @@ wsServer.on("request", function(request) {
                         author: "[Server]",
                         msg: "<i>Connected...</i>",
                     };
-                    db("amirosol_newkpj", sql, function(result) {
+                    util.sql("amirosol_newkpj", sql, function(result) {
                         if (result.length > 0) {
                             obj.granted = true;
                             obj.name = result[0].name;
@@ -225,7 +212,8 @@ wsServer.on("request", function(request) {
                         }));
                         return;
                     }
-                    var isadmin = check_admin(nick.toUpperCase());
+                    var isadmin = check_admin(nick);
+                    console.log("isadmin - "+isadmin);
                     if (isadmin === true) {
                         if (!res[2]) {
                             temp_detail = {
@@ -250,7 +238,7 @@ wsServer.on("request", function(request) {
                             password_user = nick;
                             return;
                         } else {
-                            var verified = check_password(nick.toUpperCase(), res[2]);
+                            var verified = check_password(nick, res[2]);
                             password = false;
                             password_user = null;
                             if (timer_password_temp[msgs.id]) {
@@ -384,8 +372,9 @@ wsServer.on("request", function(request) {
                             agent: msgs.agent,
                             screen: msgs.screen,
                         };
-                        if(temp_detail !== null) {
+                        if(temp_detail) {
                             detail.ip_address = temp_detail.ip_address;
+                            ip_address = temp_detail.ip_address;
                             detail.screen = temp_detail.screen;
                             detail.agent = temp_detail.agent;
                             temp_detail = null;
@@ -443,6 +432,7 @@ wsServer.on("request", function(request) {
                                 type: "channels_admin",
                                 channels: app_list
                             }));
+                            util.sql("websocket", "INSERT into log (username, ip_address) VALUES ('"+userName+"', '"+ip_address+"')");
                         }
                         online_users(appId);
                         console.log(util.get_time() + " User is known as: " + userName + " - " + userId);
@@ -531,7 +521,7 @@ wsServer.on("request", function(request) {
                     server.close();
                 } else if (msgs.msg == "/sql") {
                     var sql = "SELECT * FROM users ORDER BY id ASC;";
-                    db("utiis_2", sql, function(result) {
+                    util.sql("utiis_2", sql, function(result) {
                         connection.sendUTF(JSON.stringify({
                             type: "sql_result",
                             time: (new Date()).getTime(),
@@ -970,7 +960,7 @@ wsServer.on("request", function(request) {
                         return;
                     }
                     admin = false;
-                    var isadmin = check_admin(newNick.toUpperCase());
+                    var isadmin = check_admin(newNick);
                     if (isadmin === true) {
                         if (!res[2]) {
                             connection.sendUTF(JSON.stringify({
@@ -989,7 +979,7 @@ wsServer.on("request", function(request) {
                             password_user = newNick;
                             return;
                         } else {
-                            var verified = check_password(newNick.toUpperCase(), res[2]);
+                            var verified = check_password(newNick, res[2]);
                             password = false;
                             password_user = null;
                             if (timer_password_temp[msgs.id]) {
@@ -1377,7 +1367,7 @@ wsServer.on("request", function(request) {
                                 insert += ",'"+channel+"'";
                                 insert += ",'"+ip_address+"'";
                                 var sql = "INSERT INTO message (msg, username, channel, ip_address) VALUES ("+insert+")";
-                                db("websocket", sql);
+                                util.sql("websocket", sql);
 							}
                             break;
                         }
@@ -1622,9 +1612,9 @@ wsServer.on("request", function(request) {
                         var sql = "INSERT INTO message (msg, username, channel, ip_address) VALUES ("+insert+")";
 
                         if (clients.type == "private") {
-                            db("amirosol_newkpj", sql);
+                            util.sql("amirosol_newkpj", sql);
                         } else {
-                            db("websocket", sql);
+                            util.sql("websocket", sql);
                         }
                     }
                 }
@@ -1809,15 +1799,6 @@ var online_users = function(app, conn) {
     }
 };
 
-var check_admin = function(username) {
-    for (var i = 0, len = admins.length; i < len; i++) {
-        if (admins[i].username === username) {
-            return true;
-        }
-    }
-    return false;
-};
-
 var setup_channel = function(chnl) {
     for (var i = 0, len = channel_list.length; i < len; i++) {
         if (channel_list[i].name === chnl) {
@@ -1847,7 +1828,16 @@ var get_history = function(chnl) {
 
 var check_password = function(username, password) {
     for (var i = 0, len = admins.length; i < len; i++) {
-        if (admins[i].password === password && admins[i].username === username) {
+        if (admins[i].username === username && admins[i].password === util.MD5(password)) {
+            return true;
+        }
+    }
+    return false;
+};
+
+var check_admin = function(username) {
+    for (var i = 0, len = admins.length; i < len; i++) {
+        if (admins[i].username === username) {
             return true;
         }
     }
@@ -1939,38 +1929,6 @@ clean_up = setInterval(function() {
 }, 60000);
 
 
-/* =============================================================== MYSQL =============================================================== */
-
-function db(d, sql, callback) {
-    var c = util.db(d);
-    if (!c) {
-        return console.log("ERROR: DB not exist");
-    }
-
-    var con = mysql.createConnection(c);
-
-    con.connect(function(err) {
-        if (err) {
-            return console.log(err);
-        }
-
-        con.query(sql, function(err, result) {
-            if (err) {
-                con.end();
-                return console.log(err);
-            }
-
-            if(typeof callback == "function") {
-                con.end();
-                return callback(result);
-            }
-        });
-    });
-
-    con.on('error', function(err) {
-        return console.log("DB ERROR : " + err);
-    });
-}
 
 
 
