@@ -67,9 +67,9 @@ util.sql("websocket", "SELECT * FROM users", function(data) {
 
 wsServer.on("request", function(request) {
     console.log(util.get_time() + " Total connection : " + total_connection);
-    if (typeof request.origin != "undefined" && origins.indexOf(request.origin) === -1 || shutdown === true) {
+    if (typeof request.origin != "undefined" && origins.indexOf(request.origin) == -1 || shutdown === true) {
         console.log(util.get_time() + " Connection was blocked from origin " + request.origin);
-        if (blocked_list.indexOf(request.origin) === -1) {
+        if (blocked_list.indexOf(request.origin) == -1) {
             blocked_list.push(request.origin);
         }
         request.reject(401, "Go away. You're no authorized.");
@@ -106,7 +106,7 @@ wsServer.on("request", function(request) {
     // ========================================== GET MSG ====================================================
 
     connection.on("message", function(message) {
-        if (message.type === "utf8") {
+        if (message.type == "utf8") {
             var msgs = message.utf8Data;
             try {
                 msgs = JSON.parse(msgs);
@@ -114,7 +114,11 @@ wsServer.on("request", function(request) {
                 console.log("This doesn\'t look like a valid JSON: ", msgs);
                 return;
             }
-            console.log(util.get_time() + " Received Message : " + msgs.msg);
+
+            if (msgs.msg != "/ping") {
+                console.log(util.get_time() + " Received Message : " + msgs.msg);
+            }
+
             if (check_blocked_id(msgs.id)) {
                 console.log(util.get_time() + " Blocked ID trying to connect " + msgs.id);
                 connection.sendUTF(JSON.stringify({
@@ -128,7 +132,7 @@ wsServer.on("request", function(request) {
             
             /* =============================================================== NO APP ID =============================================================== */
 
-            if (appId === null) {
+            if (appId == null) {
                 if (msgs.msg == "/appid") {
                     var found = false;
                     if(!apps[msgs.app_id]) {
@@ -178,7 +182,7 @@ wsServer.on("request", function(request) {
 
             /* =============================================================== NO NICK =============================================================== */
 
-            if (userName === null) {
+            if (userName == null) {
                 if (msgs.msg == "/login") {
                     var sql = "SELECT * FROM chat WHERE email = '" + msgs.email + "';";
                     var obj = {
@@ -272,7 +276,7 @@ wsServer.on("request", function(request) {
                     }
                     check_user(msgs);
                     for (var i = 0, len = clients.length; i < len; i++) {
-                        if (clients[i].user_id === msgs.id) {
+                        if (clients[i].user_id == msgs.id) {
                             if (clients[i].active === false) {
                                 userName = clients[i].user_name;
                                 userId = clients[i].user_id;
@@ -333,7 +337,7 @@ wsServer.on("request", function(request) {
                                 return;
                             }
                         } else {
-                            if (clients[i].user_name === nick && clients[i].active === true) {
+                            if (clients[i].user_name == nick && clients[i].active === true) {
                                 connection.sendUTF(JSON.stringify({
                                     type: "info",
                                     time: (new Date()).getTime(),
@@ -416,6 +420,7 @@ wsServer.on("request", function(request) {
                             for (var i = 0, len = clients.length; i < len; i++) {
                                 if (userId !== clients[i].user_id && clients[i].active === true) {
                                     clients[i].connection.sendUTF(json);
+                                    break;
                                 }
                             }
                         }
@@ -451,11 +456,11 @@ wsServer.on("request", function(request) {
             } else if (userName !== null && appId !== null) {
                 clients = apps[appId];
                 index = get_index(userId, appId);
-                if(index === null) {
+                if(index == null) {
                     return;
                 }
                 if (clients.type == "private") {
-                    if(clients[index].assigned === null && clients[index].operator === false && admin === false) {
+                    if(clients[index].assigned == null && clients[index].operator === false && admin === false) {
                         if (msgs.msg != "/typing" && msgs.msg != "/seen" && msgs.msg != "/quit" && msgs.msg != "/ping") {
                             connection.sendUTF(JSON.stringify({
                                 type: "info",
@@ -584,7 +589,7 @@ wsServer.on("request", function(request) {
                         return;
                     }
                     for (var i = 0, len = clients.length; i < len; i++) {
-                        if (receipient === clients[i].user_name) {
+                        if (receipient == clients[i].user_name) {
                             clients[i].connection.sendUTF(JSON.stringify({
                                 type: "reload",
                                 time: (new Date()).getTime(),
@@ -621,7 +626,7 @@ wsServer.on("request", function(request) {
                         blocked_id = [];
                     } else {
                         for (var i = 0; i < blocked_id.length; i++) {
-                            if (receipient === blocked_id[i].user_name) {
+                            if (receipient == blocked_id[i].user_name) {
                                 blocked_id.splice(i, 1);
                             }
                         }
@@ -646,7 +651,7 @@ wsServer.on("request", function(request) {
                         return;
                     }
                     for (var i = 0, len = clients.length; i < len; i++) {
-                        if (receipient_id === clients[i].user_id && clients[i].assigned === null) {
+                        if (receipient_id == clients[i].user_id && clients[i].assigned == null) {
                             clients[i].assigned = userId;
                             clients[index].client = clients[i].user_id;
                             clients[i].connection.sendUTF(JSON.stringify({
@@ -681,7 +686,7 @@ wsServer.on("request", function(request) {
                         return;
                     }
                     for (var i = 0, len = clients.length; i < len; i++) {
-                        if (receipient === clients[i].user_id && clients[i].assigned !== null && clients[index].client === receipient) {
+                        if (receipient == clients[i].user_id && clients[i].assigned !== null && clients[index].client == receipient) {
                             clients[i].assigned = null;
                             clients[i].msg = [];
                             clients[index].msg = [];
@@ -867,7 +872,7 @@ wsServer.on("request", function(request) {
                         return;
                     }
                     for (var i = 0, len = clients.length; i < len; i++) {
-                        if (clients[i].user_name === receipient) {
+                        if (clients[i].user_name == receipient) {
                             var c = "",
                                 chnls = get_channel(clients[i].user_id);
                             for(var n = 0; n < chnls.length; n++) {
@@ -918,7 +923,7 @@ wsServer.on("request", function(request) {
                         author: userName,
                         author_id: userId
                     });
-                    if (receipient === "-all" || receipient === "-a") {
+                    if (receipient == "-all" || receipient == "-a") {
                         for (var i = 0, len = clients.length; i < len; i++) {
                             if (userId !== clients[i].user_id && clients[i].active === true) {
                                 clients[i].connection.sendUTF(json);
@@ -1011,7 +1016,7 @@ wsServer.on("request", function(request) {
                         clients[index].admin = false;
                     }
                     for (var i = 0, len = clients.length; i < len; i++) {
-                        if (newNick === clients[i].user_name && clients[i].active === true) {
+                        if (newNick == clients[i].user_name && clients[i].active === true) {
                             connection.sendUTF(JSON.stringify({
                                 type: "info",
                                 time: (new Date()).getTime(),
@@ -1054,7 +1059,7 @@ wsServer.on("request", function(request) {
                 } else if (msgs.msg.substring(0, 9) == "/channel " || msgs.msg.substring(0, 4) == "/ch " || msgs.msg.substring(0, 3) == "/j ") {
                     var res = msgs.msg.split(" ");
                     var chnl = util.htmlEntities(res[1]);
-                    if (chnl === appId) {
+                    if (chnl == appId) {
                         return;
                     }
                     if (chnl == "" || chnl == " ") {
@@ -1070,7 +1075,7 @@ wsServer.on("request", function(request) {
                         util.add_app(apps, chnl);
                     }
                     for (var i = 0, len = apps[chnl].length; i < len; i++) {
-                        if (apps[chnl][i].user_id !== userId && userName === apps[chnl][i].user_name) {
+                        if (apps[chnl][i].user_id !== userId && userName == apps[chnl][i].user_name) {
                             connection.sendUTF(JSON.stringify({
                                 type: "info",
                                 time: (new Date()).getTime(),
@@ -1082,7 +1087,7 @@ wsServer.on("request", function(request) {
                     }
                     var check = false;
                     for (var i = 0, len = apps[chnl].length; i < len; i++) {
-                        if (apps[chnl][i].user_id === userId) {
+                        if (apps[chnl][i].user_id == userId) {
                             check = true;
                             break;
                         }
@@ -1104,7 +1109,7 @@ wsServer.on("request", function(request) {
                     var users_ = "";
                     var n = 1;
                     for (var i = 0, len = clients.length; i < len; i++) {
-                        if (clients[i].user_id === userId) {
+                        if (clients[i].user_id == userId) {
                             users_ += "<br>" + (n++) + ". <b>" + clients[i].user_name + "</b>";
                         } else {
                             users_ += "<br>" + (n++) + ". " + clients[i].user_name;
@@ -1184,7 +1189,7 @@ wsServer.on("request", function(request) {
                     }
                     var check = false;
                     for (var i = 0, len = apps[chnl].length; i < len; i++) {
-                        if (userId === apps[chnl][i].user_id) {
+                        if (userId == apps[chnl][i].user_id) {
                             check = true;
                         }
                     }
@@ -1222,11 +1227,11 @@ wsServer.on("request", function(request) {
                         type: "channels",
                         channels: get_channel(userId),
                     }));
-                    if (chnl === appId) {
+                    if (chnl == appId) {
                         var chnls = get_channel(userId);
                         for (var i = 0, len = chnls.length; i < len; i++) {
                             for (var ii = 0, len2 = apps[chnls[i]].length; ii < len2; ii++) {
-                                if (apps[chnls[i]][ii].user_id === userId) {
+                                if (apps[chnls[i]][ii].user_id == userId) {
                                     channel = chnls[i];
                                     appId = chnls[i];
                                     clients = apps[chnls[i]];
@@ -1251,13 +1256,16 @@ wsServer.on("request", function(request) {
                     var n = 1;
                     for (var i = 0, len = clients.length; i < len; i++) {
                         if (clients[i].online === true) {
-                            if (clients[i].user_id === userId) {
+                            if (clients[i].user_id == userId) {
                                 users_ += "<br>" + (n++) + ". <b>" + clients[i].user_name + "</b>";
                             } else {
                                 users_ += "<br>" + (n++) + ". " + clients[i].user_name;
                             }
                         }
                     }
+
+                    console.log(JSON.stringify(users));
+                    
                     connection.sendUTF(JSON.stringify({
                         type: "info",
                         time: (new Date()).getTime(),
@@ -1295,7 +1303,7 @@ wsServer.on("request", function(request) {
                     if (clients.type == "private") {
                         receipient = (clients[index].assigned !== null) ? clients[index].assigned : ((clients[index].client !== null) ? clients[index].client : null);
                     }
-                    if (receipient === "all") {
+                    if (receipient == "all") {
                         for (var i = 0, len = clients.length; i < len; i++) {
                             if (userId !== clients[i].user_id && clients[i].active === true) {
                                 clients[i].connection.sendUTF(json);
@@ -1307,7 +1315,7 @@ wsServer.on("request", function(request) {
                         var found = false;
                         clients[index].seen = true;
                         for (var i = 0, len = clients.length; i < len; i++) {
-                            if ((clients[i].user_name === receipient || clients[i].user_id === receipient) && clients[i].active === true) {
+                            if ((clients[i].user_name == receipient || clients[i].user_id == receipient) && clients[i].active === true) {
                                 clients[i].connection.sendUTF(json);
                                 clients[i].seen = false;
                                 clients[index].seen = false;
@@ -1350,7 +1358,7 @@ wsServer.on("request", function(request) {
                     });
                     var found = false;
                     for (var i = 0, len = clients.length; i < len; i++) {
-                        if (clients[i].user_name === receipient || clients[i].user_id === receipient) {
+                        if (clients[i].user_name == receipient || clients[i].user_id == receipient) {
                             if (clients[i].active === true) {
                                 clients[i].connection.sendUTF(json);
                             } else {
@@ -1362,7 +1370,7 @@ wsServer.on("request", function(request) {
                             found = true;
 
 							if (store_msg) {
-                                var insert = "'"+util.htmlEntities(msgs.msg)+"'";
+                                var insert = "'"+msgs.msg.replace(/"/g, "\\\"").replace(/'/g, "\\\'")+"'";
                                 insert += ",'"+userName+"'";
                                 insert += ",'"+channel+"'";
                                 insert += ",'"+ip_address+"'";
@@ -1381,16 +1389,15 @@ wsServer.on("request", function(request) {
                         }));
                     }
                 } else if (msgs.msg.substring(0, 7) == "/close ") {
-                    if (admin !== true) {
-                        return;
-                    }
+                    if (admin !== true) return;
+                    
                     var res = msgs.msg.split(" ");
                     var receipient = res[1];
-                    if (userName === receipient) {
+                    if (userName == receipient) {
                         return;
                     }
                     for (var i = 0, len = clients.length; i < len; i++) {
-                        if (clients[i].user_name === receipient) {
+                        if (clients[i].user_name == receipient) {
                             clients[i].connection.sendUTF(JSON.stringify({
                                 type: "quit",
                                 time: (new Date()).getTime(),
@@ -1417,14 +1424,14 @@ wsServer.on("request", function(request) {
                     if (apps[msgs.channel].type == "private") {
                         if (apps[msgs.channel][idx].assigned !== null) {
                             for (var i = 0, len = apps[msgs.channel].length; i < len; i++) {
-                                if (apps[msgs.channel][idx].assigned === apps[msgs.channel][i].user_id) {
+                                if (apps[msgs.channel][idx].assigned == apps[msgs.channel][i].user_id) {
                                     apps[msgs.channel][i].connection.sendUTF(json);
                                 }
                             }
                         }
                         if (apps[msgs.channel][idx].operator === true && apps[msgs.channel][idx].client !== null) {
                             for (var i = 0, len = apps[msgs.channel].length; i < len; i++) {
-                                if (apps[msgs.channel][idx].client === apps[msgs.channel][i].user_id) {
+                                if (apps[msgs.channel][idx].client == apps[msgs.channel][i].user_id) {
                                     apps[msgs.channel][i].connection.sendUTF(json);
                                 }
                             }
@@ -1452,14 +1459,14 @@ wsServer.on("request", function(request) {
                     if (apps[msgs.channel].type == "private") {
                         if (apps[msgs.channel][idx].assigned !== null) {
                             for (var i = 0, len = apps[msgs.channel].length; i < len; i++) {
-                                if (apps[msgs.channel][idx].assigned === apps[msgs.channel][i].user_id) {
+                                if (apps[msgs.channel][idx].assigned == apps[msgs.channel][i].user_id) {
                                     apps[msgs.channel][i].connection.sendUTF(json);
                                 }
                             }
                         }
                         if (apps[msgs.channel][idx].operator === true && apps[msgs.channel][idx].client !== null) {
                             for (var i = 0, len = apps[msgs.channel].length; i < len; i++) {
-                                if (apps[msgs.channel][idx].client === apps[msgs.channel][i].user_id) {
+                                if (apps[msgs.channel][idx].client == apps[msgs.channel][i].user_id) {
                                     apps[msgs.channel][i].connection.sendUTF(json);
                                 }
                             }
@@ -1484,7 +1491,7 @@ wsServer.on("request", function(request) {
                         });
                     }
                     for (var i = 0, len = apps[msgs.channel].length; i < len; i++) {
-                        if (apps[msgs.channel][i].user_id === receipient) {
+                        if (apps[msgs.channel][i].user_id == receipient) {
                             apps[msgs.channel][i].connection.sendUTF(json);
                         }
                     }
@@ -1564,7 +1571,7 @@ wsServer.on("request", function(request) {
                     if (clients.type == "private") {
                         if (clients[index].assigned !== null) {
                             for (var i = 0, len = clients.length; i < len; i++) {
-                                if (userId !== clients[i].user_id && (clients[index].assigned === clients[i].user_id || clients[i].admin === true)) {
+                                if (userId !== clients[i].user_id && (clients[index].assigned == clients[i].user_id || clients[i].admin === true)) {
                                     clients[i].connection.sendUTF(json);
                                     if (clients[i].admin === false) {
                                         clients[i].msg.push(json);
@@ -1578,7 +1585,7 @@ wsServer.on("request", function(request) {
                         }
                         if (clients[index].operator === true && clients[index].client !== null) {
                             for (var i = 0, len = clients.length; i < len; i++) {
-                                if (userId !== clients[i].user_id && (clients[index].client === clients[i].user_id || clients[i].admin === true)) {
+                                if (userId !== clients[i].user_id && (clients[index].client == clients[i].user_id || clients[i].admin === true)) {
                                     clients[i].connection.sendUTF(json);
                                     if (clients[i].admin === false) {
                                         clients[i].msg.push(json);
@@ -1605,7 +1612,7 @@ wsServer.on("request", function(request) {
                     }
                     clients[index].seen = true;
                     if (store_msg) {
-                        var insert = "'"+util.htmlEntities(msgs.msg)+"'";
+                        var insert = "'"+msgs.msg.replace(/"/g, "\\\"").replace(/'/g, "\\\'")+"'";
                         insert += ",'"+userName+"'";
                         insert += ",'"+channel+"'";
                         insert += ",'"+ip_address+"'";
@@ -1629,7 +1636,7 @@ wsServer.on("request", function(request) {
         total_connection--;
         if (shutdown === false) {
             index = get_index(userId, appId);
-            if (index === null) {
+            if (index == null) {
                 return;
             }
             var client = apps[appId];
@@ -1666,7 +1673,7 @@ var get_index = function(id, app) {
     var client = apps[app];
     if (client) {
         for (var i = 0, len = client.length; i < len; i++) {
-            if (client[i].user_id === id) {
+            if (client[i].user_id == id) {
                 return i;
             }
         }
@@ -1677,7 +1684,7 @@ var get_index = function(id, app) {
 
 var ping = function(id, app) {
     var idx = get_index(id, app);
-    if (idx === null) {
+    if (idx == null) {
         return;
     }
     if(apps[app][idx].ping !== null) {
@@ -1686,7 +1693,7 @@ var ping = function(id, app) {
     apps[app][idx].ping = setTimeout(function() {
         var client = apps[app];
         idx = get_index(id, app);
-        if (idx === null) {
+        if (idx == null) {
             return;
         }
         apps[app][idx].ping = null;
@@ -1731,7 +1738,7 @@ var remove_client = function(idx, app, pingresult) {
         if (client[idx].client !== null) {
             var cl = client[idx].client;
             for (var i = 0, len = client.length; i < len; i++) {
-                if (client[i].user_id === cl) {
+                if (client[i].user_id == cl) {
                     client[i].assigned = null;
                     client[i].msg = [];
                     client[i].connection.sendUTF(JSON.stringify({
@@ -1757,7 +1764,9 @@ var remove_client = function(idx, app, pingresult) {
     });
     console.log(util.get_time() + " " + client[idx].user_name + pingresult);
     del_user(client[idx].user_id);
+    
     client.splice(idx, 1);
+
     for (var i = 0, len = client.length; i < len; i++) {
         if (client[i].active === true) {
             client[i].connection.sendUTF(json);
@@ -1793,15 +1802,37 @@ var online_users = function(app, conn) {
         return;
     }
     for (var i = 0, len = client.length; i < len; i++) {
-        if (client[i].active === true && client[i].channel === app) {
+        if (client[i].active === true && client[i].channel == app) {
             client[i].connection.sendUTF(json);
         }
     }
 };
 
+var check_user = function(m) {
+    for (var i = 0, len = users.length; i < len; i++) {
+        if(users[i].user_id == m.id) return true;
+    }
+
+    users.push({
+        user_id: m.id,
+        user_name: util.htmlEntities(m.msg.split(" ")[1]),
+        channels: [m.channel]
+    });
+    return true;
+}
+
+var del_user = function(id) {
+    for (var i = 0, len = users.length; i < len; i++) {
+        if(users[i].user_id == id) {
+            return users.splice(i, 1);
+        }
+    }
+    return false;
+}
+
 var setup_channel = function(chnl) {
     for (var i = 0, len = channel_list.length; i < len; i++) {
-        if (channel_list[i].name === chnl) {
+        if (channel_list[i].name == chnl) {
             channel_list[i].users++;
             return;
         }
@@ -1828,7 +1859,7 @@ var get_history = function(chnl) {
 
 var check_password = function(username, password) {
     for (var i = 0, len = admins.length; i < len; i++) {
-        if (admins[i].username === username && admins[i].password === util.MD5(password)) {
+        if (admins[i].username == username && admins[i].password == util.MD5(password)) {
             return true;
         }
     }
@@ -1837,7 +1868,7 @@ var check_password = function(username, password) {
 
 var check_admin = function(username) {
     for (var i = 0, len = admins.length; i < len; i++) {
-        if (admins[i].username === username) {
+        if (admins[i].username == username) {
             return true;
         }
     }
@@ -1846,59 +1877,37 @@ var check_admin = function(username) {
 
 var check_blocked_id = function(id) {
     for (var i = 0, len = blocked_id.length; i < len; i++) {
-        if (blocked_id[i].user_id === id) {
+        if (blocked_id[i].user_id == id) {
             return true;
         }
     }
     return false;
 };
 
-var check_user = function(m) {
-    for (var i = 0, len = users.length; i < len; i++) {
-        if(users[i].user_id === m.id) {
-            return true;
-        }
-    }
-    users.push({
-        user_id: m.id,
-        user_name: util.htmlEntities(m.msg.split(" ")[1]),
-        channels: [m.channel]
-    });
-    return true;
-}
-
-var del_user = function(id) {
-    for (var i = 0, len = users.length; i < len; i++) {
-        if(users[i].user_id === id) {
-            users.splice(i, 1);
-            return true;
-        }
-    }
-    return false;
-}
-
 var get_channel = function(id) {
     for (var i = 0, len = users.length; i < len; i++) {
-        if(users[i].user_id === id) {
+        if(users[i].user_id == id) {
             return users[i].channels;
         }
     }
+    return [];
 }
 
 var add_channel = function(id, chnl) {
     for (var i = 0, len = users.length; i < len; i++) {
-        if(users[i].user_id === id) {
-            if(users[i].channels.indexOf(chnl) === -1) {
+        if(users[i].user_id == id) {
+            if(users[i].channels.indexOf(chnl) == -1) {
                 users[i].channels.push(chnl);
                 return true;
             }
         }
     }
+    return false;
 }
 
 var del_channel = function(id, chnl) {
     for (var i = 0, len = users.length; i < len; i++) {
-        if(users[i].user_id === id) {
+        if(users[i].user_id == id) {
             var idx = users[i].channels.indexOf(chnl);
             users[i].channels.splice(idx, 1);
             break;

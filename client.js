@@ -528,7 +528,9 @@
                 msgs = [];
                 channels = [];
                 historys = 0;
-                localStorage.clear();
+                delete localStorage.chat;
+                delete localStorage.myId;
+                delete localStorage.myName;
                 if (window.opener !== null) {
                     localStorage.removeItem("chat");
                     window.close();
