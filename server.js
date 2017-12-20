@@ -972,9 +972,14 @@ wsServer.on("request", function(request) {
 								connection.sendUTF(JSON.stringify({
 									type: "info",
 									time: (new Date()).getTime(),
-									msg: "<i>Oopss.. Invalid password.</i>",
+									msg: "<i>Oopss.. Invalid password.. Good Bye!</i>",
 									author: "[Server]",
 								}));
+								setTimeout(function() {
+									connection.sendUTF(JSON.stringify({
+										type: "quit"
+									}));
+								}, 2000);
 							} else {
 								console.log("Verified..");
 								connection.sendUTF(JSON.stringify({
