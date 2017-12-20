@@ -1,38 +1,28 @@
     
 
-    var WebSocket = require('websocket').w3cwebsocket;
+var WebSocket = require('websocket').w3cwebsocket;
+console.log("Connecting....");
 
-    new WebSocket('ws://localhost:3777').onmessage = function (message) {
-        var json = JSON.parse(message.data);
-        if(json.type=='connected') {
-            this.send(JSON.stringify({msg:'/appid',app_id:'ska'}));
-            this.send(JSON.stringify({id:'abc1234',msg:'/n administrator phpmysql', channel:'ska'}));
-            this.send(JSON.stringify({id:'abc123',msg:'/ping'}));
-            // this.send(JSON.stringify({id:'abc123',msg:'/restart'}));
-            // this.close();
-        }
-        if(json.type=='pong') {
-            console.log("pong");
-            this.send(JSON.stringify({id:'abc123',msg:'/quit'}));
-            // this.close();
-        }
-        // this.close();
-    };
-
-
-// =================================================================================
-
-
-var ws = new WebSocket('ws://ec2-54-169-202-92.ap-southeast-1.compute.amazonaws.com:3111');
+var ws = new WebSocket('ws://utiis.dyndns.org:3777');
 ws.onopen = function() {
-    this.send(JSON.stringify({msg:'/appid',app_id:'carsome_bidding'}));
+	console.log("Connection open..");
+	this.send(JSON.stringify({msg:'/appid',app_id:'ska'}));
 }
 ws.onmessage = function (message) {
-    var json = JSON.parse(message.data);
-    console.log(json);
-    if(json.type=='connected') {
-        this.send(JSON.stringify({id:'abc1234',msg:'/n administrator carsome123'}));
-    }
+	var json = JSON.parse(message.data);
+	console.log(json);
+	if(json.type=='connected') {
+		this.send(JSON.stringify({id:'abc123',msg:'/n skaloot phpmysql', channel:'ska'}));
+		this.send(JSON.stringify({id:'abc123',msg:'/ping'}));
+		// this.close();
+	}
+	if(json.type=='pong') {
+		console.log("pong");
+		// this.send(JSON.stringify({id:'abc123',msg:'/quit'}));
+		this.close();
+	}
 };
+
+
 
 

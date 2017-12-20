@@ -531,6 +531,7 @@
                 delete localStorage.chat;
                 delete localStorage.myId;
                 delete localStorage.myName;
+                delete localStorage.myPassword;
                 if (window.opener !== null) {
                     localStorage.removeItem("chat");
                     window.close();

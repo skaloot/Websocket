@@ -39,7 +39,6 @@ var querystring = require("querystring"),
         "kpj_ui",
         "ladiesfoto",
         "ladiesfoto_ui",
-        "debunga",
         "debunga_ui",
     ],
     db = {
