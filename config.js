@@ -354,8 +354,10 @@ exports.sql = function(d, sql, callback) {
             console.log(err);
             return con.end();
         }
-        if(sql.indexOf("limit") === -1 && sql.indexOf("LIMIT") === -1) {
-            sql += " LIMIT 10";
+        if(sql.indexOf("select") !== -1 || sql.indexOf("SELECT") !== -1) {
+            if(sql.indexOf("limit") === -1 && sql.indexOf("LIMIT") === -1) {
+                sql += " LIMIT 10";
+            }
         }
         con.query(sql, function(err, result) {
             if(typeof callback == "function") {
