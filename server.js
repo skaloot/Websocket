@@ -61,11 +61,6 @@ var wsServer = new webSocketServer({
 
 util.set_app(apps, app_list);
 
-util.sql("websocket", "SELECT * FROM users", function(data) {
-    admins = data;
-	console.log(JSON.stringify(admins));
-});
-
 
 
 /* =============================================================== CONNECT =============================================================== */
@@ -221,59 +216,34 @@ wsServer.on("request", function(request) {
                         return;
                     }
 					
-                    // var isadmin = check_admin(nick);
                     if (res[2]) {
-                        // if (!res[2]) {
-                            // temp_detail = {
-                                // ip_address: msgs.ip_address,
-                                // screen: msgs.screen,
-                                // agent: msgs.agent
-                            // };
-                            // connection.sendUTF(JSON.stringify({
-                                // type: "info",
-                                // auth_admin: true,
-                                // time: (new Date()).getTime(),
-                                // msg: "<i>Oopss.. Nickname <b>" + nick + "</b> is reserved for admin. Please type in your password within 15 seconds.</i>",
-                                // author: "[Server]",
-                            // }));
-                            // if (!timer_password_temp[msgs.id]) {
-                                // timer_password_temp[msgs.id] = {
-                                    // timer: null
-                                // };
-                            // }
-                            // timer_password(msgs.id, connection);
-                            // password = true;
-                            // password_user = nick;
-                            // return;
-                        // } else {
-                            check_password(nick, res[2], function(verified) {
-								if (verified === false) {
-									console.log("Invalid..");
+                        check_password(nick, res[2], function(verified) {
+							if (verified === false) {
+								console.log("Invalid..");
+								connection.sendUTF(JSON.stringify({
+									type: "info",
+									time: (new Date()).getTime(),
+									msg: "<i>Oopss.. Invalid password.. Good Bye!</i>",
+									author: "[Server]",
+								}));
+								setTimeout(function() {
 									connection.sendUTF(JSON.stringify({
-										type: "info",
-										time: (new Date()).getTime(),
-										msg: "<i>Oopss.. Invalid password.. Good Bye!</i>",
-										author: "[Server]",
+										type: "quit"
 									}));
-									setTimeout(function() {
-										connection.sendUTF(JSON.stringify({
-											type: "quit"
-										}));
-									}, 2000);
-								} else {
-									console.log("Verified..");
-									connection.sendUTF(JSON.stringify({
-										type: "info",
-										time: (new Date()).getTime(),
-										msg: "<i>Verified..</i>",
-										author: "[Server]",
-									}));
-									admin_password = " " + res[2];
-									admin = true;
-									register_user();
-								}
-							});
-                        // }
+								}, 2000);
+							} else {
+								console.log("Verified..");
+								connection.sendUTF(JSON.stringify({
+									type: "info",
+									time: (new Date()).getTime(),
+									msg: "<i>Verified..</i>",
+									author: "[Server]",
+								}));
+								admin_password = " " + res[2];
+								admin = true;
+								register_user();
+							}
+						});
                     } else {
 						register_user();
 					}
@@ -1855,24 +1825,6 @@ var check_password = function(username, password, callback) {
 		if (typeof callback == "function") return callback(check);
 		return check;
 	});
-};
-
-var check_password_2 = function(username, password) {
-    for (var i = 0, len = admins.length; i < len; i++) {
-        if (admins[i].username == username && admins[i].password == util.MD5(password)) {
-            return true;
-        }
-    }
-    return false;
-};
-
-var check_admin = function(username) {
-    for (var i = 0, len = admins.length; i < len; i++) {
-        if (admins[i].username == username) {
-            return true;
-        }
-    }
-    return false;
 };
 
 var check_blocked_id = function(id) {
