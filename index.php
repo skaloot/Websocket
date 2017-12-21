@@ -51,6 +51,7 @@ date_default_timezone_set("Asia/Kuala_lumpur");
 		.panel { padding:15px 20px;display:block; }
         .close-channel { position:absolute;margin: -25px 0 0 200px; cursor: pointer; opacity:0.3; }
         .close-channel:hover { opacity:1; }
+        pre {outline: 1px solid #ccc; padding: 5px; margin: 5px; }
         @media only screen and (max-width: 500px) {
             #panel { display: none; }
 			#content, #input-holder { left:0px; }

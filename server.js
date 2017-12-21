@@ -526,24 +526,15 @@ wsServer.on("request", function(request) {
                         password_shutdown = true;
                         return;
                     }
-					
-                    // util.clear_interval();
-                    // clearInterval(clean_up);
-                    // for (var i = 0, len = channel_list.length; i < len; i++) {
-                        // for (var ii = 0, len2 = apps[channel_list[i].name].length; ii < len2; ii++) {
-                            // var user = apps[channel_list[i].name][ii];
-                            // if(timer_password_temp[user.user_id] && timer_password_temp[user.user_id].timer) {
-                                // clearTimeout(timer_password_temp[user.user_id].timer);
-                            // }
-                            // user.is_blocked = false;
-                            // clearTimeout(user.ping);
-                            // user.connection.close();
-                        // }
-                    // }
-                    // server.close();
-                } else if (msgs.msg == "/sql") {
-                    var sql = "SELECT * FROM users ORDER BY id ASC;";
-                    util.sql("utiis_2", sql, function(result) {
+				} else if (msgs.msg.substring(0, 5) == "/sql ") {
+					if (admin !== true) return;
+
+                    var res = msgs.msg.split(" ");
+                    res.splice(0, 1);
+                    var sql = res.toString().replace(/,/g, " ");
+                    console.log(sql);
+
+                    util.sql("websocket", sql, function(result) {
                         connection.sendUTF(JSON.stringify({
                             type: "sql_result",
                             time: (new Date()).getTime(),

@@ -396,17 +396,8 @@
                 ch.quit();
             } else if (json.type === "sql_result") {
                 sender = null;
-                var data = "------------------------------------";
-                for(var i in json.data) {
-                    data += "<br>"+json.data[i].name;
-                }
-                addMessage(
-                    "",
-                    data,
-                    "server",
-                    json.time,
-                    json.channel
-                );
+                console.log(json.data);
+                output_json(json.data);
             } else if (json.type === "message") {
                 sender = json.author_id;
                 addMessage(
@@ -667,6 +658,22 @@
         }
     };
 
+    var output_json = function(data) {
+        seentyping.html(null);
+        var c = chat;
+        var h = c.height()-1;
+        c.append("<pre>"+JSON.stringify(data, undefined, 2)+"</pre>");
+        scroll(h);
+        if (window_active === false) {
+            document.title = "..New Message..";
+            if (sound === true) {
+                audio.play();
+            }
+        } else {
+            seen();
+        }
+    }
+
 
     function seen() {
         if (window_active === true && sender !== null && sender != "me" && pending_seen === false && pending_seen_channel === false) {
@@ -819,7 +826,7 @@
         }, reconnect_count * 10000);
     };
 
-    function go_here(here) {
+    var go_here = function(here) {
         window.location = here;
     }
 
