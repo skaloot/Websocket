@@ -1526,23 +1526,23 @@ wsServer.on("request", function(request) {
                     }, 50);
                 } else if (msgs.msg == "/flood-stop") {
                     flood = false;
-		} else if (msgs.msg == "/admin") {
-			if(!admin) return;
-			var sql = "SELECT * FROM users";
-			util.sql("websocket", sql, function(data) {
-				console.log(JSON.stringify(data));
-				var a = "<i>------------------------------------<br>Admins<br>";
-				for(var i in data) {
-					a += (i+1) + ". " + data[i].username + "<br>";
-				}
-				a += "</i>";
-				connection.sendUTF(JSON.stringify({
-					type: "info",
-					time: (new Date()).getTime(),
-					msg: a,
-					author: "[Server]",
-				}));
-			));
+				} else if (msgs.msg == "/admin") {
+					if(!admin) return;
+					var sql = "SELECT * FROM users";
+					util.sql("websocket", sql, function(data) {
+						console.log(JSON.stringify(data));
+						var a = "<i>------------------------------------<br>Admins<br>";
+						for(var i in data) {
+							a += (i+1) + ". " + data[i].username + "<br>";
+						}
+						a += "</i>";
+						connection.sendUTF(JSON.stringify({
+							type: "info",
+							time: (new Date()).getTime(),
+							msg: a,
+							author: "[Server]",
+						}));
+					});
                 } else if (msgs.msg == "/help" || msgs.msg.substring(0, 1) == "/") {
                     if (clients.type == "private" && clients[index].operator === false) {
                         return;
