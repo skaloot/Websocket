@@ -166,6 +166,7 @@ wsServer.on("request", function(request) {
                 password_shutdown = false;
                 check_password(userName, msgs.msg, function(verified) {
 					if (verified === false) {
+						console.log("Invalid..");
 						connection.sendUTF(JSON.stringify({
 							type: "info",
 							time: (new Date()).getTime(),
