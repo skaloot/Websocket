@@ -37,6 +37,7 @@
 		pending_seen_channel = false,
         assigned = null,
         blocked = false,
+		leaving_channel = false,
         audio = new Audio("toing.mp3");
 
 
@@ -339,14 +340,19 @@
                 }
             } else if (json.type === "channels") {
                 $("#channels-title").show();
-                $("#channels").html(null);
-                for(var i=0, len=json.channels.length; i<len; i++) {
-                    var c = "";
-                    if(json.channels[i] == channel) {
-                        c = " channel-now";
-                    }
-                    $("#channels").append("<div class='channel"+c+"' id=\"c_"+json.channels[i]+"\" onclick=\"ch.chg_channel('"+json.channels[i]+"');\">"+json.channels[i]+"</div><span onclick=\"ch.leave_channel('"+json.channels[i]+"');\" class=\"close-channel\">x</span>");
-                }
+				for(var i=0, len=json.channels.length; i<len; i++) {
+					var check = false;
+					for(var ii=0, len2=channels.length; ii<len2; ii++) {
+						if(channels[i] == json.channels[i]) check = true;
+					}
+					if (!check && !leaving_channel) {
+						if(json.channels[i] == channel) {
+							c = " channel-now";
+						}
+						$("#channels").append("<div class='channel"+c+"' id=\"c_"+json.channels[i]+"\" onclick=\"ch.chg_channel('"+json.channels[i]+"');\">"+json.channels[i]+"</div><span onclick=\"ch.leave_channel('"+json.channels[i]+"');\" class=\"close-channel\">x</span>");
+					}
+				}
+				leaving_channel = false;
                 channels = json.channels;
             } else if (json.type === "channels_admin") {
                 $("#channels-title-admin").show();
@@ -463,13 +469,13 @@
             }
         },
         leave_channel: function(c) {
+			leaving_channel = true;
             connection.send(JSON.stringify({
                 id: id,
                 msg: "/l " + c
             }));
-            if(channels.length > 1) {
-                $("#content #chat_"+c).remove();
-            }
+            $("#content #chat_"+c).remove();
+            $("#channels #c_"+c).remove();
         },
 		server_detail: function() {
 			connection.send(JSON.stringify({
@@ -855,6 +861,5 @@
 
 
 ch.init();
-
 
 
