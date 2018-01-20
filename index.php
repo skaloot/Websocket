@@ -102,10 +102,9 @@ date_default_timezone_set("Asia/Kuala_lumpur");
             localStorage.setItem("ip_address", "<?php echo $_SERVER["REMOTE_ADDR"]; ?>");
 
         <?php if(isset($_GET["channel"])) { ?>
-        if(!localStorage.app_id && !localStorage.channel) {
             localStorage.app_id = "<?php echo $_GET["channel"]; ?>";
             localStorage.channel = "<?php echo $_GET["channel"]; ?>";
-        }
+
         <?php if(isset($_GET["i"])) { ?>
         if(!localStorage.myName || !localStorage.myId) {
             var decode = window.atob("<?php echo $_GET["i"]; ?>").split("-");
