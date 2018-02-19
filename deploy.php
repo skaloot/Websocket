@@ -6,6 +6,9 @@ ini_set("error_reporting", -1);
 ini_set("display_errors", -1);
 
 
+$repo = "Websocket";
+
+
 $arrContextOptions = [
     "ssl" => [
         "verify_peer"=>false,
@@ -31,15 +34,16 @@ if(isset($_POST["payload"])) {
 	$date = date("H:i:s d-m-Y");
 	$a = "";
 
-	if($payload["repository"]["name"] == "Websocket" && $payload["pusher"]["name"] == "skaloot") {
+	if($payload["repository"]["name"] == $repo && $payload["pusher"]["name"] == "skaloot") {
 		foreach($payload["commits"][0]["modified"] as $modified) {
 
 			if($modified == "deploy.php" || $modified == "github.log") continue;
 
 			$a .= $date." - ".$modified." [modified]\n";
-			$data = file_get_contents("https://raw.githubusercontent.com/skaloot/Websocket/master/".$modified."?".rand(), false, stream_context_create($arrContextOptions));
+			$data = json_decode(file_get_contents("https://api.github.com/repos/skaloot/".$repo."/contents/".$modified, false, stream_context_create($arrContextOptions)), false);
+			$content = base64_decode($data->content);
 			$fh = fopen($modified, 'w+') or die("can't open file");
-			fwrite($fh, $data);
+			fwrite($fh, $content);
 			fclose($fh);
 		}
 		foreach($payload["commits"][0]["added"] as $added) {
@@ -47,9 +51,21 @@ if(isset($_POST["payload"])) {
 			if($added == "deploy.php") continue;
 
 			$a .= $date." - ".$added." [added]\n";
-			$data = file_get_contents("https://raw.githubusercontent.com/skaloot/Websocket/master/".$added."?".rand(), false, stream_context_create($arrContextOptions));
+			$dir = explode("/", $added);
+			$d = "";
+			for($i=0; $i<count($dir)-1; $i++) {
+				$d .= $dir[$i]."/";
+				$e = rtrim($d, "/");
+				if (!file_exists($d)) {
+					$old = umask(0);
+					mkdir($e, 0777);
+					umask($old); 
+				}
+			}
+			$data = json_decode(file_get_contents("https://api.github.com/repos/skaloot/".$repo."/contents/".$added, false, stream_context_create($arrContextOptions)), false);
+			$content = base64_decode($data->content);
 			$fh = fopen($added, 'w+') or die("can't open file");
-			fwrite($fh, $data);
+			fwrite($fh, $content);
 			fclose($fh);
 		}
 		foreach($payload["commits"][0]["removed"] as $removed) {
@@ -72,8 +88,6 @@ if(isset($_POST["payload"])) {
 }
 
 
-header("Content-Type: text/plain");
-echo file_get_contents("https://raw.githubusercontent.com/skaloot/Websocket/master/server.js?".rand(), false, stream_context_create($arrContextOptions));
 
 
 
