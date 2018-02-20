@@ -104,7 +104,7 @@ exports.get_help = function() {
     return helps;
 }
 
-var checkTime = function(i) {
+exports.checkTime = function(i) {
     if (i < 10) {
         i = "0" + i;
     }
@@ -113,20 +113,20 @@ var checkTime = function(i) {
 
 exports.get_time = function() {
     var t = new Date(),
-        h = checkTime(t.getHours()),
-        m = checkTime(t.getMinutes()),
-        s = checkTime(t.getSeconds());
+        h = this.checkTime(t.getHours()),
+        m = this.checkTime(t.getMinutes()),
+        s = this.checkTime(t.getSeconds());
     return h + ":" + m + ":" + s + " - ";
 }
 
 exports.get_date = function() {
     var t = new Date(),
         y = t.getFullYear(),
-        m = checkTime(t.getMonth() + 1),
-        d = checkTime(t.getDate()),
-        h = checkTime(t.getHours()),
-        mt = checkTime(t.getMinutes()),
-        s = checkTime(t.getSeconds());
+        m = this.checkTime(t.getMonth() + 1),
+        d = this.checkTime(t.getDate()),
+        h = this.checkTime(t.getHours()),
+        mt = this.checkTime(t.getMinutes()),
+        s = this.checkTime(t.getSeconds());
     return m + "-" + d + "-" + y + "-" + h + "-" + mt + "-" + s;
 }
 
@@ -152,7 +152,7 @@ exports.DateDiff = function(time1, time2) {
     return diffD + " days, " + diffH + " hours, " + diffM + " minutes, " + diffS + " seconds";
 }
 
-var date_std = function (timestamp) {
+exports.date_std = function (timestamp) {
     if(!timestamp) timestamp = new Date().getTime();
     if(Math.ceil(timestamp).toString().length == 10) timestamp *= 1000;
     var tzoffset = (new Date()).getTimezoneOffset() * 60000;
@@ -161,11 +161,8 @@ var date_std = function (timestamp) {
     return iso[1] + ' ' + iso[2];
 }
 
-exports.date_std;
-
 exports.set_app = function(a, b) {
     for (var i = 0, len = b.length; i < len; i++) {
-        // console.log(b[i]);
         if (!a[b[i]]) {
             a[b[i]] = [];
             a[b[i]].total_user = 0;
@@ -209,24 +206,44 @@ exports.censor = function(a) {
 }
 
 exports.handle_request = function(request, response, users, channel_list) {
+
+    response.setHeader('Access-Control-Allow-Origin', '*');
+    response.writeHead(200, {'Content-Type': 'application/json'});
+
+    request = require('url').parse(request.url, true);
+
+    var req = request.pathname.split("/").splice(1),
+        e = (req[0]) ? req[0] : null,
+        f = (req[1]) ? req[1] : null,
+        g = (req[2]) ? req[2] : null;
+
+    /* =========================== POST REQUEST =========================== */
     if(request.method == 'POST') {
-        processPost(request, response, function() {
+        this.processPost(request, response, function() {
             console.log(request.post);
-            response.writeHead(200, "OK", {'Content-Type': 'text/plain'});
             response.end();
         });
-        return;
     }
-    if (request.url === '/users') {
-        response.writeHead(200, {'Content-Type': 'application/json'});
+
+    /* =========================== GET REQUEST =========================== */
+    if (e === 'users') {
+        if (f) {
+            var user = this.get_user(users, f);
+            response.end(JSON.stringify(user));
+        }
         response.end(JSON.stringify(users));
-    } else if (request.url === '/channels') {
-        response.writeHead(200, {'Content-Type': 'application/json'});
+    } else if (e === 'channels') {
         response.end(JSON.stringify(channel_list));
     } else {
-        response.writeHead(404, {'Content-Type': 'text/plain'});
-        response.end('Sorry, unknown url');
+        response.end(JSON.stringify({"status":"Bad Request"}));
     }
+}
+
+exports.get_user = function(u, n) {
+    for (var i = 0, len = u.length; i < len; i++) {
+        if (u[i].user_name == n) return u[i];
+    }
+    return [];
 }
 
 exports.processPost = function(request, response, callback) {
@@ -579,17 +596,15 @@ exports.MD5 = function (string) {
 }
 
 interval_internet = setInterval(function() {
-    if(check_internet === false) {
-        return;
-    }
+    if(check_internet === false) return;
+
     dns.resolve('www.google.com', function(err){
         if (err) {
             console.log("ERROR - No connection.");
-            internet = false;
         } else {
             console.log("SUCCESS - Connected.");
-            internet = true;
         }
+        internet = !internet;
     });
 }, (10000));
 
