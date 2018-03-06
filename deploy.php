@@ -37,13 +37,12 @@ if(isset($_POST["payload"])) {
 	if($payload["repository"]["name"] == $repo && $payload["pusher"]["name"] == "skaloot") {
 		foreach($payload["commits"][0]["modified"] as $modified) {
 
-			if($modified == "deploy.php" || $modified == "github.log") continue;
+			if($modified == "deploy.php" || $modified == "github.log") !== false) continue;
 
 			$a .= $date." - ".$modified." [modified]\n";
-			$data = json_decode(file_get_contents("https://api.github.com/repos/skaloot/".$repo."/contents/".$modified, false, stream_context_create($arrContextOptions)), false);
-			$content = base64_decode($data->content);
+			$data = file_get_contents("https://raw.githubusercontent.com/skaloot/".$repo."/master/".$modified."?".rand(), false, stream_context_create($arrContextOptions));
 			$fh = fopen($modified, 'w+') or die("can't open file");
-			fwrite($fh, $content);
+			fwrite($fh, $data);
 			fclose($fh);
 		}
 		foreach($payload["commits"][0]["added"] as $added) {
@@ -62,15 +61,14 @@ if(isset($_POST["payload"])) {
 					umask($old); 
 				}
 			}
-			$data = json_decode(file_get_contents("https://api.github.com/repos/skaloot/".$repo."/contents/".$added, false, stream_context_create($arrContextOptions)), false);
-			$content = base64_decode($data->content);
+			$data = file_get_contents("https://raw.githubusercontent.com/skaloot/".$repo."/master/".$added."?".rand(), false, stream_context_create($arrContextOptions));
 			$fh = fopen($added, 'w+') or die("can't open file");
-			fwrite($fh, $content);
+			fwrite($fh, $data);
 			fclose($fh);
 		}
 		foreach($payload["commits"][0]["removed"] as $removed) {
 
-			if($removed == "deploy.php") continue;
+			if($removed == "deploy.php") !== false) continue;
 
 			if(file_exists($removed)) {
 				$a .= $date." - ".$removed." [removed]\n";
@@ -78,6 +76,7 @@ if(isset($_POST["payload"])) {
 			}
 		}
 	}
+
 	$fh = fopen($github, 'a+') or die("can't open file");
 	fwrite($fh, $a);
 	fclose($fh);
@@ -86,11 +85,5 @@ if(isset($_POST["payload"])) {
 	echo json_encode(["status"=>"Done"]);
 	exit;
 }
-
-
-
-
-
-
 
 
