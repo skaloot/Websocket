@@ -60,13 +60,6 @@ var querystring = require("querystring"),
             password: "phpmysql",
             database: "websocket",
             insecureAuth: true
-        },
-        debunga: {
-            host: "debungahotel.com",
-            user: "debungah_skaloot",
-            password: "Tatiana1",
-            database: "debungah_websocket",
-            insecureAuth: true
         }
     };
 
@@ -355,8 +348,7 @@ exports.GetThis = function(host, path, callback) {
 }
 
 exports.sql = function(d, sql, callback) {
-    // var c = this.db(d);
-    var c = this.db("debunga");
+    var c = this.db(d);
     if (!c) {
         console.log("ERROR: DB not exist");
         return false;
