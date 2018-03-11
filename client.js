@@ -8,7 +8,6 @@
         chat = $(".chat"),
         seentyping = $("#seen-typing"),
         input = $("#input"),
-		// host = "//127.0.0.1",
         host = location.host,
         // host = "//utiis.dyndns.org",
         port = 3777,
@@ -20,7 +19,7 @@
         window_active = null,
         myName = null,
         myInfo = null,
-        ip_address = localStorage.getItem("ip_address"),
+        ip_address = localStorage.ip_address,
         screen = $(window).width(),
         myPassword = "",
         sound = false,
@@ -288,6 +287,7 @@
                 chat = $("#chat_"+channel);
                 $("#channels-title").show();
                 $("#channels").html(null);
+                var chnls = "";
                 for(var i=0, len=json.channels.length; i<len; i++) {
                     var c = "";
                     if(json.channels[i] == channel) {
@@ -295,8 +295,10 @@
                     } else {
                         $("#content").append("<div class=\"chat\" id=\"chat_"+json.channels[i]+"\"></div>");
                     }
-                    $("#channels").append("<div class='channel"+c+"' id=\"c_"+json.channels[i]+"\" onclick=\"ska.chg_channel('"+json.channels[i]+"');\">"+json.channels[i]+"</div><span onclick=\"ska.leave_channel('"+json.channels[i]+"');\" class=\"close-channel\">x</span>");
+                    chnls += "<div class='channel"+c+"' id=\"c_"+json.channels[i]+"\" onclick=\"ska.chg_channel('"+json.channels[i]+"');\">";
+                    chnls += json.channels[i]+"</div><span onclick=\"ska.leave_channel('"+json.channels[i]+"');\" class=\"close-channel\">x</span>";
                 }
+                $("#channels").append(chnls);
                 $(".chat").hide();
                 channels = json.channels;
                 chat.show();
@@ -308,6 +310,7 @@
                 chat = $("#chat_"+channel);
                 $("#channels-title").show();
                 $("#channels").html(null);
+                var chnls = "";
                 for(var i=0, len=json.channels.length; i<len; i++) {
                     var c = "";
                     if(json.channels[i] == channel) {
@@ -315,14 +318,17 @@
                     } else {
                         $("#content").append("<div class=\"chat\" id=\"chat_"+json.channels[i]+"\"></div>");
                     }
-                    $("#channels").append("<div class='channel"+c+"' id=\"c_"+json.channels[i]+"\" onclick=\"ska.chg_channel('"+json.channels[i]+"');\">"+json.channels[i]+"</div><span onclick=\"ska.leave_channel('"+json.channels[i]+"');\" class=\"close-channel\">x</span>");
+                    chnls += "<div class='channel"+c+"' id=\"c_"+json.channels[i]+"\" onclick=\"ska.chg_channel('"+json.channels[i]+"');\">";
+                    chnls += json.channels[i]+"</div><span onclick=\"ska.leave_channel('"+json.channels[i]+"');\" class=\"close-channel\">x</span>";
                 }
+                $("#channels").append(chnls);
                 $(".chat").hide();
                 channels = json.channels;
                 chat.show();
             } else if (json.type === "online_state") {
                 //
             } else if (json.type === "users") {
+                if (json.channel != channel) return;
                 $("#users").html(null);
                 for(var i=0, len=json.users.length; i<len; i++) {
                     if(json.users[i].name == myName) {
@@ -334,13 +340,16 @@
             } else if (json.type === "channels") {
                 $("#channels-title").show();
                 $("#channels").html(null);
+                var chnls = "";
                 for(var i=0, len=json.channels.length; i<len; i++) {
                     var c = "";
                     if(json.channels[i] == channel) {
                         c = " channel-now";
                     }
-                    $("#channels").append("<div class='channel"+c+"' id=\"c_"+json.channels[i]+"\" onclick=\"ska.chg_channel('"+json.channels[i]+"');\">"+json.channels[i]+"</div><span onclick=\"ska.leave_channel('"+json.channels[i]+"');\" class=\"close-channel\">x</span>");
+                    chnls += "<div class='channel"+c+"' id=\"c_"+json.channels[i]+"\" onclick=\"ska.chg_channel('"+json.channels[i]+"');\">";
+                    chnls += json.channels[i]+"</div><span onclick=\"ska.leave_channel('"+json.channels[i]+"');\" class=\"close-channel\">x</span>";
                 }
+                $("#channels").append(chnls);
                 channels = json.channels;
             } else if (json.type === "channels_admin") {
                 $("#channels-title-admin").show();
@@ -354,8 +363,21 @@
                 }
                 $("#btn-server").show();
                 $("#btn-restart").show();
-            } else if (json.type === "leave_channel") {
-                ska.chg_channel(json.new_channel);
+            } else if (json.type === "new_channel") {
+                $("#channels-title").show();
+                $("#channels").html(null);
+                var chnls = "";
+                for(var i=0, len=json.channels.length; i<len; i++) {
+                    var c = "";
+                    if(json.channels[i] == channel) {
+                        c = " channel-now";
+                    }
+                    chnls += "<div class='channel"+c+"' id=\"c_"+json.channels[i]+"\" onclick=\"ska.chg_channel('"+json.channels[i]+"');\">";
+                    chnls += json.channels[i]+"</div><span onclick=\"ska.leave_channel('"+json.channels[i]+"');\" class=\"close-channel\">x</span>";
+                }
+                $("#channels").append(chnls);
+                channels = json.channels;
+                ska.chg_channel(json.channel);
             } else if (json.type === "typing") {
                 var h = chat.height()-1;
                 if(h < content.height()) {
@@ -451,8 +473,8 @@
 			chat.hide();
 			channel = c;
 			app_id = c;
-			localStorage.setItem("channel", channel);
-			localStorage.setItem("app_id", app_id);
+            localStorage.channel = channel;
+			localStorage.app_id = app_id;
 			if(channels.indexOf(channel) !== -1) {
 				$("#chat_"+channel).show();
 			} else {
@@ -529,10 +551,8 @@
             delete localStorage.myId;
             delete localStorage.myName;
             delete localStorage.myPassword;
-            if (window.opener !== null) {
-                localStorage.removeItem("chat");
-                window.close();
-            }
+            delete localStorage.ip_address;
+            if (window.opener !== null) window.close();
 		},
     }
 
