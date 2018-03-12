@@ -403,7 +403,7 @@ wsServer.on("request", function(request) {
 								}));
 								util.sql("websocket", "INSERT into log (username, ip_address) VALUES ('"+userName+"', '"+ip_address+"')");
 							}
-							online_users(appId);
+							online_users(channel);
 							console.log(util.get_time() + " User is known as: " + userName + " - " + userId);
 						}
 					}
