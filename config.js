@@ -246,6 +246,8 @@ exports.get_user = function(u, n) {
                     screen: u[i].screen,
                     active: u[i].active,
                     agent: u[i].agent,
+                    channel: u[i].channel,
+                    channels: u[i].channels,
                 };
                 return data;
             }
@@ -260,6 +262,8 @@ exports.get_user = function(u, n) {
                 screen: u[i].screen,
                 active: u[i].active,
                 agent: u[i].agent,
+                channel: u[i].channel,
+                channels: u[i].channels,
             });
         }
         return data;

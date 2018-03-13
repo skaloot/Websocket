@@ -435,10 +435,8 @@
         };
 
         connection.onclose = function() {
-            if (!localStorage.myPassword) {
-                online = false;
-                ska.quit();
-            }
+            online = false;
+            ska.quit();
         };
     }
 

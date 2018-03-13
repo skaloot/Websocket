@@ -42,8 +42,8 @@ var querystring = require("querystring"),
     db = {
         amirosol_newkpj: {
             host: "kpjselangor.com",
-            user: "amirosol_kpj",
-            password: "kpjselangor123",
+            user: "amirosol_skaloot",
+            password: "Tatiana1",
             database: "amirosol_newkpj",
             insecureAuth: true
         },
@@ -59,6 +59,13 @@ var querystring = require("querystring"),
             user: "skaloot",
             password: "phpmysql",
             database: "websocket",
+            insecureAuth: true
+        },
+        debunga: {
+            host: "debungahotel.com",
+            user: "debungah_skaloot",
+            password: "Tatiana1",
+            database: "debungah_websocket",
             insecureAuth: true
         }
     };
@@ -217,11 +224,8 @@ exports.handle_request = function(request, response, users, channel_list) {
 
     /* =========================== GET REQUEST =========================== */
     if (e === 'users') {
-        if (f) {
-            var user = this.get_user(users, f);
-            response.end(JSON.stringify(user));
-        }
-        response.end(JSON.stringify(users));
+        var user = this.get_user(users, f);
+        response.end(JSON.stringify(user));
     } else if (e === 'channels') {
         response.end(JSON.stringify(channel_list));
     } else {
@@ -230,10 +234,36 @@ exports.handle_request = function(request, response, users, channel_list) {
 }
 
 exports.get_user = function(u, n) {
-    for (var i = 0, len = u.length; i < len; i++) {
-        if (u[i].user_name == n) return u[i];
+    var data = [];
+    if (n) {
+        for (var i = 0, len = u.length; i < len; i++) {
+            if (u[i].user_name == n) {
+                data = {
+                    user_name: u[i].user_name,
+                    user_id: u[i].user_id,
+                    origin: u[i].origin,
+                    ip_address: u[i].ip_address,
+                    screen: u[i].screen,
+                    active: u[i].active,
+                    agent: u[i].agent,
+                };
+                return data;
+            }
+        }
+    } else {
+        for (var i = 0, len = u.length; i < len; i++) {
+            data.push({
+                user_name: u[i].user_name,
+                user_id: u[i].user_id,
+                origin: u[i].origin,
+                ip_address: u[i].ip_address,
+                screen: u[i].screen,
+                active: u[i].active,
+                agent: u[i].agent,
+            });
+        }
+        return data;
     }
-    return [];
 }
 
 exports.processPost = function(request, response, callback) {
