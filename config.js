@@ -256,7 +256,8 @@ exports.get_user = function(u, n) {
                 data = {
                     user_name: u[i].user_name,
                     user_id: u[i].user_id,
-                    last_seen: this.date_std(u[i].last_seen),
+                    online: this.DateDiff((new Date()).getTime(), u[i].start),
+                    last_seen: this.DateDiff((new Date()).getTime(), u[i].last_seen),
                     origin: u[i].origin,
                     ip_address: u[i].ip_address,
                     screen: u[i].screen,
@@ -273,7 +274,8 @@ exports.get_user = function(u, n) {
             data.push({
                 user_name: u[i].user_name,
                 user_id: u[i].user_id,
-                last_seen: this.date_std(u[i].last_seen),
+                online: this.DateDiff((new Date()).getTime(), u[i].start),
+                last_seen: this.DateDiff((new Date()).getTime(), u[i].last_seen),
                 timestamp: u[i].last_seen,
                 origin: u[i].origin,
                 ip_address: u[i].ip_address,
