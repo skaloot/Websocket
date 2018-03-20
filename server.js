@@ -432,7 +432,9 @@ wsServer.on("request", function(request) {
                 index = get_index(userId);
                 if(index === null) return;
 
-                users[index].last_seen = new Date().getTime();
+                if (msgs.msg != "/typing" && msgs.msg != "/seen" && msgs.msg != "/quit" && msgs.msg != "/ping") {
+	                users[index].last_seen = new Date().getTime();
+	            }
 					
                 if (channel == "kpj") {
                     if(users[index].assigned == null && users[index].operator === false && admin === false) {

@@ -202,6 +202,21 @@ exports.censor = function(a) {
     }
 }
 
+exports.sort_array = function (arr) {
+    arr.sort(function(a, b) {
+        var A = a.timestamp;
+        var B = b.timestamp;
+        if (A < B) {
+            return 1;
+        }
+        if (A > B) {
+            return -1;
+        }
+        return 0;
+    });
+    return arr;
+}
+
 exports.handle_request = function(request, response, users, channel_list) {
 
     response.setHeader('Access-Control-Allow-Origin', '*');
@@ -259,6 +274,7 @@ exports.get_user = function(u, n) {
                 user_name: u[i].user_name,
                 user_id: u[i].user_id,
                 last_seen: this.date_std(u[i].last_seen),
+                timestamp: u[i].last_seen,
                 origin: u[i].origin,
                 ip_address: u[i].ip_address,
                 screen: u[i].screen,
@@ -268,6 +284,7 @@ exports.get_user = function(u, n) {
                 channels: u[i].channels,
             });
         }
+        data = this.sort_array(data);
         return data;
     }
 }
