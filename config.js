@@ -241,6 +241,7 @@ exports.get_user = function(u, n) {
                 data = {
                     user_name: u[i].user_name,
                     user_id: u[i].user_id,
+                    last_seen: this.date_std(u[i].last_seen),
                     origin: u[i].origin,
                     ip_address: u[i].ip_address,
                     screen: u[i].screen,
@@ -257,6 +258,7 @@ exports.get_user = function(u, n) {
             data.push({
                 user_name: u[i].user_name,
                 user_id: u[i].user_id,
+                last_seen: this.date_std(u[i].last_seen),
                 origin: u[i].origin,
                 ip_address: u[i].ip_address,
                 screen: u[i].screen,
@@ -326,9 +328,9 @@ exports.PostThis = function(obj, host, url, callback) {
 
     post_req.on('error', function(err) {
         if (err.code === "ECONNRESET") {
-            console.log(date_std() + " Timeout occurs");
+            console.log(this.date_std() + " Timeout occurs");
         }
-        console.log(date_std() + " POST - Socket error.", err);
+        console.log(this.date_std() + " POST - Socket error.", err);
     });
 
     post_req.setTimeout(10000, function() {
@@ -357,7 +359,7 @@ exports.GetThis = function(host, path, callback) {
                 try {
                     data = JSON.parse(data);
                 } catch (e) {
-                    console.log(date_std() + 'This doesn\'t look like a valid JSON: - ' + host + path);
+                    console.log(this.date_std() + 'This doesn\'t look like a valid JSON: - ' + host + path);
                     return;
                 }
             }
@@ -369,9 +371,9 @@ exports.GetThis = function(host, path, callback) {
 
     req.on('error', function(err) {
         if (err.code === "ECONNRESET") {
-            console.log(date_std() + " Timeout occurs");
+            console.log(this.date_std() + " Timeout occurs");
         }
-        console.log(date_std() + " GET - Socket error.", err);
+        console.log(this.date_std() + " GET - Socket error.", err);
     });
 
     req.setTimeout(10000, function() {

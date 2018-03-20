@@ -332,7 +332,7 @@ wsServer.on("request", function(request) {
 							userId = msgs.id;
 							channel = msgs.channel;
 							channels = [msgs.channel];
-							ip_address = msgs.ip_address || detail_temp.ip_address;
+							ip_address = msgs.ip_address || detail_temp.ip_address || 0;
 							detail = {
 								connection: connection,
 								user_name: userName,
@@ -340,7 +340,7 @@ wsServer.on("request", function(request) {
 								app_id: appId,
 								channel: msgs.channel,
 								channels: [msgs.channel],
-								ip_address: msgs.ip_address || detail_temp.ip_address,
+								ip_address: msgs.ip_address || detail_temp.ip_address || 0,
 								origin: request.origin,
 								seen: false,
 								active: true,
@@ -354,8 +354,8 @@ wsServer.on("request", function(request) {
 								msg: [],
 								admin: admin,
 								operator: false,
-								agent: msgs.agent || detail_temp.agent,
-								screen: msgs.screen || detail_temp.screen,
+								agent: msgs.agent || detail_temp.agent || "",
+								screen: msgs.screen || detail_temp.screen || 0,
 							};
 							if (msgs.operator) detail.operator = true;
 							setup_channel(channel);
