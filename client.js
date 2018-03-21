@@ -192,7 +192,9 @@
                 $("#channels-admin").html(null);
             } else if (json.type === "history") {
                 sender = null;
+                var h = [];
                 for (var i = 0; i < json.msg.length; i++) {
+                    h.push({json.msg[i].author: json.msg[i].msg});
                     addMessage(
                         json.msg[i].author + ": ",
                         json.msg[i].msg,
@@ -200,6 +202,7 @@
                         json.msg[i].time
                     );
                 }
+                output_json(h);
             } else if (json.type === "info") {
                 sender = null;
                 var chnl = null;
