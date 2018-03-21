@@ -194,7 +194,9 @@
                 sender = null;
                 var h = [];
                 for (var i = 0; i < json.msg.length; i++) {
-                    h.push({json.msg[i].author: json.msg[i].msg});
+                    var s = json.msg[i].author;
+                    var m = json.msg[i].msg;
+                    h.push({s: m});
                     addMessage(
                         json.msg[i].author + ": ",
                         json.msg[i].msg,
