@@ -197,6 +197,7 @@
                     var s = json.msg[i].author;
                     var o = {};
                     o[s] = json.msg[i].msg;
+                    o.time = json.msg[i].time;
                     h.push(o);
                 }
                 output_json(h);
