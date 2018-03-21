@@ -1419,9 +1419,9 @@ wsServer.on("request", function(request) {
                     if (channel == "kpj" && users[index].operator === false) return;
                     
                     connection.sendUTF(JSON.stringify({
-                        type: "info",
+                        type: "json",
                         time: (new Date()).getTime(),
-                        msg: "<i>------------------------------------<br>List of commands" + helps + "<br>------------------------------------</i>",
+                        data: {command: helps},
                         author: "[Server]",
                     }));
                 } else {

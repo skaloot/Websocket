@@ -18,17 +18,18 @@ var querystring = require("querystring"),
         "http://www.ladiesfoto.com",
         "http://kpj",
     ],
-    helps = "" +
-        "<br><b>/nick</b> - to set or change nickname" +
-        "<br><b>/users</b> - to get online users" +
-        "<br><b>/history</b> - to get chat history" +
-        "<br><b>/msg &lt;name&gt; &lt;your message&gt;</b> - for private message" +
-        "<br><b>/alert &lt;name&gt;</b> - to get your friend's attention" +
-        "<br><b>/quit</b> - to close your connection" +
-        "<br><b>/clear</b> - to clear your screen" +
-        "<br><b>/mute</b> - to mute your notification sound" +
-        "<br><b>/unmute</b> - to unmute your notification sound" +
-        "<br>arrow <b>up</b> - and <b>down</b> for your messages history",
+    helps = [
+        "<b>/nick</b> - to set or change nickname",
+        "<b>/users</b> - to get online users",
+        "<b>/history</b> - to get chat history",
+        "<b>/msg &lt;name&gt; &lt;your message&gt;</b> - for private message",
+        "<b>/alert &lt;name&gt;</b> - to get your friend's attention",
+        "<b>/quit</b> - to close your connection",
+        "<b>/clear</b> - to clear your screen",
+        "<b>/mute</b> - to mute your notification sound",
+        "<b>/unmute</b> - to unmute your notification sound",
+        "arrow <b>up</b> - and <b>down</b> for your messages history",
+    ];
     app_list = [
         "ska",
         "utiis",
