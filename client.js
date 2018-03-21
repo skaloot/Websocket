@@ -52,41 +52,10 @@
     }
 
 
-    function checkTime(i) {
-        if (i < 10) {
-            i = "0" + i;
-        }
-        return i;
-    }
-
-    function get_time(t) {
-        var today = new Date(t),
-            h = today.getHours(),
-            m = today.getMinutes(),
-            s = today.getSeconds();
-        h = checkTime(h);
-        m = checkTime(m);
-        s = checkTime(s);
-        var time = h + ":" + m;
-        return time;
-    }
-
-
-    function executeFunctionByName(functionName, context, args) {
-        args = [].slice.call(arguments).splice(2);
-        var namespaces = functionName.split(".");
-        var func = namespaces.pop();
-        for (var i = 0; i < namespaces.length; i++) {
-            context = context[namespaces[i]];
-        }
-        return context[func].apply(context, args);
-    }
-
-
-    function connect_this(host, port) {
+    var connect_this = function(host, port) {
+        connection = new WebSocket("ws:" + host + ":" + port);
         chat.append("<p class=\"server\"><i>Connecting...</i><span class=\"time\">" + get_time() + "</span></p>");
         console.log("Connecting..");
-        connection = new WebSocket("ws:" + host + ":" + port);
 
         connection.onopen = function() {
             console.log("Connected..");
@@ -197,7 +166,7 @@
                     var s = json.msg[i].author;
                     var o = {};
                     o[s] = json.msg[i].msg;
-                    o.time = json.msg[i].time;
+                    o.time = date_std(json.msg[i].time);
                     h.push(o);
                 }
                 output_json(h);
@@ -663,6 +632,48 @@
         }
     });
 
+
+    /* =========================================================== FUNCTION =========================================================== */
+
+    var checkTime = function(i) {
+        if (i < 10) {
+            i = "0" + i;
+        }
+        return i;
+    }
+
+    var get_time = function(t) {
+        var today = new Date(t),
+            h = today.getHours(),
+            m = today.getMinutes(),
+            s = today.getSeconds();
+        h = checkTime(h);
+        m = checkTime(m);
+        s = checkTime(s);
+        var time = h + ":" + m;
+        return time;
+    }
+
+
+    var executeFunctionByName = function(functionName, context, args) {
+        args = [].slice.call(arguments).splice(2);
+        var namespaces = functionName.split(".");
+        var func = namespaces.pop();
+        for (var i = 0; i < namespaces.length; i++) {
+            context = context[namespaces[i]];
+        }
+        return context[func].apply(context, args);
+    }
+
+    var date_std = function (timestamp) {
+        if(!timestamp) timestamp = new Date().getTime();
+        if(Math.ceil(timestamp).toString().length == 10) timestamp *= 1000;
+        var tzoffset = (new Date()).getTimezoneOffset() * 60000;
+        var date = new Date(timestamp - tzoffset);
+        var iso = date.toISOString().match(/(\d{4}\-\d{2}\-\d{2})T(\d{2}:\d{2}:\d{2})/);
+        return iso[1] + ' ' + iso[2];
+    }
+
     var addMessage = function(author, message, textClass, time, chnl=null) {
         seentyping.html(null);
 		var c = chat;
@@ -751,7 +762,7 @@
     });
 
 
-    function create_id() {
+    var create_id = function() {
         var S4 = function() {
             return (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1);
         };
@@ -817,7 +828,7 @@
         localStorage.removeItem("client_chat_with_id");
     };
 
-    function change_title() {
+    var change_title = function() {
         if (document.title !== "Websocket") {
             document.title = "Websocket";
             seen();
