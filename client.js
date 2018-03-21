@@ -410,7 +410,7 @@
             } else if (json.type === "quit") {
                 online = true;
                 ska.quit();
-            } else if (json.type === "sql_result") {
+            } else if (json.type === "json") {
                 sender = null;
                 console.log(json.data);
                 output_json(json.data);

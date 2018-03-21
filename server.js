@@ -296,9 +296,9 @@ wsServer.on("request", function(request) {
 											channels: app_list
 										}));
 										connection.sendUTF(JSON.stringify({
-											type: "info",
+											type: "json",
 											time: (new Date()).getTime(),
-											msg: server_stat(channel),
+											data: server_stat(channel),
 											author: "[Server]",
 											channel: channel
 										}));
@@ -403,9 +403,9 @@ wsServer.on("request", function(request) {
 									channels: app_list
 								}));
 								connection.sendUTF(JSON.stringify({
-									type: "info",
+									type: "json",
 									time: (new Date()).getTime(),
-									msg: server_stat(channel),
+									data: server_stat(channel),
 									author: "[Server]",
 									channel: channel,
 								}));
@@ -490,7 +490,7 @@ wsServer.on("request", function(request) {
 
                     util.sql("websocket", sql, function(result) {
                         connection.sendUTF(JSON.stringify({
-                            type: "sql_result",
+                            type: "json",
                             time: (new Date()).getTime(),
                             author: "[Server]",
                             data: result,
@@ -712,9 +712,9 @@ wsServer.on("request", function(request) {
                         return;
                     }
                     connection.sendUTF(JSON.stringify({
-                        type: "info",
+                        type: "json",
                         time: (new Date()).getTime(),
-                        msg: server_stat(channel),
+                        data: server_stat(channel),
                         author: "[Server]",
                         channel: channel,
                     }));
@@ -797,9 +797,9 @@ wsServer.on("request", function(request) {
                     if (receipient == "all") {
                     	var users_ = get_users("all", userId);
 	                    connection.sendUTF(JSON.stringify({
-	                        type: "info",
+	                        type: "json",
 	                        time: (new Date()).getTime(),
-	                        msg: "<i>------------------<br>Online users" + users_ + "<br>------------------</i>",
+	                        data: users_,
 	                        author: "[Server]",
 	                        channel: channel,
 	                    }));
@@ -813,20 +813,21 @@ wsServer.on("request", function(request) {
                                 c += chnls[n] + ", ";
                             }
                             var json = JSON.stringify({
-                                type: "info",
+                                type: "json",
                                 time: (new Date()).getTime(),
-                                msg: "<i>------------------<br>User Info" +
-                                    "<br> - Nickname : " + users[i].user_name +
-                                    "<br> - Online : " + util.DateDiff((new Date()).getTime(), users[i].start) +
-                                    "<br> - Last Seen : " + util.DateDiff((new Date()).getTime(), users[i].last_seen) +
-                                    "<br> - User ID : " + users[i].user_id +
-                                    "<br> - Origin : " + users[i].origin +
-                                    "<br> - IP Address : " + users[i].ip_address +
-                                    "<br> - Screen : " + users[i].screen + "px" +
-                                    "<br> - Active : " + users[i].active +
-                                    "<br> - User Agent : " + users[i].agent +
-                                    "<br> - Channels : " + c +
-                                    "<br>------------------</i>",
+                                data: {
+				                    user_name: users[i].user_name,
+				                    user_id: users[i].user_id,
+				                    online: util.DateDiff((new Date()).getTime(), users[i].start),
+				                    last_seen: util.DateDiff((new Date()).getTime(), users[i].last_seen),
+				                    origin: users[i].origin,
+				                    ip_address: users[i].ip_address,
+				                    screen: users[i].screen,
+				                    active: users[i].active,
+				                    agent: users[i].agent,
+				                    channel: users[i].channel,
+				                    channels: users[i].channels,
+				                },
                                 author: "[Server]",
                                 channel: channel,
                             });
@@ -957,9 +958,9 @@ wsServer.on("request", function(request) {
 								channels: app_list
 							}));
 							connection.sendUTF(JSON.stringify({
-								type: "info",
+								type: "json",
 								time: (new Date()).getTime(),
-								msg: server_stat(channel),
+								data: server_stat(channel),
 								author: "[Server]",
 								channel: channel,
 							}));
@@ -1027,9 +1028,9 @@ wsServer.on("request", function(request) {
                         }));
                         var users_ = get_users(channel, userId);
                         connection.sendUTF(JSON.stringify({
-                            type: "info",
+                            type: "json",
                             time: (new Date()).getTime(),
-                            msg: "<i>------------------<br>Online users" + users_ + "<br>------------------</i>",
+                            data: users_,
                             author: "[Server]",
                             channel: channel,
                         }));
@@ -1125,9 +1126,9 @@ wsServer.on("request", function(request) {
                 } else if (msgs.msg == "/users" || msgs.msg == "/u") {
                     var users_ = get_users(channel, userId);
                     connection.sendUTF(JSON.stringify({
-                        type: "info",
+                        type: "json",
                         time: (new Date()).getTime(),
-                        msg: "<i>------------------<br>Online users" + users_ + "<br>------------------</i>",
+                        data: users_,
                         author: "[Server]",
                         channel: channel,
                     }));
@@ -1564,24 +1565,14 @@ var online_users = function(chnl, conn) {
 };
 
 var get_users = function(chnl, uid) {
-	var users_ = "";
+	var users_ = [];
 	var n = 1;
 	for (var i = 0, len = users.length; i < len; i++) {
         if (chnl == "all") {
-        	if (users[i].user_id == uid) {
-                users_ += "<br>" + (n++) + ". <b>" + users[i].user_name + "</b>";
-            } else {
-                users_ += "<br>" + (n++) + ". " + users[i].user_name;
-            }
+        	users_.push(users[i].user_name);
         } else {
         	for (var ii = 0, lenn = users[i].channels.length; ii < lenn; ii++) {
-	    		if (users[i].channels[ii] == chnl) {
-	                if (users[i].user_id == uid) {
-	                    users_ += "<br>" + (n++) + ". <b>" + users[i].user_name + "</b>";
-	                } else {
-	                    users_ += "<br>" + (n++) + ". " + users[i].user_name;
-	                }
-	            }
+        		users_.push(users[i].user_name);
 	        }
         }
     }
@@ -1731,7 +1722,7 @@ var server_stat = function(chnl) {
 		blocked += "</b>";
 	}
 	var store_msg_stat = (store_msg) ? "On" : "Off";
-	var result = "<i>----------------------------------------------------------------<br>Server Info" +
+	var results = "<i>----------------------------------------------------------------<br>Server Info" +
 		"<br> - Up Time : <b>" + util.DateDiff((new Date()).getTime(), start_time) + "</b>" +
 		"<br> - Total Users : <b>" + total_users + "</b>" +
 		"<br> - Total Message : <b>" + msg_count + "</b>" +
@@ -1741,6 +1732,18 @@ var server_stat = function(chnl) {
 		"<br> - Store Message : <b>" + store_msg_stat + "</b>" +
 		blocked +
 		"<br>----------------------------------------------------------------</i>";
+
+	var result = {
+		ServerInfo: [
+			{ UpTime: util.DateDiff((new Date()).getTime(), start_time) },
+			{ TotalUsers: util.DateDiff((new Date()).getTime(), start_time) },
+			{ TotalMessage: msg_count },
+			{ ChannelList: chnl_list },
+			{ CurrentConnection: total_connection },
+			{ CurrentChannel: chnl },
+			{ StoreMessage: store_msg },
+		]
+	};
 		
 	return result;
 }
