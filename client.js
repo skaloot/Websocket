@@ -195,14 +195,9 @@
                 var h = [];
                 for (var i = 0; i < json.msg.length; i++) {
                     var s = json.msg[i].author;
-                    var m = json.msg[i].msg;
-                    h.push({s: m});
-                    addMessage(
-                        json.msg[i].author + ": ",
-                        json.msg[i].msg,
-                        "client",
-                        json.msg[i].time
-                    );
+                    var o = {};
+                    o[s] = json.msg[i].msg;
+                    h.push(o);
                 }
                 output_json(h);
             } else if (json.type === "info") {
