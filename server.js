@@ -1572,7 +1572,9 @@ var get_users = function(chnl, uid) {
         	users_.push(users[i].user_name);
         } else {
         	for (var ii = 0, lenn = users[i].channels.length; ii < lenn; ii++) {
-        		users_.push(users[i].user_name);
+        		if (users[i].channels[ii] == chnl) {
+	        		users_.push(users[i].user_name);
+	        	}
 	        }
         }
     }
