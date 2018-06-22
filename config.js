@@ -17,6 +17,7 @@ var querystring = require("querystring"),
         "https://www.kpjselangor.com",
         "http://www.ladiesfoto.com",
         "http://kpj",
+        "http://35.240.143.167",
     ],
     helps = [
         "<b>/nick</b> - to set or change nickname",
@@ -41,32 +42,11 @@ var querystring = require("querystring"),
         "debunga_ui",
     ],
     db = {
-        amirosol_newkpj: {
-            host: "kpjselangor.com",
-            user: "amirosol_skaloot",
-            password: "Tatiana1",
-            database: "amirosol_newkpj",
-            insecureAuth: true
-        },
-        utiis_2: {
-            host: "localhost",
-            user: "skaloot",
-            password: "phpmysql",
-            database: "utiis_2",
-            insecureAuth: true
-        },
         websocket: {
             host: "localhost",
             user: "skaloot",
-            password: "phpmysql",
-            database: "websocket",
-            insecureAuth: true
-        },
-        debunga: {
-            host: "debungahotel.com",
-            user: "debungah_skaloot",
             password: "Tatiana1",
-            database: "debungah_websocket",
+            database: "websocket",
             insecureAuth: true
         }
     };
