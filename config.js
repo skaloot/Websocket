@@ -45,7 +45,7 @@ var querystring = require("querystring"),
         websocket: {
             host: "localhost",
             user: "skaloot",
-            password: "Tatiana1",
+            password: "phpmysql",
             database: "websocket",
             insecureAuth: true
         }

@@ -30,7 +30,10 @@
         sender = null,
         popup = null,
         timer,
+        idle,
+        interval,
         timer_reconnect,
+        timeout = false,
         reconnect_count = 1,
         pending_seen = false,
 		pending_seen_channel = false,
@@ -56,17 +59,20 @@
         connection = new WebSocket("ws:" + host + ":" + port);
         chat.append("<p class=\"server\"><i>Connecting...</i><span class=\"time\">" + get_time() + "</span></p>");
         console.log("Connecting..");
-
+        
         connection.onopen = function() {
             console.log("Connected..");
             connect = true;
-            reconnect_count = 1;
-            this.send(JSON.stringify({
+            timeout = false;
+            connection.send(JSON.stringify({
+                id: id,
                 msg: "/appid",
-                app_id: app_id,
-                id: id
             }));
-        };
+
+            interval = setInterval(function() {
+                if (connect === true && connection && connection.readyState !== 1) connect_this(host, port);
+            }, 5000);
+        }
 
         connection.onmessage = function(message) {
             var json = message.data;
@@ -247,16 +253,16 @@
                 var mn = json.nickname.split(" ");
                 myName = mn[0];
                 online = true;
-                localStorage.setItem("myName", myName);
-                if (mn[1]) {
-                    localStorage.setItem("myPassword", mn[1]);
-                }
+                localStorage.myName = myName;
+                if (mn[1]) localStorage.myPassword = mn[1];
+
                 $("#username").val(null);
                 $("#username").removeAttr("disabled");
                 $(".chat").attr("id","chat_"+channel);
-                chat = $("#chat_"+channel);
                 $("#channels-title").show();
                 $("#channels").html(null);
+                chat = $("#chat_"+channel);
+
                 var chnls = "";
                 for(var i=0, len=json.channels.length; i<len; i++) {
                     var c = "";
@@ -268,6 +274,7 @@
                     chnls += "<div class='channel"+c+"' id=\"c_"+json.channels[i]+"\" onclick=\"ska.chg_channel('"+json.channels[i]+"');\">";
                     chnls += json.channels[i]+"</div><span onclick=\"ska.leave_channel('"+json.channels[i]+"');\" class=\"close-channel\">x</span>";
                 }
+
                 $("#channels").append(chnls);
                 $(".chat").hide();
                 channels = json.channels;
@@ -399,17 +406,19 @@
         };
 
         connection.onerror = function(error) {
-            chat.html("<p class=\"server\"><i>Sorry, but there's some problem with your connection or the server is down.<br> Reconnecting in " + (reconnect_count * 10) + " seconds. Thank You.</i></p>");
+            clearInterval(interval);
+            chat.html("<p class=\"server\"><i>Sorry, but there's some problem with your connection or the server is down.<br> Reconnecting in " + (reconnect_count * 5) + " seconds. Thank You.</i></p>");
+            connect = false;
             online = false;
-            reconnect_this();
-        };
-
-        connection.onclose = function() {
-            if (!localStorage.myPassword) {
-                online = false;
-                ska.quit();
+            if (reconnect_count == 5) {
+                reconnect_count = 1;
+                return false;
             }
-        };
+            reconnect_count++;
+            setTimeout(function() {
+                connect_this(host, port);
+            }, (reconnect_count * 5000));
+        }
     }
 
 
@@ -771,9 +780,8 @@
 
     $("#username").keydown(function(e) {
         if (e.keyCode === 13) {
-            if(($(this).val() == "" || $(this).val() == " ")) {
-                return;
-            }
+            if(($(this).val() == "" || $(this).val() == " ")) return;
+
             if(connect === false && myName === null) {
                 id = create_id();
                 connect_this(host, port);
@@ -782,14 +790,37 @@
         }
     });
 
-    window.onclick = function() {
-        if (this.getSelection().type === "Range") {
-            return;
-        }
-        if(myName === null) {
-            $("#username").focus();
-            return;
-        }
+    window.addEventListener("focus", function() {
+        window_active = true;
+        change_title();
+        clearTimeout(idle);
+    }, false);
+
+    window.addEventListener("blur", function() {
+        window_active = false;
+        clearTimeout(idle);
+        if (!connect) return;
+
+        idle = setTimeout(function() {
+            console.log("Timeout..");
+            timeout = true;
+            ska.quit();
+        }, 1800000);
+        window_active = false;
+    }, false);
+
+    window.addEventListener("offline", function () {
+        console.log("Offline..");
+    }, false);
+    
+    window.addEventListener("online", function () {
+        console.log("Online..");
+    }, false);
+
+    window.addEventListener("click", function () {
+        if (this.getSelection().type === "Range") return;
+        if (myName === null) return $("#username").focus();
+
         if (popup !== null) {
             this.open(popup);
             popup = null;
@@ -801,32 +832,24 @@
         }
         input.focus();
         window_active = true;
-    };
+    }, false);
 
-    window.onfocus = function() {
-        window_active = true;
-        change_title();
-    };
-
-    window.onblur = function() {
-        window_active = false;
-    };
-
-    window.onkeydown = function() {
+    window.addEventListener("keydown", function () {
         if (this.getSelection().type === "Range" || myName === null) {
             return;
         }
         input.focus();
-    };
+    }, false);
 
-    window.onresize = function() {
+    window.addEventListener("resize", function () {
         content.scrollTop(content[0].scrollHeight);
-    };
+    }, false);
 
-    window.onbeforeunload = function() {
+    window.addEventListener("beforeunload", function () {
         localStorage.removeItem("chat");
         localStorage.removeItem("client_chat_with_id");
-    };
+    }, false);
+
 
     var change_title = function() {
         if (document.title !== "Websocket") {
@@ -834,20 +857,6 @@
             seen();
         }
     }
-
-    var check_con = setInterval(function() {
-        var h = chat.height()-1;
-        if (connect === true && connection.readyState === 3 && blocked !== true) {
-            connect = false;
-            online = false;
-            ska.init();
-            chat.append("<p class=\"server\"><i>You are not connected..</i><span class=\"time\">" + get_time() + "</span></p>");
-            chat.append("<p class=\"server\"><i>Connecting...</i><span class=\"time\">" + get_time() + "</span></p>");
-            if(content.scrollTop()+content.height() >= h) {
-                content.scrollTop(chat.height());
-            }
-        }
-    }, 3000);
     
     var ping = setInterval(function() {
         if (connect === true && online === true && connection.readyState === 1 && blocked !== true) {
@@ -857,24 +866,17 @@
         }
     }, 60000);
 
-    var reconnect_this = function() {
-        reconnect_count++;
-        clearTimeout(timer_reconnect);
-        timer_reconnect = setTimeout(function() {
-            connect = true;
-        }, reconnect_count * 10000);
-    };
+    // var reconnect_this = function() {
+    //     reconnect_count++;
+    //     clearTimeout(timer_reconnect);
+    //     timer_reconnect = setTimeout(function() {
+    //         connect = true;
+    //     }, reconnect_count * 10000);
+    // };
 
     var go_here = function(here) {
         window.location = here;
     }
-
-    window.addEventListener("offline", function () {
-        console.log("Offline..");
-    }, false);
-    window.addEventListener("online", function () {
-        console.log("Online..");
-    }, false);
 
 
     console.log("\n" +
