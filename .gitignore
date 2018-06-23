@@ -48,3 +48,7 @@ Temporary Items
 
 db.php
 *.log
+
+node_modules/*
+
+
