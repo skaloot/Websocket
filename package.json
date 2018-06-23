@@ -8,7 +8,7 @@
 		"start": "node server.js"
 	},
 	"env": {
-		"PORT": "3777"
+		"PORT": "3000"
 	},
 	"author": {
 		"name": "Skaloot",
@@ -16,8 +16,9 @@
 		"url": "https://www.facebook.com/skaloot"
 	},
 	"dependencies": {
-		"websocket": "^1.0.24",
-		"mysql": "^2.15.0"
+		"jsonwebtoken": "^8.3.0",
+		"mysql": "^2.15.0",
+		"websocket": "^1.0.24"
 	},
 	"keywords": [
 		"NodeJs",
@@ -25,5 +26,6 @@
 		"Chat",
 		"Skaloot"
 	],
-	"license": "MIT"
+	"license": "MIT",
+	"repository": "https://github.com/skaloot/websocket"
 }

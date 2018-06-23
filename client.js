@@ -10,8 +10,9 @@
         input = $("#input"),
         host = location.host,
         // host = "//utiis.dyndns.org",
-        port = 3777,
-        app_id = null,
+        port = 3000,
+        protocol = (location.protocol == "https:") ? "wss:" : "ws:",
+        app_id = "V1hwS01HRkhTa2hQV0ZwclVWUXdPUT09",
         channel = null,
 		channels = [],
         connect = false,
@@ -56,7 +57,7 @@
 
 
     var connect_this = function(host, port) {
-        connection = new WebSocket("ws:" + host + ":" + port);
+        connection = new WebSocket(protocol + host + ":" + port);
         chat.append("<p class=\"server\"><i>Connecting...</i><span class=\"time\">" + get_time() + "</span></p>");
         console.log("Connecting..");
         
@@ -67,6 +68,7 @@
             connection.send(JSON.stringify({
                 id: id,
                 msg: "/appid",
+                app_id: app_id,
             }));
 
             interval = setInterval(function() {
@@ -95,6 +97,8 @@
             } else if (json.type === "blocked") {
                 blocked = true;
                 connect = false;
+            } else if (json.type === "logout") {
+                ska.quit();
             } else if (json.type === "alert") {
                 sender = json.author_id;
                 addMessage(
@@ -124,7 +128,7 @@
                     "server",
                     json.time
                 );
-                localStorage.removeItem("client_chat_with_id");
+                delete localStorage.client_chat_with_id;
             } else if (json.type === "function") {
                 this.send(JSON.stringify({
                     id: id,
@@ -153,13 +157,11 @@
                 );
                 var mn = json.nickname.split(" ");
                 myName = mn[0];
-                localStorage.setItem("myName", myName);
+                localStorage.myName = myName;
                 if (mn[1]) {
-                    localStorage.setItem("myPassword", mn[1]);
+                    localStorage.myPassword = mn[1];
                 } else {
-                    if (localStorage.getItem("myPassword")) {
-                        localStorage.removeItem("myPassword");
-                    }
+                    if (localStorage.myPassword) delete localStorage.myPassword;
                 }
                 $("#channels-title-admin").hide();
                 $("#btn-server").hide();
@@ -190,8 +192,8 @@
                     chnl
                 );
             } else if (json.type === "leave") {
-                if(localStorage.getItem("client_chat_with_id")) {
-                    if(json.user_id == localStorage.getItem("client_chat_with_id")) {
+                if(localStorage.client_chat_with_id) {
+                    if(json.user_id == localStorage.client_chat_with_id) {
                         sender = null;
                         addMessage(
                             "",
@@ -199,7 +201,7 @@
                             "server",
                             json.time
                         );
-                        localStorage.removeItem("client_chat_with_id");
+                        delete localStorage.client_chat_with_id;
                     }
                 }
             } else if (json.type === "appid_invalid") {
@@ -210,9 +212,6 @@
                     "server",
                     json.time
                 );
-                if (localStorage.getItem("app_id")) {
-                    localStorage.removeItem("app_id");
-                }
             } else if (json.type === "connected") {
                 sender = null;
                 addMessage(
@@ -221,16 +220,16 @@
                     "server",
                     json.time
                 );
-                if (localStorage.getItem("myPassword")) {
-                    myPassword = " " + localStorage.getItem("myPassword");
+                if (localStorage.myPassword) {
+                    myPassword = " " + localStorage.myPassword;
                 }
-                if (!localStorage.getItem("myName")) {
-                    localStorage.setItem("myName", $("#username").val());
+                if (!localStorage.myName) {
+                    localStorage.myName = $("#username").val();
                     $("#username").attr("disabled", "disabled");
                 }
-                localStorage.setItem("myId", id);
+                localStorage.myId = id;
                 localStorage.setItem("chat", id);
-                myName = localStorage.getItem("myName");
+                myName = localStorage.myName;
                 this.send(JSON.stringify({
                     id: id,
                     channel: channel,
@@ -424,24 +423,19 @@
 
     global.ska = {
         init: function() {
-            if (localStorage.getItem("app_id")) {
-                app_id = localStorage.getItem("app_id");
-                channel = localStorage.getItem("app_id");
-            } else {
-                localStorage.setItem("app_id", app_id);
-                localStorage.setItem("channel", app_id);
-            }
+            if (!localStorage.channel) localStorage.channel = "ska";
+            channel = localStorage.channel;
 
-            if (localStorage.getItem("myName")) {
+            if (localStorage.myName) {
                 $("#bg_login").hide();
                 $("#login").hide();
-                if (localStorage.getItem("myId")) {
-                    id = localStorage.getItem("myId");
+                if (localStorage.myId) {
+                    id = localStorage.myId;
                 } else {
                     id = create_id();
-                    localStorage.setItem("myId", id);
+                    localStorage.myId = id;
                 }
-                localStorage.setItem("chat", id);
+                localStorage.chat = id;
                 connect_this(host, port);
             }
         },
@@ -453,9 +447,7 @@
             }));
 			chat.hide();
 			channel = c;
-			app_id = c;
             localStorage.channel = channel;
-			localStorage.app_id = app_id;
 			if(channels.indexOf(channel) !== -1) {
 				$("#chat_"+channel).show();
 			} else {
@@ -475,9 +467,7 @@
                 id: id,
                 msg: "/l " + c
             }));
-            if(channels.length > 1) {
-                $("#content #chat_"+c).remove();
-            }
+            if(channels.length > 1) $("#content #chat_"+c).remove();
         },
 		server_detail: function() {
 			connection.send(JSON.stringify({
@@ -528,9 +518,10 @@
             msgs = [];
             channels = [];
             historys = 0;
-            delete localStorage.chat;
             delete localStorage.myId;
+            delete localStorage.channel;
             delete localStorage.myName;
+            delete localStorage.chat;
             delete localStorage.myPassword;
             delete localStorage.ip_address;
             if (window.opener !== null) window.close();
@@ -835,9 +826,7 @@
     }, false);
 
     window.addEventListener("keydown", function () {
-        if (this.getSelection().type === "Range" || myName === null) {
-            return;
-        }
+        if (this.getSelection().type === "Range" || myName === null) return;
         input.focus();
     }, false);
 
@@ -846,8 +835,8 @@
     }, false);
 
     window.addEventListener("beforeunload", function () {
-        localStorage.removeItem("chat");
-        localStorage.removeItem("client_chat_with_id");
+        delete localStorage.chat;
+        delete localStorage.client_chat_with_id;
     }, false);
 
 
@@ -865,14 +854,6 @@
             }));
         }
     }, 60000);
-
-    // var reconnect_this = function() {
-    //     reconnect_count++;
-    //     clearTimeout(timer_reconnect);
-    //     timer_reconnect = setTimeout(function() {
-    //         connect = true;
-    //     }, reconnect_count * 10000);
-    // };
 
     var go_here = function(here) {
         window.location = here;

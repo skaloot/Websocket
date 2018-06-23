@@ -1,74 +1,68 @@
 
 
-var querystring = require("querystring"),
-    http = require("http"),
-    https = require("https"),
-    dns = require('dns'),
-    mysql = require("mysql"),
-    internet = true,
-    pswd_srvr = "isu2uDIABL0W67B",
-    origins = [
-        "http://localhost",
-        "http://127.0.0.1",
-        "http://192.168.0.10",
-        "http://artinity.dtdns.net",
-        "http://utiis.dyndns.org",
-        "http://www.kpjselangor.com",
-        "https://www.kpjselangor.com",
-        "http://www.ladiesfoto.com",
-        "http://kpj",
-        "http://35.240.143.167",
-    ],
-    helps = [
-        "<b>/nick</b> - to set or change nickname",
-        "<b>/users</b> - to get online users",
-        "<b>/history</b> - to get chat history",
-        "<b>/msg &lt;name&gt; &lt;your message&gt;</b> - for private message",
-        "<b>/alert &lt;name&gt;</b> - to get your friend's attention",
-        "<b>/quit</b> - to close your connection",
-        "<b>/clear</b> - to clear your screen",
-        "<b>/mute</b> - to mute your notification sound",
-        "<b>/unmute</b> - to unmute your notification sound",
-        "arrow <b>up</b> - and <b>down</b> for your messages history",
-    ];
-    app_list = [
-        "ska",
-        "utiis",
-        "utiis_ui",
-        "kpj",
-        "kpj_ui",
-        "ladiesfoto",
-        "ladiesfoto_ui",
-        "debunga_ui",
-    ],
-    db = {
-        websocket: {
-            host: "localhost",
-            user: "skaloot",
-            password: "phpmysql",
-            database: "websocket",
-            insecureAuth: true
-        }
-    };
+exports.jwt = require('jsonwebtoken');
+exports.websocket = require("websocket").server;
+exports.http = require("http");
+exports.https = require("https");
+exports.mysql = require("mysql");
+exports.fs = require('fs');
+exports.querystring = require("querystring");
 
+exports.ssl = false;
+exports.port = 3000;
+exports.app_key = "V1hwS01HRkhTa2hQV0ZwclVWUXdPUT09";
+exports.root = "localhost";
+exports.webhook = "/api/webhook";
+exports.ssl_key = __dirname + "/ssl/key.key";
+exports.ssl_cert = __dirname + "/ssl/cert.crt";
+exports.token = "skA8d40f4264fc9109a42a7b2052efd4f9350ae6e708a8cb326c1b030adfea9e8ec";
 
-
-/* ======================================================================================================== */
-
-
-
-exports.app_list = function() {
-    return app_list;
-}
-
-exports.get_http = function() {
-    return http;
-}
-
-exports.db = function(n) {
-    if (db[n]) return db[n];
-    return false;
-}
+exports.channel_list = [
+    "ska",
+    "utiis",
+    "utiis_ui",
+    "kpj",
+    "kpj_ui",
+    "ladiesfoto",
+    "ladiesfoto_ui",
+    "debunga_ui",
+];
+exports.helps = [
+    "<b>/nick</b> - to set or change nickname",
+    "<b>/users</b> - to get online users",
+    "<b>/history</b> - to get chat history",
+    "<b>/msg &lt;name&gt; &lt;your message&gt;</b> - for private message",
+    "<b>/alert &lt;name&gt;</b> - to get your friend's attention",
+    "<b>/quit</b> - to close your connection",
+    "<b>/clear</b> - to clear your screen",
+    "<b>/mute</b> - to mute your notification sound",
+    "<b>/unmute</b> - to unmute your notification sound",
+    "arrow <b>up</b> - and <b>down</b> for your messages history",
+];
+exports.origins = [
+    "http://localhost",
+    "https://localhost",
+    "http://127.0.0.1",
+    "https://127.0.0.1",
+    "http://192.168.0.10",
+    "http://artinity.dtdns.net",
+    "http://utiis.dyndns.org",
+    "http://www.kpjselangor.com",
+    "https://www.kpjselangor.com",
+    "http://www.ladiesfoto.com",
+    "http://kpj",
+    "http://35.240.143.167",
+    "https://35.240.143.167",
+];
+exports.db = {
+    websocket: {
+        host: "localhost",
+        user: "skaloot",
+        password: "phpmysql",
+        database: "websocket",
+        insecureAuth: true
+    }
+};
 
 exports.get_https = function() {
     return https;
@@ -198,37 +192,6 @@ exports.sort_array = function (arr) {
     return arr;
 }
 
-exports.handle_request = function(request, response, users, channel_list) {
-
-    response.setHeader('Access-Control-Allow-Origin', '*');
-    response.writeHead(200, {'Content-Type': 'application/json'});
-
-    request = require('url').parse(request.url, true);
-
-    var req = request.pathname.split("/").splice(1),
-        e = (req[0]) ? req[0] : null,
-        f = (req[1]) ? req[1] : null,
-        g = (req[2]) ? req[2] : null;
-
-    /* =========================== POST REQUEST =========================== */
-    if(request.method == 'POST') {
-        this.processPost(request, response, function() {
-            console.log(request.post);
-            response.end();
-        });
-    }
-
-    /* =========================== GET REQUEST =========================== */
-    if (e === 'users') {
-        var user = this.get_user(users, f);
-        response.end(JSON.stringify(user));
-    } else if (e === 'channels') {
-        response.end(JSON.stringify(channel_list));
-    } else {
-        response.end(JSON.stringify({"status":"Bad Request"}));
-    }
-}
-
 exports.get_user = function(u, n) {
     var data = [];
     if (n) {
@@ -274,24 +237,16 @@ exports.get_user = function(u, n) {
 
 exports.processPost = function(request, response, callback) {
     var queryData = "";
-    if(typeof callback !== 'function') return null;
-
-    if(request.method == 'POST') {
-        request.on('data', function(data) {
-            queryData += data;
-            if(queryData.length > 1e6) {
-                queryData = "";
-                response.writeHead(413, {'Content-Type': 'text/plain'}).end();
-                request.connection.destroy();
-            }
-        });
-
-        request.on('end', function() {
-            request.post = querystring.parse(queryData);
-            callback();
-        });
-
-    }
+    request.on('data', function(data) {
+        queryData += data;
+        if(queryData.length > 1e6) {
+            queryData = "";
+            response.writeHead(413, {'Content-Type': 'text/plain'}).end();
+            request.connection.destroy();
+        }
+    }).on('end', function() {
+        if(typeof callback == "function") callback(queryData);
+    });
 }
 
 exports.PostThis = function(obj, host, url, callback) {
@@ -299,7 +254,7 @@ exports.PostThis = function(obj, host, url, callback) {
         console.log("ERROR - Cannot post: No connection.");
         return;
     }
-    var post_data = querystring.stringify(obj),
+    var post_data = this.querystring.stringify(obj),
         post_options = {
             host: host,
             port: "80",
@@ -384,13 +339,9 @@ exports.GetThis = function(host, path, callback) {
 }
 
 exports.sql = function(d, sql, callback) {
-    var c = this.db(d);
-    if (!c) {
-        console.log("ERROR: DB not exist");
-        return false;
-    }
+    var c = this.db[d];
 
-    var con = mysql.createConnection(c);
+    var con = this.mysql.createConnection(c);
 
     con.connect(function(err) {
         if (err) {
