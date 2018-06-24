@@ -65,15 +65,19 @@
             console.log("Connected..");
             connect = true;
             timeout = false;
-            connection.send(JSON.stringify({
+            this.send(JSON.stringify({
                 id: id,
                 msg: "/appid",
                 app_id: app_id,
             }));
 
             interval = setInterval(function() {
-                if (connect === true && connection && connection.readyState !== 1) connect_this(host, port);
+                if (connect === true && connection && connection.readyState !== 1) ska.error();
             }, 5000);
+        }
+
+        connection.onerror = function(error) {
+            ska.error();
         }
 
         connection.onmessage = function(message) {
@@ -81,343 +85,327 @@
             try {
                 json = JSON.parse(json);
             } catch (e) {
-                console.log("This doesn't look like a valid JSON: ", message.msg);
-                return;
+                //
             }
 
-            if (json.type === "pong") {
-                //
-            } else if (json.type === "reload") {
-                this.send(JSON.stringify({
-                    id: id,
-                    receipient: json.author_id,
-                    msg: "/seen"
-                }));
-                window.location.reload();
-            } else if (json.type === "blocked") {
-                blocked = true;
-                connect = false;
-            } else if (json.type === "logout") {
-                ska.quit();
-            } else if (json.type === "alert") {
-                sender = json.author_id;
-                addMessage(
-                    "",
-                    json.msg,
-                    "server",
-                    json.time,
-                    json.channel
-                );
-                audio.play();
-            } else if (json.type === "assigned") {
-                sender = null;
-                assigned = json.assigned;
-                addMessage(
-                    "",
-                    json.msg,
-                    "server",
-                    json.time
-                );
-                sound = true;
-                audio.play();
-            } else if (json.type === "unassigned") {
-                assigned = null;
-                addMessage(
-                    "",
-                    json.msg,
-                    "server",
-                    json.time
-                );
-                delete localStorage.client_chat_with_id;
-            } else if (json.type === "function") {
-                this.send(JSON.stringify({
-                    id: id,
-                    receipient: json.author_id,
-                    msg: "/seen"
-                }));
-                if (json.functions == "go_here") {
-                    go_here(json.arguments);
-                    return;
-                }
-                sender = null;
-                executeFunctionByName(json.functions, window, json.arguments);
-            } else if (json.type === "open") {
-                sender = json.author_id;
-                popup = json.url;
-            } else if (json.type === "unmute") {
-                sender = null;
-                sound = true;
-            } else if (json.type === "newNick") {
-                sender = null;
-                addMessage(
-                    "",
-                    json.msg,
-                    "server",
-                    json.time
-                );
-                var mn = json.nickname.split(" ");
-                myName = mn[0];
-                localStorage.myName = myName;
-                if (mn[1]) {
-                    localStorage.myPassword = mn[1];
+            if (typeof json == "object") {
+                if (json.type === "pong") {
+                    //
+                } else if (json.type === "reload") {
+                    this.send(JSON.stringify({
+                        id: id,
+                        receipient: json.author_id,
+                        msg: "/seen"
+                    }));
+                    window.location.reload();
+                } else if (json.type === "blocked") {
+                    blocked = true;
+                    connect = false;
+                } else if (json.type === "logout") {
+                    ska.quit();
+                } else if (json.type === "alert") {
+                    sender = json.author_id;
+                    addMessage(
+                        "",
+                        json.msg,
+                        "server",
+                        json.time,
+                        json.channel
+                    );
+                    audio.play();
+                } else if (json.type === "assigned") {
+                    sender = null;
+                    assigned = json.assigned;
+                    addMessage(
+                        "",
+                        json.msg,
+                        "server",
+                        json.time
+                    );
+                    sound = true;
+                    audio.play();
+                } else if (json.type === "unassigned") {
+                    assigned = null;
+                    addMessage(
+                        "",
+                        json.msg,
+                        "server",
+                        json.time
+                    );
+                    delete localStorage.client_chat_with_id;
+                } else if (json.type === "function") {
+                    this.send(JSON.stringify({
+                        id: id,
+                        receipient: json.author_id,
+                        msg: "/seen"
+                    }));
+                    if (json.functions == "go_here") {
+                        go_here(json.arguments);
+                        return;
+                    }
+                    sender = null;
+                    executeFunctionByName(json.functions, window, json.arguments);
+                } else if (json.type === "open") {
+                    sender = json.author_id;
+                    popup = json.url;
+                } else if (json.type === "unmute") {
+                    sender = null;
+                    sound = true;
+                } else if (json.type === "newNick") {
+                    sender = null;
+                    addMessage(
+                        "",
+                        json.msg,
+                        "server",
+                        json.time
+                    );
+                    var mn = json.nickname.split(" ");
+                    myName = mn[0];
+                    localStorage.myName = myName;
+                    if (mn[1]) {
+                        localStorage.myPassword = mn[1];
+                    } else {
+                        if (localStorage.myPassword) delete localStorage.myPassword;
+                    }
+                    $("#channels-title-admin").hide();
+                    $("#btn-server").hide();
+                    $("#btn-restart").hide();
+                    $("#channels-admin").html(null);
+                } else if (json.type === "history") {
+                    sender = null;
+                    var h = [];
+                    for (var i = 0; i < json.msg.length; i++) {
+                        var s = json.msg[i].author;
+                        var o = {};
+                        o[s] = json.msg[i].msg;
+                        o.time = date_std(json.msg[i].time);
+                        h.push(o);
+                    }
+                    output_json(h);
+                } else if (json.type === "info") {
+                    sender = null;
+                    var chnl = null;
+                    if(json.channel) {
+                        chnl = json.channel;
+                    }
+                    addMessage(
+                        "",
+                        json.msg,
+                        "server",
+                        json.time,
+                        chnl
+                    );
+                } else if (json.type === "leave") {
+                    if(localStorage.client_chat_with_id) {
+                        if(json.user_id == localStorage.client_chat_with_id) {
+                            sender = null;
+                            addMessage(
+                                "",
+                                json.msg,
+                                "server",
+                                json.time
+                            );
+                            delete localStorage.client_chat_with_id;
+                        }
+                    }
+                } else if (json.type === "appid_invalid") {
+                    sender = null;
+                    addMessage(
+                        "",
+                        json.msg,
+                        "server",
+                        json.time
+                    );
+                } else if (json.type === "connected") {
+                    sender = null;
+                    addMessage(
+                        "",
+                        json.msg,
+                        "server",
+                        json.time
+                    );
+                    if (localStorage.myPassword) {
+                        myPassword = " " + localStorage.myPassword;
+                    }
+                    if (!localStorage.myName) {
+                        localStorage.myName = $("#username").val();
+                        $("#username").attr("disabled", "disabled");
+                    }
+
+                    myName = localStorage.myName;
+                    this.send(JSON.stringify({
+                        id: id,
+                        channel: channel,
+                        msg: "/nick " + myName + myPassword,
+                        ip_address: ip_address,
+                        agent: navigator.userAgent,
+                        screen: screen,
+                    }));
+                    $("#login").hide();
+                    $("#bg_login").hide();
+                    input.focus();
+                } else if (json.type === "welcome") {
+                    sender = null;
+                    addMessage(
+                        "",
+                        json.msg,
+                        "server",
+                        json.time
+                    );
+                    var mn = json.nickname.split(" ");
+                    myName = mn[0];
+                    online = true;
+                    localStorage.myName = myName;
+                    if (mn[1]) localStorage.myPassword = mn[1];
+
+                    $("#username").val(null);
+                    $("#username").removeAttr("disabled");
+                    $(".chat").attr("id","chat_"+channel);
+                    $("#channels-title").show();
+                    $("#channels").html(null);
+                    chat = $("#chat_"+channel);
+
+                    var chnls = "";
+                    for(var i=0, len=json.channels.length; i<len; i++) {
+                        var c = "";
+                        if(json.channels[i] == channel) {
+                            c = " channel-now";
+                        } else {
+                            $("#content").append("<div class=\"chat\" id=\"chat_"+json.channels[i]+"\"></div>");
+                        }
+                        chnls += "<div class='channel"+c+"' id=\"c_"+json.channels[i]+"\" onclick=\"ska.chg_channel('"+json.channels[i]+"');\">";
+                        chnls += json.channels[i]+"</div><span onclick=\"ska.leave_channel('"+json.channels[i]+"');\" class=\"close-channel\">x</span>";
+                    }
+
+                    $("#channels").append(chnls);
+                    $(".chat").hide();
+                    channels = json.channels;
+                    chat.show();
+                    input.focus();
+                } else if (json.type === "online") {
+                    online = true;
+                    window_active = false;
+                    $(".chat").attr("id","chat_"+channel);
+                    chat = $("#chat_"+channel);
+                    $("#channels-title").show();
+                    $("#channels").html(null);
+                    var chnls = "";
+                    for(var i=0, len=json.channels.length; i<len; i++) {
+                        var c = "";
+                        if(json.channels[i] == channel) {
+                            c = " channel-now";
+                        } else {
+                            $("#content").append("<div class=\"chat\" id=\"chat_"+json.channels[i]+"\"></div>");
+                        }
+                        chnls += "<div class='channel"+c+"' id=\"c_"+json.channels[i]+"\" onclick=\"ska.chg_channel('"+json.channels[i]+"');\">";
+                        chnls += json.channels[i]+"</div><span onclick=\"ska.leave_channel('"+json.channels[i]+"');\" class=\"close-channel\">x</span>";
+                    }
+                    $("#channels").append(chnls);
+                    $(".chat").hide();
+                    channels = json.channels;
+                    chat.show();
+                } else if (json.type === "online_state") {
+                    //
+                } else if (json.type === "users") {
+                    if (json.channel != channel) return;
+                    $("#users").html(null);
+                    for(var i=0, len=json.users.length; i<len; i++) {
+                        if(json.users[i].name == myName) {
+                            $("#users").append("<div class='user' onclick=\"ska.whois('"+json.users[i].name+"')\"><b>"+json.users[i].name+"</b></div>");
+                        } else {
+                            $("#users").append("<div class='user' onclick=\"ska.whois('"+json.users[i].name+"')\">"+json.users[i].name+"</div>");
+                        }
+                    }
+                } else if (json.type === "channels") {
+                    $("#channels-title").show();
+                    $("#channels").html(null);
+                    var chnls = "";
+                    for(var i=0, len=json.channels.length; i<len; i++) {
+                        var c = "";
+                        if(json.channels[i] == channel) {
+                            c = " channel-now";
+                        }
+                        chnls += "<div class='channel"+c+"' id=\"c_"+json.channels[i]+"\" onclick=\"ska.chg_channel('"+json.channels[i]+"');\">";
+                        chnls += json.channels[i]+"</div><span onclick=\"ska.leave_channel('"+json.channels[i]+"');\" class=\"close-channel\">x</span>";
+                    }
+                    $("#channels").append(chnls);
+                    channels = json.channels;
+                } else if (json.type === "channels_admin") {
+                    $("#channels-title-admin").show();
+                    $("#channels-admin").html(null);
+                    for(var i=0, len=json.channels.length; i<len; i++) {
+                        var c = "";
+                        if(json.channels[i] == channel) {
+                            c = " channel-now";
+                        }
+                        $("#channels-admin").append("<div class='channel"+c+"' id=\"ca_"+json.channels[i]+"\" onclick=\"ska.chg_channel('"+json.channels[i]+"');\">"+json.channels[i]+"</div>");
+                    }
+                    $("#btn-server").show();
+                    $("#btn-restart").show();
+                } else if (json.type === "new_channel") {
+                    $("#channels-title").show();
+                    $("#channels").html(null);
+                    var chnls = "";
+                    for(var i=0, len=json.channels.length; i<len; i++) {
+                        var c = "";
+                        if(json.channels[i] == channel) {
+                            c = " channel-now";
+                        }
+                        chnls += "<div class='channel"+c+"' id=\"c_"+json.channels[i]+"\" onclick=\"ska.chg_channel('"+json.channels[i]+"');\">";
+                        chnls += json.channels[i]+"</div><span onclick=\"ska.leave_channel('"+json.channels[i]+"');\" class=\"close-channel\">x</span>";
+                    }
+                    $("#channels").append(chnls);
+                    channels = json.channels;
+                    ska.chg_channel(json.channel);
+                } else if (json.type === "typing") {
+                    var h = chat.height()-1;
+                    if(h < content.height()) {
+                        seentyping.html("<i>" + json.author + " is typing..</i>");
+                    } else if(content.scrollTop()+content.height() >= h) {
+                        seentyping.html("<i>" + json.author + " is typing..</i>");
+                        content.scrollTop(chat.height());
+                    }
+                    window.clearTimeout(timer);
+                    timer = window.setTimeout(function() {
+                        seentyping.html(null);
+                    }, 5000);
+                } else if (json.type === "seen") {
+                    window.clearTimeout(timer);
+                    var h = chat.height()-1;
+                    if(h < content.height()) {
+                        seentyping.html("<i>seen by " + json.author + " " + get_time(new Date().getTime()) + "</i>");
+                    } else if(content.scrollTop()+content.height() >= h) {
+                        seentyping.html("<i>seen by " + json.author + " " + get_time(new Date().getTime()) + "</i>");
+                        content.scrollTop(chat.height());
+                    }
+                } else if (json.type === "youtube") {
+                    sender = json.author_id;
+                    addMessage(
+                        json.author + ": ",
+                        "<br><iframe width=\"560\" height=\"315\" src=\"https://www.youtube.com/embed/"+json.embeded+"?autoplay=1\" frameborder=\"0\" allowfullscreen></iframe>",
+                        "client",
+                        json.time
+                    );
+                } else if (json.type === "quit") {
+                    online = true;
+                    ska.quit();
+                } else if (json.type === "json") {
+                    sender = null;
+                    output_json(json.data);
+                } else if (json.type === "message") {
+                    sender = json.author_id;
+                    addMessage(
+                        json.author + ": ",
+                        json.msg,
+                        "client",
+                        json.time,
+                        json.channel
+                    );
                 } else {
-                    if (localStorage.myPassword) delete localStorage.myPassword;
+                    console.log("Hmm..., I\"ve never seen JSON like this: ", json);
                 }
-                $("#channels-title-admin").hide();
-                $("#btn-server").hide();
-                $("#btn-restart").hide();
-                $("#channels-admin").html(null);
-            } else if (json.type === "history") {
-                sender = null;
-                var h = [];
-                for (var i = 0; i < json.msg.length; i++) {
-                    var s = json.msg[i].author;
-                    var o = {};
-                    o[s] = json.msg[i].msg;
-                    o.time = date_std(json.msg[i].time);
-                    h.push(o);
-                }
-                output_json(h);
-            } else if (json.type === "info") {
-                sender = null;
-                var chnl = null;
-                if(json.channel) {
-                    chnl = json.channel;
-                }
-                addMessage(
-                    "",
-                    json.msg,
-                    "server",
-                    json.time,
-                    chnl
-                );
-            } else if (json.type === "leave") {
-                if(localStorage.client_chat_with_id) {
-                    if(json.user_id == localStorage.client_chat_with_id) {
-                        sender = null;
-                        addMessage(
-                            "",
-                            json.msg,
-                            "server",
-                            json.time
-                        );
-                        delete localStorage.client_chat_with_id;
-                    }
-                }
-            } else if (json.type === "appid_invalid") {
-                sender = null;
-                addMessage(
-                    "",
-                    json.msg,
-                    "server",
-                    json.time
-                );
-            } else if (json.type === "connected") {
-                sender = null;
-                addMessage(
-                    "",
-                    json.msg,
-                    "server",
-                    json.time
-                );
-                if (localStorage.myPassword) {
-                    myPassword = " " + localStorage.myPassword;
-                }
-                if (!localStorage.myName) {
-                    localStorage.myName = $("#username").val();
-                    $("#username").attr("disabled", "disabled");
-                }
-                localStorage.myId = id;
-                localStorage.setItem("chat", id);
-                myName = localStorage.myName;
-                this.send(JSON.stringify({
-                    id: id,
-                    channel: channel,
-                    msg: "/nick " + myName + myPassword,
-                    ip_address: ip_address,
-                    agent: navigator.userAgent,
-                    screen: screen,
-                }));
-                $("#login").hide();
-                $("#bg_login").hide();
-                input.focus();
-            } else if (json.type === "welcome") {
-                sender = null;
-                addMessage(
-                    "",
-                    json.msg,
-                    "server",
-                    json.time
-                );
-                var mn = json.nickname.split(" ");
-                myName = mn[0];
-                online = true;
-                localStorage.myName = myName;
-                if (mn[1]) localStorage.myPassword = mn[1];
-
-                $("#username").val(null);
-                $("#username").removeAttr("disabled");
-                $(".chat").attr("id","chat_"+channel);
-                $("#channels-title").show();
-                $("#channels").html(null);
-                chat = $("#chat_"+channel);
-
-                var chnls = "";
-                for(var i=0, len=json.channels.length; i<len; i++) {
-                    var c = "";
-                    if(json.channels[i] == channel) {
-                        c = " channel-now";
-                    } else {
-                        $("#content").append("<div class=\"chat\" id=\"chat_"+json.channels[i]+"\"></div>");
-                    }
-                    chnls += "<div class='channel"+c+"' id=\"c_"+json.channels[i]+"\" onclick=\"ska.chg_channel('"+json.channels[i]+"');\">";
-                    chnls += json.channels[i]+"</div><span onclick=\"ska.leave_channel('"+json.channels[i]+"');\" class=\"close-channel\">x</span>";
-                }
-
-                $("#channels").append(chnls);
-                $(".chat").hide();
-                channels = json.channels;
-                chat.show();
-                input.focus();
-            } else if (json.type === "online") {
-                online = true;
-                window_active = false;
-                $(".chat").attr("id","chat_"+channel);
-                chat = $("#chat_"+channel);
-                $("#channels-title").show();
-                $("#channels").html(null);
-                var chnls = "";
-                for(var i=0, len=json.channels.length; i<len; i++) {
-                    var c = "";
-                    if(json.channels[i] == channel) {
-                        c = " channel-now";
-                    } else {
-                        $("#content").append("<div class=\"chat\" id=\"chat_"+json.channels[i]+"\"></div>");
-                    }
-                    chnls += "<div class='channel"+c+"' id=\"c_"+json.channels[i]+"\" onclick=\"ska.chg_channel('"+json.channels[i]+"');\">";
-                    chnls += json.channels[i]+"</div><span onclick=\"ska.leave_channel('"+json.channels[i]+"');\" class=\"close-channel\">x</span>";
-                }
-                $("#channels").append(chnls);
-                $(".chat").hide();
-                channels = json.channels;
-                chat.show();
-            } else if (json.type === "online_state") {
-                //
-            } else if (json.type === "users") {
-                if (json.channel != channel) return;
-                $("#users").html(null);
-                for(var i=0, len=json.users.length; i<len; i++) {
-                    if(json.users[i].name == myName) {
-                        $("#users").append("<div class='user' onclick=\"ska.whois('"+json.users[i].name+"')\"><b>"+json.users[i].name+"</b></div>");
-                    } else {
-                        $("#users").append("<div class='user' onclick=\"ska.whois('"+json.users[i].name+"')\">"+json.users[i].name+"</div>");
-                    }
-                }
-            } else if (json.type === "channels") {
-                $("#channels-title").show();
-                $("#channels").html(null);
-                var chnls = "";
-                for(var i=0, len=json.channels.length; i<len; i++) {
-                    var c = "";
-                    if(json.channels[i] == channel) {
-                        c = " channel-now";
-                    }
-                    chnls += "<div class='channel"+c+"' id=\"c_"+json.channels[i]+"\" onclick=\"ska.chg_channel('"+json.channels[i]+"');\">";
-                    chnls += json.channels[i]+"</div><span onclick=\"ska.leave_channel('"+json.channels[i]+"');\" class=\"close-channel\">x</span>";
-                }
-                $("#channels").append(chnls);
-                channels = json.channels;
-            } else if (json.type === "channels_admin") {
-                $("#channels-title-admin").show();
-                $("#channels-admin").html(null);
-                for(var i=0, len=json.channels.length; i<len; i++) {
-                    var c = "";
-                    if(json.channels[i] == channel) {
-                        c = " channel-now";
-                    }
-                    $("#channels-admin").append("<div class='channel"+c+"' id=\"ca_"+json.channels[i]+"\" onclick=\"ska.chg_channel('"+json.channels[i]+"');\">"+json.channels[i]+"</div>");
-                }
-                $("#btn-server").show();
-                $("#btn-restart").show();
-            } else if (json.type === "new_channel") {
-                $("#channels-title").show();
-                $("#channels").html(null);
-                var chnls = "";
-                for(var i=0, len=json.channels.length; i<len; i++) {
-                    var c = "";
-                    if(json.channels[i] == channel) {
-                        c = " channel-now";
-                    }
-                    chnls += "<div class='channel"+c+"' id=\"c_"+json.channels[i]+"\" onclick=\"ska.chg_channel('"+json.channels[i]+"');\">";
-                    chnls += json.channels[i]+"</div><span onclick=\"ska.leave_channel('"+json.channels[i]+"');\" class=\"close-channel\">x</span>";
-                }
-                $("#channels").append(chnls);
-                channels = json.channels;
-                ska.chg_channel(json.channel);
-            } else if (json.type === "typing") {
-                var h = chat.height()-1;
-                if(h < content.height()) {
-                    seentyping.html("<i>" + json.author + " is typing..</i>");
-                } else if(content.scrollTop()+content.height() >= h) {
-                    seentyping.html("<i>" + json.author + " is typing..</i>");
-                    content.scrollTop(chat.height());
-                }
-                window.clearTimeout(timer);
-                timer = window.setTimeout(function() {
-                    seentyping.html(null);
-                }, 5000);
-            } else if (json.type === "seen") {
-                window.clearTimeout(timer);
-                var h = chat.height()-1;
-                if(h < content.height()) {
-                    seentyping.html("<i>seen by " + json.author + " " + get_time(new Date().getTime()) + "</i>");
-                } else if(content.scrollTop()+content.height() >= h) {
-                    seentyping.html("<i>seen by " + json.author + " " + get_time(new Date().getTime()) + "</i>");
-                    content.scrollTop(chat.height());
-                }
-            } else if (json.type === "youtube") {
-                sender = json.author_id;
-                addMessage(
-                    json.author + ": ",
-                    "<br><iframe width=\"560\" height=\"315\" src=\"https://www.youtube.com/embed/"+json.embeded+"?autoplay=1\" frameborder=\"0\" allowfullscreen></iframe>",
-                    "client",
-                    json.time
-                );
-            } else if (json.type === "quit") {
-                online = true;
-                ska.quit();
-            } else if (json.type === "json") {
-                sender = null;
-                console.log(json.data);
-                output_json(json.data);
-            } else if (json.type === "message") {
-                sender = json.author_id;
-                addMessage(
-                    json.author + ": ",
-                    json.msg,
-                    "client",
-                    json.time,
-                    json.channel
-                );
-            } else {
-                console.log("Hmm..., I\"ve never seen JSON like this: ", json);
             }
         };
-
-        connection.onerror = function(error) {
-            clearInterval(interval);
-            chat.html("<p class=\"server\"><i>Sorry, but there's some problem with your connection or the server is down.<br> Reconnecting in " + (reconnect_count * 5) + " seconds. Thank You.</i></p>");
-            connect = false;
-            online = false;
-            if (reconnect_count == 5) {
-                reconnect_count = 1;
-                return false;
-            }
-            reconnect_count++;
-            setTimeout(function() {
-                connect_this(host, port);
-            }, (reconnect_count * 5000));
-        }
     }
 
 
@@ -526,6 +514,20 @@
             delete localStorage.ip_address;
             if (window.opener !== null) window.close();
 		},
+        error: function() {
+            clearInterval(interval);
+            chat.html("<p class=\"server\"><i>Sorry, but there's some problem with your connection or the server is down.<br> Reconnecting in " + (reconnect_count * 5) + " seconds. Thank You.</i></p>");
+            connect = false;
+            online = false;
+            if (reconnect_count == 5) {
+                reconnect_count = 1;
+                return false;
+            }
+            reconnect_count++;
+            setTimeout(function() {
+                connect_this(host, port);
+            }, (reconnect_count * 5000));
+        }
     }
 
 
@@ -800,6 +802,10 @@
         window_active = false;
     }, false);
 
+    window.addEventListener("load", function () {
+        ska.init();
+    }, false);
+
     window.addEventListener("offline", function () {
         console.log("Offline..");
     }, false);
@@ -849,9 +855,7 @@
     
     var ping = setInterval(function() {
         if (connect === true && online === true && connection.readyState === 1 && blocked !== true) {
-            connection.send(JSON.stringify({
-                msg: "/ping"
-            }));
+            connection.send("ping");
         }
     }, 60000);
 
@@ -876,6 +880,5 @@
 })(this);
 
 
-ska.init();
 
 

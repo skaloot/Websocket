@@ -184,8 +184,10 @@ wsServer.on("request", function(request) {
             try {
                 msgs = JSON.parse(msgs);
             } catch (e) {
-                if (debug) console.log("This doesn\'t look like a valid JSON: ", msgs);
-                return;
+                if (msgs == "ping") {
+                    connection.sendUTF("pong");
+                    return;
+                }
             }
 
             if (msgs.msg != "/ping") {
@@ -209,7 +211,7 @@ wsServer.on("request", function(request) {
             
             /* =============================================================== NO APP ID =============================================================== */
 
-            if (appId == null && userId == null) {
+            if (appId == null) {
                 if (msgs.msg == "/appid") {
                     if (msgs.app_id !== config.app_key) {
                         connection.sendUTF(JSON.stringify({
@@ -253,9 +255,11 @@ wsServer.on("request", function(request) {
 							msg: "<i>Password is invalid.</i>",
 							author: "[Server]",
 						}));
+                        return;
 					} else {
 						if (debug) console.log("Shutting down..");
 						ShutTheHellUp();
+                        return;
 					}
 				});
             }
@@ -359,19 +363,6 @@ wsServer.on("request", function(request) {
 									reconnect = true;
 
 									if (admin) users[i].admin = true;
-									if (users[i].msg.length > 0) {
-										connection.sendUTF(JSON.stringify({
-											type: "info",
-											time: (new Date()).getTime(),
-											msg: "<i>------------------------------------<br></i>",
-											author: "[Server]",
-											channel: channel,
-										}));
-										for (var n = 0, len2 = users[i].msg.length; n < len2; n++) {
-											connection.sendUTF(users[i].msg[n]);
-										}
-										users[i].msg = [];
-									}
 									connection.sendUTF(JSON.stringify({
 										type: "online",
 										time: (new Date()).getTime(),
@@ -402,6 +393,19 @@ wsServer.on("request", function(request) {
 										}));
 									}
 									online_users(users[i].channel, connection);
+                                    if (users[i].msg.length > 0) {
+                                        connection.sendUTF(JSON.stringify({
+                                            type: "info",
+                                            time: (new Date()).getTime(),
+                                            msg: "<i>------------------------------------<br></i>",
+                                            author: "[Server]",
+                                            channel: channel,
+                                        }));
+                                        for (var n = 0, len2 = users[i].msg.length; n < len2; n++) {
+                                            connection.sendUTF(users[i].msg[n]);
+                                        }
+                                        users[i].msg = [];
+                                    }
 									break;
 								} else {
 									connection.sendUTF(JSON.stringify({
@@ -1605,7 +1609,7 @@ var ping = function(idx, id) {
         users[idx].ping = null;
         if (users[idx].active === false) {
             var p = " has disconnected.. - [No Respond]";			
-			remove_client(idx, p);
+            remove_client(idx, p);
         } else {
             if (debug) console.log(config.get_time() + " " + users[idx].user_name + " is active.");
         }
