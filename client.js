@@ -13,12 +13,13 @@
         port = 3000,
         protocol = (location.protocol == "https:") ? "wss:" : "ws:",
         app_id = "V1hwS01HRkhTa2hQV0ZwclVWUXdPUT09",
-        channel = null,
+        channel = "ska",
 		channels = [],
         connect = false,
         online = false,
         window_active = null,
         myName = null,
+        myId = null,
         myInfo = null,
         ip_address = localStorage.ip_address,
         screen = $(window).width(),
@@ -66,7 +67,7 @@
             connect = true;
             timeout = false;
             this.send(JSON.stringify({
-                id: id,
+                id: myId,
                 msg: "/appid",
                 app_id: app_id,
             }));
@@ -93,7 +94,7 @@
                     //
                 } else if (json.type === "reload") {
                     this.send(JSON.stringify({
-                        id: id,
+                        id: myId,
                         receipient: json.author_id,
                         msg: "/seen"
                     }));
@@ -135,7 +136,7 @@
                     delete localStorage.client_chat_with_id;
                 } else if (json.type === "function") {
                     this.send(JSON.stringify({
-                        id: id,
+                        id: myId,
                         receipient: json.author_id,
                         msg: "/seen"
                     }));
@@ -227,14 +228,9 @@
                     if (localStorage.myPassword) {
                         myPassword = " " + localStorage.myPassword;
                     }
-                    if (!localStorage.myName) {
-                        localStorage.myName = $("#username").val();
-                        $("#username").attr("disabled", "disabled");
-                    }
 
-                    myName = localStorage.myName;
                     this.send(JSON.stringify({
-                        id: id,
+                        id: myId,
                         channel: channel,
                         msg: "/nick " + myName + myPassword,
                         ip_address: ip_address,
@@ -411,26 +407,24 @@
 
     global.ska = {
         init: function() {
-            if (!localStorage.channel) localStorage.channel = "ska";
-            channel = localStorage.channel;
+            if (localStorage.channel) channel = localStorage.channel;
+            localStorage.channel = channel;
 
-            if (localStorage.myName) {
+            if (localStorage.myName && localStorage.myId) {
                 $("#bg_login").hide();
                 $("#login").hide();
-                if (localStorage.myId) {
-                    id = localStorage.myId;
-                } else {
-                    id = create_id();
-                    localStorage.myId = id;
-                }
-                localStorage.chat = id;
+                myName = localStorage.myName;
+                myId = localStorage.myId;
                 connect_this(host, port);
+            } else {
+                myId = create_id();
+                localStorage.myId = myId;
             }
         },
         chg_channel: function(c) {
 			$(".channel").removeClass("channel-now");
             connection.send(JSON.stringify({
-                id: id,
+                id: myId,
                 msg: "/ch "+c,
             }));
 			chat.hide();
@@ -452,28 +446,28 @@
         },
         leave_channel: function(c) {
             connection.send(JSON.stringify({
-                id: id,
+                id: myId,
                 msg: "/l " + c
             }));
             if(channels.length > 1) $("#content #chat_"+c).remove();
         },
 		server_detail: function() {
 			connection.send(JSON.stringify({
-                id: id,
+                id: myId,
                 msg: "/server"
             }));
 			content.scrollTop(chat.height());
 		},
         restart: function() {
             connection.send(JSON.stringify({
-                id: id,
+                id: myId,
                 msg: "/restart"
             }));
             content.scrollTop(chat.height());
         },
 		whois: function(u) {
 			connection.send(JSON.stringify({
-                id: id,
+                id: myId,
                 msg: "/u "+u
             }));
 			content.scrollTop(chat.height());
@@ -481,7 +475,7 @@
 		quit: function() {
 			if (online === true) {
                 connection.send(JSON.stringify({
-                    id: id,
+                    id: myId,
                     msg: "/quit"
                 }));
                 connection.close();
@@ -586,12 +580,12 @@
                         ska.leave_channel(c);
                     } else if (msg == "/reload" || msg == "/r") {
                         connection.send(JSON.stringify({
-                            id: id,
+                            id: myId,
                             msg: "/reload"
                         }));
                     } else {
                         connection.send(JSON.stringify({
-                            id: id,
+                            id: myId,
                             channel: channel,
                             msg: msg
                         }));
@@ -627,7 +621,7 @@
         var msg = $(this).val();
         if (msg.length === 1 && msg !== "/" && myName !== null && online === true) {
             connection.send(JSON.stringify({
-                id: id,
+                id: myId,
                 msg: "/typing",
 				channel: channel
             }));
@@ -719,7 +713,7 @@
     function seen() {
         if (window_active === true && sender !== null && sender != "me" && pending_seen === false && pending_seen_channel === false) {
             connection.send(JSON.stringify({
-                id: id,
+                id: myId,
                 receipient: sender,
                 msg: "/seen",
 				channel: channel
@@ -775,8 +769,12 @@
         if (e.keyCode === 13) {
             if(($(this).val() == "" || $(this).val() == " ")) return;
 
-            if(connect === false && myName === null) {
-                id = create_id();
+            if(connect === false) {
+                myId = create_id();
+                myName = $(this).val();
+                localStorage.myId = myId;
+                localStorage.myName = myName;
+
                 connect_this(host, port);
 				$("#username").attr("disabled","disabled");
             }
@@ -822,7 +820,7 @@
             this.open(popup);
             popup = null;
             connection.send(JSON.stringify({
-                id: id,
+                id: myId,
                 receipient: sender,
                 msg: "/seen"
             }));

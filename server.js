@@ -345,6 +345,7 @@ wsServer.on("request", function(request) {
 					
 					function register_user() {						
 						config.add_app(apps, msgs.channel);
+                        var similliar = false;
 
 						for (var i = 0, len = users.length; i < len; i++) {
 							if (users[i].user_id == msgs.id) {
@@ -416,19 +417,19 @@ wsServer.on("request", function(request) {
 									}));
 									return;
 								}
-							} else {
-								if (users[i].user_name == nick) {
-									connection.sendUTF(JSON.stringify({
-										type: "info",
-										time: (new Date()).getTime(),
-										msg: "<i>Oopss.. Nickname is not available.<br>Please type in <b>/nick &lt;your name&gt;</b> to set your name.</i>",
-										author: "[Server]",
-									}));
-									detail_temp = msgs;
-									return;
-								}
 							}
+                            if (users[i].user_name == nick && reconnect === false) similliar = true;
 						}
+                        if (similliar) {
+                            connection.sendUTF(JSON.stringify({
+                                type: "info",
+                                time: (new Date()).getTime(),
+                                msg: "<i>Oopss.. Nickname is not available.<br>Please type in <b>/nick &lt;your name&gt;</b> to set your name.</i>",
+                                author: "[Server]",
+                            }));
+                            detail_temp = msgs;
+                            return;
+                        }
 						if (reconnect === false) {
 							userName = nick;
 							userId = msgs.id;
@@ -1569,7 +1570,7 @@ wsServer.on("request", function(request) {
             index = get_index(userId);
             if (index == null) return;
 			
-            if (userName !== null && appId !== null && users[index].active === true && quit === false && users[index].is_blocked === false) {
+            if (userId !== null && quit === false && users[index].is_blocked === false) {
                 users[index].active = false;
                 ping(index, userId);
             }
@@ -1578,7 +1579,7 @@ wsServer.on("request", function(request) {
                     clearTimeout(users[index].ping);
                 }
                 var p = " has closed the connection";
-				if (users[index].is_blocked) p = " has been blocked by admin.";				
+				if (users[index].is_blocked) p = " has been blocked by admin.";	
 				remove_client(index, p);
             }
         }
