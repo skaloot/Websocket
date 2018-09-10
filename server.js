@@ -1,9 +1,14 @@
+
 "use strict";
 
 
 /* ============================================= PROCESS ================================================= */
 
-var START_TIME = (new Date()).getTime();
+var now = function() {
+    return new Date().getTime();
+}
+
+var START_TIME = now();
 
 process.title = 'Ska Chat';
 process.env.TZ = "Asia/Kuala_Lumpur";
@@ -24,24 +29,21 @@ var config = require("./config"),
     channels = [],
     users = [],
     apps = [],
-	total_users = 0,
     channel_list = [],
     blocked_list = [],
     blocked_id = [],
     clean_up,
+    timeout = [],
     debug = true,
     msg_count = 0,
     shutdown = false,
 	store_msg = false,
     max_connection = 200,
-    total_connection = 1,
-
     webSocketServer = config.websocket,
     http = config.http,
     https = config.https,
     fs = config.fs,
     app_id = config.app_id,
-    origins = config.origins,
     helps = config.helps,
     port = config.port,
     app_list = config.channel_list;
@@ -138,8 +140,8 @@ config.set_app(apps, app_list);
 /* =============================================================== CONNECT =============================================================== */
 
 wsServer.on("request", function(request) {
-    if (debug) console.log(config.get_time() + " Total connection : " + total_connection);
-    if (typeof request.origin != "undefined" && origins.indexOf(request.origin) == -1 || shutdown === true) {
+    if (debug) console.log(config.get_time() + " Total connection : " + wsServer.connections.length);
+    if ((typeof request.origin != "undefined" && config.origins.indexOf(request.origin) === -1) || shutdown === true) {
         if (debug) console.log(config.get_time() + " Connection was blocked from origin " + request.origin);
         if (blocked_list.indexOf(request.origin) == -1) {
             blocked_list.push(request.origin);
@@ -147,7 +149,7 @@ wsServer.on("request", function(request) {
         request.reject(401, "Go away. You're no authorized.");
         return;
     }
-    if (total_connection > max_connection) {
+    if (wsServer.connections.length > max_connection) {
         if (debug) console.log(config.get_time() + " Connection reached max value!");
         request.reject(403, "Too many connection.. Please try later..");
         return;
@@ -166,15 +168,13 @@ wsServer.on("request", function(request) {
         password_user = null,
         detail,
         detail_temp,
-        clients,
         index = 0,
         is_blocked = false,
         admin = false,
         temp_detail = null,
+        origin = request.origin,
         password_shutdown = false,
         shutdown_verified = false;
-
-    total_connection++;
 
     // ========================================== GET MSG ====================================================
 
@@ -190,15 +190,13 @@ wsServer.on("request", function(request) {
                 }
             }
 
-            if (msgs.msg != "/ping") {
-                if (debug) console.log(config.get_time() + " Received Message : " + msgs.msg);
-            }
+            if (debug) console.log(config.get_time() + " Received Message : " + msgs.msg);
 
             if (check_blocked_id(msgs.id)) {
                 if (debug) console.log(config.get_time() + " Blocked ID trying to connect " + msgs.id);
                 connection.sendUTF(JSON.stringify({
                     type: "blocked",
-                    time: (new Date()).getTime(),
+                    time: now(),
                     author: "[Server]",
                 }));
                 connection.sendUTF(JSON.stringify({
@@ -225,7 +223,7 @@ wsServer.on("request", function(request) {
 
                     connection.sendUTF(JSON.stringify({
                         type: "connected",
-                        time: (new Date()).getTime(),
+                        time: now(),
                         msg: "<i>Connected...</i>",
                         author: "[Server]",
                         requests: request.accept
@@ -251,7 +249,7 @@ wsServer.on("request", function(request) {
 						if (debug) console.log("Invalid..");
 						connection.sendUTF(JSON.stringify({
 							type: "info",
-							time: (new Date()).getTime(),
+							time: now(),
 							msg: "<i>Password is invalid.</i>",
 							author: "[Server]",
 						}));
@@ -272,7 +270,7 @@ wsServer.on("request", function(request) {
                     var obj = {
                         type: "connected",
                         connected: true,
-                        time: (new Date()).getTime(),
+                        time: now(),
                         author: "[Server]",
                         msg: "<i>Connected...</i>",
                     };
@@ -294,7 +292,7 @@ wsServer.on("request", function(request) {
                     if (nick == "" || nick == " ") {
                         connection.sendUTF(JSON.stringify({
                             type: "info",
-                            time: (new Date()).getTime(),
+                            time: now(),
                             msg: "<i>Oopss.. Your nickname is empty.</i>",
                             author: "[Server]",
                         }));
@@ -303,7 +301,7 @@ wsServer.on("request", function(request) {
                     if (!msgs.channel) {
                         connection.sendUTF(JSON.stringify({
                             type: "info",
-                            time: (new Date()).getTime(),
+                            time: now(),
                             msg: "<i>Oopss.. Please provide channel.</i>",
                             author: "[Server]",
                         }));
@@ -316,7 +314,7 @@ wsServer.on("request", function(request) {
 								if (debug) console.log("Invalid..");
 								connection.sendUTF(JSON.stringify({
 									type: "info",
-									time: (new Date()).getTime(),
+									time: now(),
 									msg: "<i>Oopss.. Invalid password.. Good Bye!</i>",
 									author: "[Server]",
 								}));
@@ -330,7 +328,7 @@ wsServer.on("request", function(request) {
 								if (debug) console.log("Verified..");
 								connection.sendUTF(JSON.stringify({
 									type: "info",
-									time: (new Date()).getTime(),
+									time: now(),
 									msg: "<i>Verified..</i>",
 									author: "[Server]",
 								}));
@@ -349,81 +347,73 @@ wsServer.on("request", function(request) {
 
 						for (var i = 0, len = users.length; i < len; i++) {
 							if (users[i].user_id == msgs.id) {
-								if (users[i].active === false) {
-									userName = users[i].user_name;
-									userId = users[i].user_id;
-									channel = users[i].channel;
-									channels = users[i].channels;
-									ip_address = users[i].ip_address;
+								userName = users[i].user_name;
+								userId = users[i].user_id;
+								channel = users[i].channel;
+								channels = users[i].channels;
+								ip_address = users[i].ip_address;
 
-									users[i].connection = connection;
-									users[i].active = true;
-									users[i].online = true;
-									users[i].seen = false;
-									users[i].last_seen = new Date().getTime();
-									reconnect = true;
+								users[i].connection = connection;
+								users[i].active = true;
+								users[i].online = true;
+								users[i].seen = false;
+								users[i].timestamp = now();
+								reconnect = true;
 
-									if (admin) users[i].admin = true;
+                                connection.user = users[i].detail;
+
+								if (admin) users[i].admin = true;
+								connection.sendUTF(JSON.stringify({
+									type: "online",
+									time: now(),
+									author: "[Server]",
+									assigned: users[i].assigned,
+									nickname: userName + admin_password,
+									channels: users[i].channels
+								}));
+								if (channel == "kpj" || channel == "kpj_ui") {
 									connection.sendUTF(JSON.stringify({
-										type: "online",
-										time: (new Date()).getTime(),
+										type: "online_state",
+										time: now(),
 										author: "[Server]",
-										assigned: users[i].assigned,
-										nickname: userName + admin_password,
-										channels: users[i].channels
+										state: apps["kpj"].online_state
 									}));
-									if (channel == "kpj" || channel == "kpj_ui") {
-										connection.sendUTF(JSON.stringify({
-											type: "online_state",
-											time: (new Date()).getTime(),
-											author: "[Server]",
-											state: apps["kpj"].online_state
-										}));
-									}
-									if (admin) {
-										connection.sendUTF(JSON.stringify({
-											type: "channels_admin",
-											channels: app_list
-										}));
-										connection.sendUTF(JSON.stringify({
-											type: "json",
-											time: (new Date()).getTime(),
-											data: server_stat(channel),
-											author: "[Server]",
-											channel: channel
-										}));
-									}
-									online_users(users[i].channel, connection);
-                                    if (users[i].msg.length > 0) {
-                                        connection.sendUTF(JSON.stringify({
-                                            type: "info",
-                                            time: (new Date()).getTime(),
-                                            msg: "<i>------------------------------------<br></i>",
-                                            author: "[Server]",
-                                            channel: channel,
-                                        }));
-                                        for (var n = 0, len2 = users[i].msg.length; n < len2; n++) {
-                                            connection.sendUTF(users[i].msg[n]);
-                                        }
-                                        users[i].msg = [];
-                                    }
-									break;
-								} else {
-									connection.sendUTF(JSON.stringify({
-										type: "info",
-										time: (new Date()).getTime(),
-										msg: "<i>Oopss.. You are already connected.</i>",
-										author: "[Server]",
-									}));
-									return;
 								}
+								if (admin) {
+									connection.sendUTF(JSON.stringify({
+										type: "channels_admin",
+										channels: app_list
+									}));
+									connection.sendUTF(JSON.stringify({
+										type: "json",
+										time: now(),
+										data: server_stat(channel),
+										author: "[Server]",
+										channel: channel
+									}));
+								}
+								online_users(users[i].channel, connection);
+                                if (users[i].msg.length > 0) {
+                                    connection.sendUTF(JSON.stringify({
+                                        type: "info",
+                                        time: now(),
+                                        msg: "<i>------------------------------------<br></i>",
+                                        author: "[Server]",
+                                        channel: channel,
+                                    }));
+                                    for (var n = 0, len2 = users[i].msg.length; n < len2; n++) {
+                                        connection.sendUTF(users[i].msg[n]);
+                                    }
+                                    users[i].msg = [];
+                                }
+								break;
 							}
                             if (users[i].user_name == nick && reconnect === false) similliar = true;
 						}
                         if (similliar) {
                             connection.sendUTF(JSON.stringify({
                                 type: "info",
-                                time: (new Date()).getTime(),
+                                time: now(),
                                 msg: "<i>Oopss.. Nickname is not available.<br>Please type in <b>/nick &lt;your name&gt;</b> to set your name.</i>",
                                 author: "[Server]",
                             }));
@@ -448,10 +438,11 @@ wsServer.on("request", function(request) {
 								seen: false,
 								active: true,
 								online: true,
-								ping: null,
+                                ping: null,
+								ping_timeout: null,
 								is_blocked: false,
-								start: new Date().getTime(),
-								last_seen: new Date().getTime(),
+								start: now(),
+								timestamp: now(),
 								assigned: null,
 								client: null,
 								msg: [],
@@ -460,12 +451,15 @@ wsServer.on("request", function(request) {
 								agent: msgs.agent || detail_temp.agent || "",
 								screen: msgs.screen || detail_temp.screen || 0,
 							};
+
+                            detail.detail = detail;
+
 							if (msgs.operator) detail.operator = true;
 							setup_channel(channel);
 							
 							users.push(detail);
-							total_users++;
 							index = get_index(userId);
+                            connection.user = detail;
 
 							if (channel == "ladiesfoto") {
 								config.GetThis("www.ladiesfoto.com", "/websocket/login_mail.php?username=" + userName);
@@ -474,7 +468,7 @@ wsServer.on("request", function(request) {
 							var m = "Type <b>/help</b> for list of command.";
 							connection.sendUTF(JSON.stringify({
 								type: "welcome",
-								time: (new Date()).getTime(),
+								time: now(),
 								msg: "<i>------------------------------------" +
 									"<br><b>WELCOME " + userName + "!!</b><br>" + m +
 									"<br>------------------------------------</i>",
@@ -482,19 +476,19 @@ wsServer.on("request", function(request) {
 								nickname: userName + admin_password,
 								channels: channels,
 							}));
-							var json = JSON.stringify({
+							var json = {
 								type: "info",
-								time: (new Date()).getTime(),
+								time: now(),
 								msg: "<i><b>" + userName + "</b> just connected..</i>",
 								author: "[Server]",
 								channel: channel
-							});
+							};
 							send(json, channel, userId);
 
 							if (channel == "kpj" || channel == "kpj_ui") {
 								// connection.sendUTF(JSON.stringify({
 								// 	type: "online_state",
-								// 	time: (new Date()).getTime(),
+								// 	time: now(),
 								// 	author: "[Server]",
 								// 	state: apps["kpj"].online_state,
 								// 	channel: channel,
@@ -507,7 +501,7 @@ wsServer.on("request", function(request) {
 								}));
 								connection.sendUTF(JSON.stringify({
 									type: "json",
-									time: (new Date()).getTime(),
+									time: now(),
 									data: server_stat(channel),
 									author: "[Server]",
 									channel: channel,
@@ -517,12 +511,13 @@ wsServer.on("request", function(request) {
 							online_users(channel);
 							if (debug) console.log(config.get_time() + " User is known as: " + userName + " - " + userId);
 						}
+                        ping(index, userId);
 					}
                 
 				} else {
                     connection.sendUTF(JSON.stringify({
                         type: "info",
-                        time: (new Date()).getTime(),
+                        time: now(),
                         msg: "<i>You haven't told us your name yet!. <br>Please type in <b>/nick &lt;your name&gt;</b> to set your name.</i>",
                         author: "[Server]",
                     }));
@@ -531,12 +526,11 @@ wsServer.on("request", function(request) {
             /* =============================================================== HAS USER ID =============================================================== */
             
             } else {
-                clients = apps[channel];
                 index = get_index(userId);
                 if(index === null) return;
 
                 if (msgs.msg != "/typing" && msgs.msg != "/seen" && msgs.msg != "/quit" && msgs.msg != "/ping") {
-	                users[index].last_seen = new Date().getTime();
+	                users[index].timestamp = now();
 	            }
 					
                 if (channel == "kpj") {
@@ -544,7 +538,7 @@ wsServer.on("request", function(request) {
                         if (msgs.msg != "/typing" && msgs.msg != "/seen" && msgs.msg != "/quit" && msgs.msg != "/ping") {
                             connection.sendUTF(JSON.stringify({
                                 type: "info",
-                                time: (new Date()).getTime(),
+                                time: now(),
                                 msg: "<i>Please hold on. Our staff will be with you in a moment.</i>",
                                 author: "[Server]",
                                 channel: channel,
@@ -556,17 +550,17 @@ wsServer.on("request", function(request) {
                 if (msgs.msg == "/quit") {
                     quit = true;
                 } else if (msgs.msg == "/reload") {
-                	var json = JSON.stringify({
+                	var json = {
                         type: "reload",
                         author: userName,
                         author_id: userId
-                    });
+                    };
                     send(json, channel, userId);
                 } else if (msgs.msg == "/shutdown" || msgs.msg == "/sd" || msgs.msg == "/kill" || msgs.msg == "/restart") {
                     if (!admin) {
                         connection.sendUTF(JSON.stringify({
                             type: "info",
-                            time: (new Date()).getTime(),
+                            time: now(),
                             msg: "<i>Oopss.. you're not authorized.</i>",
                             author: "[Server]",
                             channel: channel,
@@ -576,7 +570,7 @@ wsServer.on("request", function(request) {
                     if(shutdown_verified === false) {
                         connection.sendUTF(JSON.stringify({
                             type: "info",
-                            time: (new Date()).getTime(),
+                            time: now(),
                             msg: "<i>Please type in your password..</i>",
                             author: "[Server]",
                         }));
@@ -594,7 +588,7 @@ wsServer.on("request", function(request) {
                     config.sql("websocket", sql, function(result) {
                         connection.sendUTF(JSON.stringify({
                             type: "json",
-                            time: (new Date()).getTime(),
+                            time: now(),
                             author: "[Server]",
                             data: result,
                             channel: channel,
@@ -606,10 +600,10 @@ wsServer.on("request", function(request) {
                     }
                     var res = msgs.msg.split(" ");
                     var origin = res[1];
-                    origins.push(origin);
+                    config.origins.push(origin);
                     connection.sendUTF(JSON.stringify({
                         type: "info",
-                        time: (new Date()).getTime(),
+                        time: now(),
                         msg: "<i>Done</i>",
                         author: "[Server]",
                         channel: channel,
@@ -620,17 +614,17 @@ wsServer.on("request", function(request) {
                     if (!admin) {
                         connection.sendUTF(JSON.stringify({
                             type: "info",
-                            time: (new Date()).getTime(),
+                            time: now(),
                             msg: "<i>Oopss.. you're not authorized.</i>",
                             author: "[Server]",
                             channel: channel,
                         }));
                         return;
                     }
-                    origins.splice(origins.indexOf(origin), 1);
+                    config.origins.splice(config.origins.indexOf(origin), 1);
                     connection.sendUTF(JSON.stringify({
                         type: "info",
-                        time: (new Date()).getTime(),
+                        time: now(),
                         msg: "<i>Done</i>",
                         author: "[Server]",
                         channel: channel,
@@ -641,7 +635,7 @@ wsServer.on("request", function(request) {
                     if (!admin) {
                         connection.sendUTF(JSON.stringify({
                             type: "info",
-                            time: (new Date()).getTime(),
+                            time: now(),
                             msg: "<i>Oopss.. you're not authorized.</i>",
                             author: "[Server]",
                             channel: channel,
@@ -652,7 +646,7 @@ wsServer.on("request", function(request) {
                         if (receipient == users[i].user_name) {
                             users[i].connection.sendUTF(JSON.stringify({
                                 type: "reload",
-                                time: (new Date()).getTime(),
+                                time: now(),
                                 author: "[Server]",
                                 channel: channel,
                             }));
@@ -667,7 +661,7 @@ wsServer.on("request", function(request) {
                     }
                     connection.sendUTF(JSON.stringify({
                         type: "info",
-                        time: (new Date()).getTime(),
+                        time: now(),
                         msg: "<i>Oopss.. Nickname <b>" + receipient + "</b> is not here.</i>",
                         author: "[Server]",
                         channel: channel,
@@ -678,7 +672,7 @@ wsServer.on("request", function(request) {
                     if (!admin) {
                         connection.sendUTF(JSON.stringify({
                             type: "info",
-                            time: (new Date()).getTime(),
+                            time: now(),
                             msg: "<i>Oopss.. you're not authorized.</i>",
                             author: "[Server]",
                             channel: channel,
@@ -696,7 +690,7 @@ wsServer.on("request", function(request) {
                     }
                     connection.sendUTF(JSON.stringify({
                         type: "info",
-                        time: (new Date()).getTime(),
+                        time: now(),
                         msg: "<i>Done</i>",
                         author: "[Server]",
                         channel: channel,
@@ -708,7 +702,7 @@ wsServer.on("request", function(request) {
                     if (users[index].operator !== true) {
                         connection.sendUTF(JSON.stringify({
                             type: "info",
-                            time: (new Date()).getTime(),
+                            time: now(),
                             msg: "<i>Oopss.. you're not authorized.</i>",
                             author: "[Server]",
                             channel: channel,
@@ -722,7 +716,7 @@ wsServer.on("request", function(request) {
                             users[i].connection.sendUTF(JSON.stringify({
                                 type: "assigned",
                                 assigned: userId,
-                                time: (new Date()).getTime(),
+                                time: now(),
                                 msg: "<i>Hi.. you are now chatting with <b>" + userName + "</b>.</i>",
                                 author: "[Server]",
                                 channel: channel,
@@ -733,7 +727,7 @@ wsServer.on("request", function(request) {
                     }
                     connection.sendUTF(JSON.stringify({
                         type: "assign_client_result",
-                        time: (new Date()).getTime(),
+                        time: now(),
                         msg: "<i>Done</i>",
                         author: "[Server]",
                         receipient: receipient,
@@ -746,7 +740,7 @@ wsServer.on("request", function(request) {
                     if (users[index].operator !== true) {
                         connection.sendUTF(JSON.stringify({
                             type: "info",
-                            time: (new Date()).getTime(),
+                            time: now(),
                             msg: "<i>Oopss.. you're not authorized.</i>",
                             author: "[Server]",
                             channel: channel,
@@ -762,7 +756,7 @@ wsServer.on("request", function(request) {
                             users[i].connection.sendUTF(JSON.stringify({
                                 type: "unassigned",
                                 assigned: userId,
-                                time: (new Date()).getTime(),
+                                time: now(),
                                 msg: "<i>Your session has ended.</i>",
                                 author: "[Server]",
                                 channel: channel,
@@ -774,7 +768,7 @@ wsServer.on("request", function(request) {
                     users.online_state = msgs.state;
                     connection.sendUTF(JSON.stringify({
                         type: "online_state",
-                        time: (new Date()).getTime(),
+                        time: now(),
                         author: "[Server]",
                         state: users.online_state,
                         channel: channel,
@@ -787,7 +781,7 @@ wsServer.on("request", function(request) {
                     }
                     connection.sendUTF(JSON.stringify({
                         type: "info",
-                        time: (new Date()).getTime(),
+                        time: now(),
                         msg: "<i>------------------<br>Chat History</i>",
                         author: "[Server]",
                         channel: channel,
@@ -798,7 +792,7 @@ wsServer.on("request", function(request) {
                     clear_history(channel);
                     connection.sendUTF(JSON.stringify({
                         type: "info",
-                        time: (new Date()).getTime(),
+                        time: now(),
                         msg: "<i>Chat history has been cleared.</i>",
                         author: "[Server]",
                         channel: channel,
@@ -807,7 +801,7 @@ wsServer.on("request", function(request) {
                     if (!admin) {
                         connection.sendUTF(JSON.stringify({
                             type: "info",
-                            time: (new Date()).getTime(),
+                            time: now(),
                             msg: "<i>Oopss.. you're not authorized.</i>",
                             author: "[Server]",
                             channel: channel,
@@ -816,7 +810,7 @@ wsServer.on("request", function(request) {
                     }
                     connection.sendUTF(JSON.stringify({
                         type: "json",
-                        time: (new Date()).getTime(),
+                        time: now(),
                         data: server_stat(channel),
                         author: "[Server]",
                         channel: channel,
@@ -825,7 +819,7 @@ wsServer.on("request", function(request) {
                     if (!admin) {
                         connection.sendUTF(JSON.stringify({
                             type: "info",
-                            time: (new Date()).getTime(),
+                            time: now(),
                             msg: "<i>Oopss.. you're not authorized.</i>",
                             author: "[Server]",
                             channel: channel,
@@ -836,15 +830,15 @@ wsServer.on("request", function(request) {
                     var funct = res[1];
                     res.splice(0, 2);
                     var argument = res.toString().replace(/,/g, " ");
-                    var json = JSON.stringify({
+                    var json = {
                         type: "function",
-                        time: (new Date()).getTime(),
+                        time: now(),
                         functions: funct,
                         arguments: argument,
                         author: userName,
                         author_id: userId,
                         channel: channel
-                    });
+                    };
                     send(json, channel, userId);
                 } else if (msgs.msg.substring(0, 9) == "/youtube " || msgs.msg.substring(0, 4) == "/yt ") {
                     if (!admin) {
@@ -852,34 +846,34 @@ wsServer.on("request", function(request) {
                     }
                     var res = msgs.msg.split(" ");
                     var embeded = res[1];
-                    var json = JSON.stringify({
+                    var json = {
                         type: "youtube",
-                        time: (new Date()).getTime(),
+                        time: now(),
                         embeded: embeded,
                         author: userName,
                         author_id: userId,
                         channel: channel,
-                    });
+                    };
                     send(json, channel, userId);
                 } else if (msgs.msg.substring(0, 6) == "/open " || msgs.msg.substring(0, 3) == "/o ") {
                     if (admin !== true) return;
 
                     var res = msgs.msg.split(" ");
                     var url = res[1];
-                    var json = JSON.stringify({
+                    var json = {
                         type: "open",
-                        time: (new Date()).getTime(),
+                        time: now(),
                         url: url,
                         author: userName,
                         author_id: userId,
                         channel: channel,
-                    });
+                    };
                     send(json, channel, userId);
                 } else if (msgs.msg.substring(0, 11) == "/unmute all") {
-                    var json = JSON.stringify({
+                    var json = {
                         type: "unmute",
                         channel: channel,
-                    });
+                    };
                     send(json, channel, userId);
                 } else if (msgs.msg.substring(0, 6) == "/user " || msgs.msg.substring(0, 3) == "/u ") {
                     if (admin !== true) return;
@@ -890,7 +884,7 @@ wsServer.on("request", function(request) {
                     if (receipient == "" || receipient == " ") {
                         connection.sendUTF(JSON.stringify({
                             type: "info",
-                            time: (new Date()).getTime(),
+                            time: now(),
                             msg: "<i>Oopss.. Receipient is empty.",
                             author: "[Server]",
                             channel: channel,
@@ -901,7 +895,7 @@ wsServer.on("request", function(request) {
                     	var users_ = get_users("all", userId);
 	                    connection.sendUTF(JSON.stringify({
 	                        type: "json",
-	                        time: (new Date()).getTime(),
+	                        time: now(),
 	                        data: users_,
 	                        author: "[Server]",
 	                        channel: channel,
@@ -915,14 +909,14 @@ wsServer.on("request", function(request) {
                             for(var n = 0; n < chnls.length; n++) {
                                 c += chnls[n] + ", ";
                             }
-                            var json = JSON.stringify({
+                            var json = {
                                 type: "json",
-                                time: (new Date()).getTime(),
+                                time: now(),
                                 data: {
 				                    user_name: users[i].user_name,
 				                    user_id: users[i].user_id,
-				                    online: config.DateDiff((new Date()).getTime(), users[i].start),
-				                    last_seen: config.DateDiff((new Date()).getTime(), users[i].last_seen),
+				                    online: config.DateDiff(now(), users[i].start),
+				                    last_seen: config.DateDiff(now(), users[i].timestamp),
 				                    origin: users[i].origin,
 				                    ip_address: users[i].ip_address,
 				                    screen: users[i].screen,
@@ -933,13 +927,13 @@ wsServer.on("request", function(request) {
 				                },
                                 author: "[Server]",
                                 channel: channel,
-                            });
-                            return connection.sendUTF(json);
+                            };
+                            return connection.sendUTF(JSON.stringify(json));
                         }
                     }
                     connection.sendUTF(JSON.stringify({
                         type: "info",
-                        time: (new Date()).getTime(),
+                        time: now(),
                         msg: "<i>Oopss.. Nickname <b>" + receipient + "</b> is not here.</i>",
                         author: "[Server]",
                         channel: channel,
@@ -956,19 +950,19 @@ wsServer.on("request", function(request) {
                     }
                     if (receipient == "" || receipient == " ") return;
 
-                    var json = JSON.stringify({
+                    var json = {
                         type: "chat",
                         author: userName,
                         author_id: userId,
                         channel: channel,
-                    });
+                    };
                     if (receipient == "-all" || receipient == "-a") {
                     	return send(json, channel, userId);
                     }
                     var found = false;
                     for (var i = 0, len = users.length; i < len; i++) {
                         if (users[i].user_name == receipient && users[i].active === true && users[i].channel == channel) {
-                            users[i].connection.sendUTF(json);
+                            users[i].connection.sendUTF(JSON.stringify(json));
                             users[i].seen = false;
                             found = true;
                             break;
@@ -977,7 +971,7 @@ wsServer.on("request", function(request) {
                     if (found === false) {
                         connection.sendUTF(JSON.stringify({
                             type: "info",
-                            time: (new Date()).getTime(),
+                            time: now(),
                             msg: "<i>Oopss.. Nickname <b>" + receipient + "</b> is not here.</i>",
                             author: "[Server]",
                             channel: channel,
@@ -992,7 +986,7 @@ wsServer.on("request", function(request) {
                     if (newNick == "" || newNick == " ") {
                         connection.sendUTF(JSON.stringify({
                             type: "info",
-                            time: (new Date()).getTime(),
+                            time: now(),
                             msg: "<i>Oopss.. Nickname is empty.",
                             author: "[Server]",
                             channel: channel,
@@ -1002,7 +996,7 @@ wsServer.on("request", function(request) {
 					if (!check_username(userId, userName)) {
 						connection.sendUTF(JSON.stringify({
 							type: "info",
-							time: (new Date()).getTime(),
+							time: now(),
 							msg: "<i>Oopss.. Nickname <b>" + newNick + "</b> is not available.</i>",
 							author: "[Server]",
 							channel: channel,
@@ -1018,7 +1012,7 @@ wsServer.on("request", function(request) {
 								if (debug) console.log("Invalid..");
 								connection.sendUTF(JSON.stringify({
 									type: "info",
-									time: (new Date()).getTime(),
+									time: now(),
 									msg: "<i>Oopss.. Invalid password.. Good Bye!</i>",
 									author: "[Server]",
 									channel: channel,
@@ -1033,7 +1027,7 @@ wsServer.on("request", function(request) {
 								if (debug) console.log("Verified..");
 								connection.sendUTF(JSON.stringify({
 									type: "info",
-									time: (new Date()).getTime(),
+									time: now(),
 									msg: "<i>Verified..</i>",
 									author: "[Server]",
 									channel: channel,
@@ -1052,7 +1046,7 @@ wsServer.on("request", function(request) {
 						if (debug) console.log(config.get_time() + " User " + userName + " has changed nickname to " + newNick);
 						connection.sendUTF(JSON.stringify({
 							type: "newNick",
-							time: (new Date()).getTime(),
+							time: now(),
 							msg: "<i>You are now known as <b>" + newNick + "</b></i>",
 							author: "[Server]",
 							channel: channel,
@@ -1065,7 +1059,7 @@ wsServer.on("request", function(request) {
 							}));
 							connection.sendUTF(JSON.stringify({
 								type: "json",
-								time: (new Date()).getTime(),
+								time: now(),
 								data: server_stat(channel),
 								author: "[Server]",
 								channel: channel,
@@ -1073,13 +1067,13 @@ wsServer.on("request", function(request) {
 						}
 						userName = newNick;
 						users[index].user_name = newNick;
-						var json = JSON.stringify({
+						var json = {
 							type: "info",
-							time: (new Date()).getTime(),
+							time: now(),
 							msg: "<i><b>" + userName + "</b> has changed nickname to <b>" + newNick + "</b></i>",
 							author: "[Server]",
 							channel: channel,
-						});
+						};
 						for (var i = 0, len = channels.length; i < len; i++) {
 							send(json, channels[i], userId);
 					        online_users(channels[i]);
@@ -1094,7 +1088,7 @@ wsServer.on("request", function(request) {
                     if (chnl == "" || chnl == " ") {
                         connection.sendUTF(JSON.stringify({
                             type: "info",
-                            time: (new Date()).getTime(),
+                            time: now(),
                             msg: "<i>Oopss.. Channel is empty.",
                             author: "[Server]",
                             channel: channel,
@@ -1126,7 +1120,7 @@ wsServer.on("request", function(request) {
                         }));
                         connection.sendUTF(JSON.stringify({
                             type: "info",
-                            time: (new Date()).getTime(),
+                            time: now(),
                             msg: "<i>You are now in channel <b>" + chnl + "</b></i>",
                             author: "[Server]",
                             channel: channel,
@@ -1134,19 +1128,19 @@ wsServer.on("request", function(request) {
                         var users_ = get_users(channel, userId);
                         connection.sendUTF(JSON.stringify({
                             type: "json",
-                            time: (new Date()).getTime(),
+                            time: now(),
                             data: users_,
                             author: "[Server]",
                             channel: channel,
                         }));
                     }
-                    var json = JSON.stringify({
+                    var json = {
                         type: "info",
-                        time: (new Date()).getTime(),
+                        time: now(),
                         msg: "<i><b>" + userName + "</b> has joined the channel..</i>",
                         author: "[Server]",
                         channel: channel,
-                    });
+                    };
                     if (!been_here) {
                     	if (channel != "kpj") {
 							send(json, channel, userId);
@@ -1165,7 +1159,7 @@ wsServer.on("request", function(request) {
                     if (chnl == "" || chnl == " ") {
                         connection.sendUTF(JSON.stringify({
                             type: "info",
-                            time: (new Date()).getTime(),
+                            time: now(),
                             msg: "<i>Oopss.. Channel is empty.",
                             author: "[Server]",
                             channel: channel,
@@ -1175,7 +1169,7 @@ wsServer.on("request", function(request) {
                     if (channels.length == 1) {
                         connection.sendUTF(JSON.stringify({
                             type: "info",
-                            time: (new Date()).getTime(),
+                            time: now(),
                             msg: "<i>Oopss.. Cant leave this channel.",
                             author: "[Server]",
                             channel: channel,
@@ -1192,7 +1186,7 @@ wsServer.on("request", function(request) {
                     if(!check) {
                         connection.sendUTF(JSON.stringify({
                             type: "info",
-                            time: (new Date()).getTime(),
+                            time: now(),
                             msg: "<i>Oopss.. You're not in that channel.",
                             author: "[Server]",
                             channel: channel,
@@ -1203,14 +1197,14 @@ wsServer.on("request", function(request) {
                     if (users[index].channel == "kpj") {
                         type = "leave";
                     }
-                    var json = JSON.stringify({
+                    var json = {
                         type: type,
                         user_id: userId,
-                        time: (new Date()).getTime(),
+                        time: now(),
                         msg: "<i><b>" + userName + "</b> has left the channel..</i>",
                         author: "[Server]",
                         channel: chnl
-                    });
+                    };
 
                     send(json, chnl, userId);
 					online_users(chnl);
@@ -1221,7 +1215,7 @@ wsServer.on("request", function(request) {
                     users[index].assigned = null;
                     connection.sendUTF(JSON.stringify({
                         type: "new_channel",
-                        time: (new Date()).getTime(),
+                        time: now(),
                         author: "[Server]",
                         channel: channel,
                         channels: channels,
@@ -1231,7 +1225,7 @@ wsServer.on("request", function(request) {
                     var users_ = get_users(channel, userId);
                     connection.sendUTF(JSON.stringify({
                         type: "json",
-                        time: (new Date()).getTime(),
+                        time: now(),
                         data: users_,
                         author: "[Server]",
                         channel: channel,
@@ -1243,7 +1237,7 @@ wsServer.on("request", function(request) {
                         if (receipient == "" || receipient == " ") {
                             connection.sendUTF(JSON.stringify({
                                 type: "info",
-                                time: (new Date()).getTime(),
+                                time: now(),
                                 msg: "<i>Oopss.. Receipient is empty.",
                                 author: "[Server]",
                                 channel: channel,
@@ -1257,14 +1251,14 @@ wsServer.on("request", function(request) {
                     if (msgs.msg == "/alert" || msgs.msg == "/a") {
                         var receipient = "all";
                     }
-                    var json = JSON.stringify({
+                    var json = {
                         type: "alert",
-                        time: (new Date()).getTime(),
+                        time: now(),
                         msg: "<i><b>" + userName + "</b> needs your attention.</i>",
                         author: userName,
                         author_id: userId,
                         channel: channel,
-                    });
+                    };
                     if (channel == "kpj") {
                         receipient = (users[index].assigned !== null) ? users[index].assigned : ((users[index].client !== null) ? users[index].client : null);
                     }
@@ -1275,7 +1269,7 @@ wsServer.on("request", function(request) {
                         users[index].seen = true;
                         for (var i = 0, len = users.length; i < len; i++) {
                             if ((users[i].user_name == receipient || users[i].user_id == receipient) && users[i].active === true && users[i].channel == channel) {
-                                users[i].connection.sendUTF(json);
+                                users[i].connection.sendUTF(JSON.stringify(json));
                                 users[i].seen = false;
                                 users[index].seen = false;
                                 found = true;
@@ -1285,7 +1279,7 @@ wsServer.on("request", function(request) {
                         if (found === false) {
                             connection.sendUTF(JSON.stringify({
                                 type: "info",
-                                time: (new Date()).getTime(),
+                                time: now(),
                                 msg: "<i>Oopss.. Receipient <b>" + receipient + "</b> is not here.</i>",
                                 author: "[Server]",
                                 channel: channel,
@@ -1302,25 +1296,25 @@ wsServer.on("request", function(request) {
                     if (the_msg == "" || the_msg == " ") {
                         connection.sendUTF(JSON.stringify({
                             type: "info",
-                            time: (new Date()).getTime(),
+                            time: now(),
                             msg: "<i>Oopss.. Message is empty.",
                             author: "[Server]",
                             channel: channel,
                         }));
                         return;
                     }
-                    var json = JSON.stringify({
+                    var json = {
                         type: "message",
-                        time: (new Date()).getTime(),
+                        time: now(),
                         msg: the_msg,
                         author: userName,
                         author_id: userId,
-                    });
+                    };
                     var found = false;
                     for (var i = 0, len = users.length; i < len; i++) {
                         if (users[i].user_name == receipient && users[i].channel == channel) {
                             if (users[i].active === true) {
-                                users[i].connection.sendUTF(json);
+                                users[i].connection.sendUTF(JSON.stringify(json));
                             } else {
                                 users[i].msg.push(json);
                                 users[i].msg = users[i].msg.slice(-20);
@@ -1343,7 +1337,7 @@ wsServer.on("request", function(request) {
                     if (found === false) {
                         connection.sendUTF(JSON.stringify({
                             type: "info",
-                            time: (new Date()).getTime(),
+                            time: now(),
                             msg: "<i>Oopss.. Nickname <b>" + receipient + "</b> is not here.</i>",
                             author: "[Server]",
                             channel: channel,
@@ -1365,7 +1359,7 @@ wsServer.on("request", function(request) {
                     }
                     connection.sendUTF(JSON.stringify({
                         type: "info",
-                        time: (new Date()).getTime(),
+                        time: now(),
                         msg: "<i>Oopss.. username <b>" + receipient + "</b> is not here.</i>",
                         author: "[Server]",
                         channel: channel,
@@ -1374,23 +1368,23 @@ wsServer.on("request", function(request) {
                     if(!users) {
                         return;
                     }
-                    var json = JSON.stringify({
+                    var json = {
                         type: "typing",
                         author: userName,
                         channel: channel
-                    });
+                    };
                     if (channel == "kpj") {
                         if (users[index].assigned !== null) {
                             for (var i = 0, len = users.length; i < len; i++) {
                                 if (users[index].assigned == users[i].user_id) {
-                                    users[i].connection.sendUTF(json);
+                                    users[i].connection.sendUTF(JSON.stringify(json));
                                 }
                             }
                         }
                         if (users[index].operator === true && users[index].client !== null) {
                             for (var i = 0, len = users.length; i < len; i++) {
                                 if (users[index].client == users[i].user_id) {
-                                    users[i].connection.sendUTF(json);
+                                    users[i].connection.sendUTF(JSON.stringify(json));
                                 }
                             }
                         }
@@ -1402,23 +1396,23 @@ wsServer.on("request", function(request) {
                         type: "pong",
                     }));
                 } else if (msgs.msg == "/seen") {
-                    var json = JSON.stringify({
+                    var json = {
                         type: "seen",
                         author: userName,
                         channel: channel
-                    });
+                    };
                     if (channel == "kpj") {
                         if (users[index].assigned !== null) {
                             for (var i = 0, len = users.length; i < len; i++) {
                                 if (users[index].assigned == users[i].user_id) {
-                                    users[i].connection.sendUTF(json);
+                                    users[i].connection.sendUTF(JSON.stringify(json));
                                 }
                             }
                         }
                         if (users[index].operator === true && users[index].client !== null) {
                             for (var i = 0, len = users.length; i < len; i++) {
                                 if (users[index].client == users[i].user_id) {
-                                    users[i].connection.sendUTF(json);
+                                    users[i].connection.sendUTF(JSON.stringify(json));
                                 }
                             }
                         }
@@ -1439,15 +1433,15 @@ wsServer.on("request", function(request) {
 						}
 					}
                     if (client_count > 2 && all === true) {
-                        var json = JSON.stringify({
+                        var json = {
                             type: "seen",
                             author: "all",
                             channel: channel
-                        });
+                        };
                     }
                     for (var i = 0, len = users.length; i < len; i++) {
                         if (users[i].active === true && users[i].user_id == receipient) {
-                            users[i].connection.sendUTF(json);
+                            users[i].connection.sendUTF(JSON.stringify(json));
                             return;
                         }
                     }
@@ -1457,7 +1451,7 @@ wsServer.on("request", function(request) {
 					store_msg = (a[1] == "on") ? true : false;
                     connection.sendUTF(JSON.stringify({
                         type: "info",
-                        time: (new Date()).getTime(),
+                        time: now(),
                         msg: "<i>Done..</i>",
                         author: "[Server]",
                         channel: channel,
@@ -1466,7 +1460,7 @@ wsServer.on("request", function(request) {
                     if (!admin) {
                         connection.sendUTF(JSON.stringify({
                             type: "info",
-                            time: (new Date()).getTime(),
+                            time: now(),
                             msg: "<i>Oopss.. you're not authorized.</i>",
                             author: "[Server]",
                             channel: channel,
@@ -1476,7 +1470,7 @@ wsServer.on("request", function(request) {
                     if (flood === true) {
                         connection.sendUTF(JSON.stringify({
                             type: "info",
-                            time: (new Date()).getTime(),
+                            time: now(),
                             msg: "<i>Oopss.. you are still flooding.. please flood again later</i>",
                             author: "[Server]",
                             channel: channel,
@@ -1487,13 +1481,13 @@ wsServer.on("request", function(request) {
                     var n = 0;
                     var floodTimer = setInterval(function() {
                         n++;
-                        var json = JSON.stringify({
+                        var json = {
                             type: "info",
-                            time: (new Date()).getTime(),
+                            time: now(),
                             author: userName,
                             channel: channel,
                             msg: "you have just been flooded by " + userName + " - " + n
-                        });
+                        };
                         send(json, channel, userId);
                         if (n > 2000 || flood === false) {
                             clearInterval(floodTimer);
@@ -1514,7 +1508,7 @@ wsServer.on("request", function(request) {
 						a += "</i>";
 						connection.sendUTF(JSON.stringify({
 							type: "info",
-							time: (new Date()).getTime(),
+							time: now(),
 							msg: a,
 							author: "[Server]",
 						}));
@@ -1524,14 +1518,14 @@ wsServer.on("request", function(request) {
                     
                     connection.sendUTF(JSON.stringify({
                         type: "json",
-                        time: (new Date()).getTime(),
+                        time: now(),
                         data: {command: helps},
                         author: "[Server]",
                     }));
                 } else {
                     var obj = {
                         type: "message",
-                        time: (new Date()).getTime(),
+                        time: now(),
                         msg: config.htmlEntities(msgs.msg),
                         author: userName,
                         author_id: userId,
@@ -1562,30 +1556,45 @@ wsServer.on("request", function(request) {
     });
 
 
+    connection.on("pong", function(connection) {
+        index = get_index(userId);
+        if (index == null) return;
+
+        users[index].ping = true;
+    });
+
+
+    connection.on("ping", function(connection) {
+        
+    });
+
+
     // ========================================== DISCONNECT ====================================================
 
     connection.on("close", function(connection) {
-        total_connection--;
         if (shutdown === false) {
             index = get_index(userId);
             if (index == null) return;
 			
-            if (userId !== null && quit === false && users[index].is_blocked === false) {
-                users[index].active = false;
-                ping(index, userId);
-            }
+            users[index].online = false;
+
             if (quit === true || users[index].is_blocked) {
-                if(users[index].ping !== null) {
-                    clearTimeout(users[index].ping);
-                }
+                clearTimeout(users[index].ping_timeout);
                 var p = " has closed the connection";
 				if (users[index].is_blocked) p = " has been blocked by admin.";	
 				remove_client(index, p);
             }
+
+            setTimeout(function() {
+                console.log(connection.state);
+                console.log(connection.connected);
+            }, 2000);
         }
     });
 
 });
+
+
 
 
 
@@ -1600,16 +1609,42 @@ var get_index = function(id) {
 };
 
 var ping = function(idx, id) {
+    if (timeout[id]) clearTimeout(timeout[id]);
+
+    timeout[id] = setTimeout(function() {
+        idx = get_index(id);
+        if (idx == null) return;
+        if (users[idx].active === false || users[idx].online === false) return;
+		
+        users[idx].ping = false;
+        users[idx].connection.ping();
+
+        timeout[id] = setTimeout(function() {
+            idx = get_index(id);
+            if (idx == null) return;
+            
+            if (users[idx].ping === false) {
+                console.log("no respond.. set as inactive");
+                users[idx].active = false;
+            } else {
+                ping(idx, id);
+            }
+        }, 3000);
+
+    }, 15000);
+};
+
+var ping_old = function(idx, id) {
     if(users[idx].ping !== null) {
         clearTimeout(users[idx].ping);
     };
     users[idx].ping = setTimeout(function() {
         idx = get_index(id);
         if (idx == null) return;
-		
+        
         users[idx].ping = null;
         if (users[idx].active === false) {
-            var p = " has disconnected.. - [No Respond]";			
+            var p = " has disconnected.. - [No Respond]";           
             remove_client(idx, p);
         } else {
             if (debug) console.log(config.get_time() + " " + users[idx].user_name + " is active.");
@@ -1626,14 +1661,14 @@ var remove_client = function(idx, pingresult) {
 	users.splice(idx, 1);
 
 	for (var i = 0, len = chnls.length; i < len; i++) {
-		var json = JSON.stringify({
+		var json = {
 	        type: "info",
 	        user_id: _id,
-	        time: (new Date()).getTime(),
+	        time: now(),
 	        msg: "<i><b>" + _name + "</b>" + pingresult + "</i>",
 	        author: "[server]",
 	        channel: chnls[i]
-	    });
+	    };
 		send(json, chnls[i]);
 		online_users(chnls[i]);
 	}
@@ -1656,15 +1691,15 @@ var online_users = function(chnl, conn) {
 	        }
 	    }
 	}
-    var json = JSON.stringify({
+    var json = {
         type: "users",
         channel: chnl,
-        time: (new Date()).getTime(),
+        time: now(),
         users: users_,
         author: "[Server]",
-    });
+    };
 
-    if (conn) return conn.sendUTF(json);
+    if (conn) return conn.sendUTF(JSON.stringify(json));
 	send(json, chnl);
 };
 
@@ -1686,42 +1721,29 @@ var get_users = function(chnl, uid) {
 }
 
 var send = function(json, chnnls, uid) {
-	if (typeof chnnls == "string") {
-		for (var i = 0, len = users.length; i < len; i++) {
-			for (var ii = 0, lenn = users[i].channels.length; ii < lenn; ii++) {
-				if (uid !== users[i].user_id && users[i].channels[ii] == chnnls) {
-					if (users[i].active === true) {
-						users[i].connection.sendUTF(json);
-					} else {
-						users[i].msg.push(json);
-						users[i].msg = users[i].msg.slice(-20);
-					}
-					users[i].seen = false;
-					break;
-				}
-			}
-		}
-	} else if (typeof chnnls == "object") {
-		for (var i = 0, len = users.length; i < len; i++) {
-			for (var ii = 0, lenn = users[i].channels.length; ii < lenn; ii++) {
-				for (var iii = 0, lennn = chnnls.length; iii < lenn; iii++) {
-					if (uid !== users[i].user_id && users[i].active === true && users[i].channels[ii] == chnnls[iii]) {
-						json = JSON.parse(json);
-						json.channel = chnnls[iii];
-						json = JSON.stringify(json);
-						if (users[i].active === true) {
-							users[i].connection.sendUTF(json);
-						} else {
-							users[i].msg.push(json);
-							users[i].msg = users[i].msg.slice(-20);
-						}
-						users[i].seen = false;
-						break;
-					}
-				}
-			}
-		}
-	}
+    var wc = wsServer.connections;
+    var ch = [];
+    if (typeof chnnls == "string") chnnls = [chnnls];
+    if (typeof json == "string") json = JSON.parse(json);
+    ch = chnnls;
+
+    for(var i = 0, len = wc.length; i < len; i++) {
+        for (var ii = 0, lenn = wc[i].user.channels.length; ii < lenn; ii++) {
+            for (var iii = 0, lennn = ch.length; iii < lenn; iii++) {
+                if (uid !== wc[i].user.user_id && wc[i].user.channels[ii] == ch[iii]) {
+                    json.channel = ch[iii];
+                    if (wc[i].user.active === true) {
+                        wc[i].sendUTF(JSON.stringify(json));
+                    } else {
+                        wc[i].user.msg.push(json);
+                        wc[i].user.msg = users[idx].msg.slice(-20);
+                    }
+                    wc[i].user.seen = false;
+                    break;
+                }
+            }
+        }
+    }
 }
 
 var setup_channel = function(chnl) {
@@ -1779,7 +1801,7 @@ var check_username = function(id, n) {
 }
 
 var date_std = function (timestamp) {
-    if(!timestamp) timestamp = new Date().getTime();
+    if(!timestamp) timestamp = now();
     if(Math.ceil(timestamp).toString().length == 10) timestamp *= 1000;
     var tzoffset = (new Date()).getTimezoneOffset() * 60000;
     var date = new Date(timestamp - tzoffset);
@@ -1829,11 +1851,11 @@ var server_stat = function(chnl) {
 	}
 	var store_msg_stat = (store_msg) ? "On" : "Off";
 	var results = "<i>----------------------------------------------------------------<br>Server Info" +
-		"<br> - Up Time : <b>" + config.DateDiff((new Date()).getTime(), START_TIME) + "</b>" +
-		"<br> - Total Users : <b>" + total_users + "</b>" +
+		"<br> - Up Time : <b>" + config.DateDiff(now(), START_TIME) + "</b>" +
+		"<br> - Total Users : <b>" + users.length + "</b>" +
 		"<br> - Total Message : <b>" + msg_count + "</b>" +
 		"<br> - Channel List : " + chnl_list +
-		"<br> - Current Connection : <b>" + (total_connection - 1) + "</b>" +
+		"<br> - Current Connection : <b>" + wsServer.connections.length + "</b>" +
 		"<br> - Current Channel : <b>" + chnl + "</b>" +
 		"<br> - Store Message : <b>" + store_msg_stat + "</b>" +
 		blocked +
@@ -1841,11 +1863,11 @@ var server_stat = function(chnl) {
 
 	var result = {
 		ServerInfo: {
-			UpTime: config.DateDiff((new Date()).getTime(), START_TIME),
-			TotalUsers: total_users,
+			UpTime: config.DateDiff(now(), START_TIME),
+			TotalUsers: users.length,
 			TotalMessage: msg_count,
 			ChannelList: chnl_list,
-			CurrentConnection: total_connection,
+			CurrentConnection: wsServer.connections.length,
 			CurrentChannel: chnl,
 			StoreMessage: store_msg,
 		}
@@ -1857,8 +1879,8 @@ var server_stat = function(chnl) {
 
 clean_up = setInterval(function() {
     for (var i = 0, len = users.length; i < len; i++) {
-        if (users[i].user_name !== null && (new Date()).getTime() - users[i].last_seen > 900000 && users[i].admin === false) {
-            users[i].connection.close();
+        if ((now() - users[i].timestamp) > 86400) {
+            remove_client(i, " has been removed");
         }
     }
 }, 60000);

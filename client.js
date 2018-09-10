@@ -81,6 +81,11 @@
             ska.error();
         }
 
+        connection.onping = function(message) {
+            console.log("got ping..");
+            this.pong(myId);
+        }
+
         connection.onmessage = function(message) {
             var json = message.data;
             try {
@@ -566,6 +571,9 @@
                     );
                     if (msg == "/quit" || msg == "/q") {
                         ska.quit();
+                    } else if (msg == "/pong") {
+                        connection.pong(myId);
+                        connection.send("pong");
                     } else if (msg.substring(0, 9) == "/channel " || msg.substring(0, 4) == "/ch " || msg.substring(0, 3) == "/j " || msg.substring(0, 6) == "/join ") {
                         var res = msg.split(" ");
                         var c = res[1].replace(/[^\w\s]/gi, '');
@@ -851,11 +859,11 @@
         }
     }
     
-    var ping = setInterval(function() {
-        if (connect === true && online === true && connection.readyState === 1 && blocked !== true) {
-            connection.send("ping");
-        }
-    }, 60000);
+    // var ping = setInterval(function() {
+    //     if (connect === true && online === true && connection.readyState === 1 && blocked !== true) {
+    //         connection.send("ping");
+    //     }
+    // }, 60000);
 
     var go_here = function(here) {
         window.location = here;
