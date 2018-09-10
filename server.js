@@ -1585,7 +1585,7 @@ wsServer.on("request", function(request) {
             connection.user.online = false;
 
             if (quit === true || connection.user.is_blocked) {
-                clearTimeout(timeout[user.connection.id]);
+                clearTimeout(timeout[connection.id]);
                 var p = " has closed the connection";
                 if (connection.user.is_blocked) p = " has been blocked by admin.";  
                 remove_client(connection.user, p);
@@ -1631,7 +1631,7 @@ var ping = function(user) {
             }
         }, 3000);
 
-    }, 10000);
+    }, 15000);
 };
 
 var remove_client = function(user, pingresult) {
