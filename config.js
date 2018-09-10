@@ -110,6 +110,13 @@ exports.originIsAllowed = function(origin) {
     return true;
 }
 
+exports.generate_id = function(origin) {
+    var S4 = function() {
+        return (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1);
+    };
+    return S4() + S4() + "-" + S4() + "-" + S4() + "-" + S4() + "-" + S4() + S4() + S4();
+}
+
 exports.DateDiff = function(time1, time2) {
     var diffMS = time1 - time2,
         diffS = Math.floor(diffMS / 1000),
