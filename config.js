@@ -1,12 +1,14 @@
 
 
-exports.jwt = require('jsonwebtoken');
-exports.websocket = require("websocket").server;
-exports.http = require("http");
-exports.https = require("https");
-exports.mysql = require("mysql");
+exports.webSocketServer = require('websocket').server;
+exports.http = require('http');
+exports.https = require('https');
 exports.fs = require('fs');
-exports.querystring = require("querystring");
+exports.querystring = require('querystring');
+exports.jwt = require('jsonwebtoken');
+
+exports.mysql = require('./mysql.js');
+// exports.firebase = require('./firebase.js');
 
 exports.ssl = false;
 exports.port = 3000;
@@ -18,15 +20,12 @@ exports.ssl_cert = __dirname + "/ssl/cert.crt";
 exports.token = "skA8d40f4264fc9109a42a7b2052efd4f9350ae6e708a8cb326c1b030adfea9e8ec";
 
 exports.channel_list = [
-    "ska",
-    "utiis",
-    "utiis_ui",
-    "kpj",
-    "kpj_ui",
-    "ladiesfoto",
-    "ladiesfoto_ui",
-    "debunga_ui",
+    "hairlo",
+    "hairlo_admin",
+    "dodoo_admin",
+    "kt_express",
 ];
+
 exports.helps = [
     "<b>/nick</b> - to set or change nickname",
     "<b>/users</b> - to get online users",
@@ -39,48 +38,129 @@ exports.helps = [
     "<b>/unmute</b> - to unmute your notification sound",
     "arrow <b>up</b> - and <b>down</b> for your messages history",
 ];
+
 exports.origins = [
     "http://localhost",
     "https://localhost",
     "http://127.0.0.1",
     "https://127.0.0.1",
-    "http://192.168.0.10",
-    "http://artinity.dtdns.net",
-    "http://utiis.dyndns.org",
-    "http://www.kpjselangor.com",
-    "https://www.kpjselangor.com",
-    "http://www.ladiesfoto.com",
-    "http://kpj",
-    "http://35.240.143.167",
-    "https://35.240.143.167",
+    "https://www.dodoodelivery.com",
+    "https://cms.dodoodelivery.com",
+    "https://www.hairlo.net",
+    "https://hairlo.net",
+    "https://cms.hairlo.net",
+    "https://chat.hairlo.net",
 ];
-exports.db = {
-    websocket: {
-        host: "localhost",
-        user: "skaloot",
-        password: "phpmysql",
-        database: "websocket",
-        insecureAuth: true
-    }
-};
 
-exports.get_https = function() {
-    return https;
+
+/* ==================================== FIREBASE ==================================== */
+// exports.fcm = function(n, t, m) {
+//     this.firebase.fcm(n, t, m);
+// }
+// exports.fcm_history = this.firebase.fcm_history;
+
+
+/* ==================================== SQL ==================================== */
+exports.sql = function(sql, callback) {
+    this.mysql.sql(sql, callback);
 }
 
-exports.get_origin = function() {
-    return origins;
+/* ==================================== PROCESS POST REQUEST ==================================== */
+exports.processPost = function(request, response, callback) {
+    var queryData = "";
+    request.on('data', function(data) {
+        queryData += data;
+        if(queryData.length > 1e6) {
+            queryData = "";
+            response.writeHead(413, {'Content-Type': 'text/plain'}).end();
+            request.connection.destroy();
+        }
+    }).on('end', function() {
+        if(typeof callback == "function") callback(queryData);
+    });
 }
 
-exports.get_help = function() {
-    return helps;
+/* ==================================== MAKE A POST REQUEST ==================================== */
+exports.PostThis = function(obj, path, host, callback) {
+    var post_data = this.querystring.stringify(obj);
+    var post_options = {
+        host: host,
+        path: path,
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Content-Length': Buffer.byteLength(post_data)
+        }
+    };
+    var h = (this.ssl) ? this.https : this.http;
+    var req = h.request(post_options, function(response) {
+        response.on('data', function(data) {
+            try {
+                data = JSON.parse(data);
+                if (typeof callback === "function") return callback(data);
+            } catch (e) {
+                return console.log('This doesn\'t look like a valid JSON: - ' + data);
+            }
+        });
+    });
+
+    req.on('error', function(err) {
+        if (err.code === "ECONNRESET") {
+            console.log(date_std() + " Timeout occurs");
+        }
+        console.log(date_std() + " POST - Socket error.", err);
+    });
+
+    req.setTimeout(10000, function() {
+        this.abort();
+    });
+
+    req.write(post_data);
+    req.end();
 }
 
-exports.checkTime = function(i) {
-    if (i < 10) {
-        i = "0" + i;
-    }
-    return i;
+/* ==================================== MAKE A GET REQUEST ==================================== */
+exports.GetThis = function(host, path, callback, protocol) {
+    var options = {
+        host: host,
+        path: path
+    };
+
+    var h = (this.ssl) ? this.https : this.http;
+    if (protocol && protocol == "http") h = this.http;
+    if (protocol && protocol == "https") h = this.https;
+    
+    var req = h.request(options, function(response) {
+        var data = '';
+        response.on('data', function(chunk) {
+            data += chunk;
+        });
+
+        response.on('end', function() {
+            if (data !== '') {
+                try {
+                    data = JSON.parse(data);
+                    console.log(data);
+                    if (typeof callback === "function") return callback(data);
+                } catch (e) {
+                    return console.log(date_std() + 'This doesn\'t look like a valid JSON: - ' + host + path);
+                }
+            }
+        });
+    });
+
+    req.on('error', function(err) {
+        if (err.code === "ECONNRESET") {
+            console.log(date_std() + " Timeout occurs");
+        }
+        console.log(date_std() + " GET - Socket error.", err);
+    });
+
+    req.setTimeout(10000, function() {
+        this.abort();
+    });
+
+    req.end();
 }
 
 exports.get_time = function() {
@@ -91,15 +171,11 @@ exports.get_time = function() {
     return h + ":" + m + ":" + s + " - ";
 }
 
-exports.get_date = function() {
-    var t = new Date(),
-        y = t.getFullYear(),
-        m = this.checkTime(t.getMonth() + 1),
-        d = this.checkTime(t.getDate()),
-        h = this.checkTime(t.getHours()),
-        mt = this.checkTime(t.getMinutes()),
-        s = this.checkTime(t.getSeconds());
-    return m + "-" + d + "-" + y + "-" + h + "-" + mt + "-" + s;
+exports.checkTime = function(i) {
+    if (i < 10) {
+        i = "0" + i;
+    }
+    return i;
 }
 
 exports.htmlEntities = function(str) {
@@ -172,18 +248,6 @@ exports.add_app = function(a, b) {
     }
 }
 
-exports.censor = function(a) {
-    var i = 0;
-    return function(key, value) {
-        if(i !== 0 && typeof(a) === 'object' && typeof(value) == 'object' && a == value) 
-            return '[Circular]'; 
-        if(i >= 29)
-            return '[Unknown]';
-        ++i; 
-        return value;  
-    }
-}
-
 exports.sort_array = function (arr) {
     arr.sort(function(a, b) {
         var A = a.timestamp;
@@ -239,142 +303,6 @@ exports.get_user = function(u, n) {
         data = this.sort_array(data);
         return data;
     }
-}
-
-exports.processPost = function(request, response, callback) {
-    var queryData = "";
-    request.on('data', function(data) {
-        queryData += data;
-        if(queryData.length > 1e6) {
-            queryData = "";
-            response.writeHead(413, {'Content-Type': 'text/plain'}).end();
-            request.connection.destroy();
-        }
-    }).on('end', function() {
-        if(typeof callback == "function") callback(queryData);
-    });
-}
-
-exports.PostThis = function(obj, host, url, callback) {
-    if(host != "localhost" && !internet) {
-        console.log("ERROR - Cannot post: No connection.");
-        return;
-    }
-    var post_data = this.querystring.stringify(obj),
-        post_options = {
-            host: host,
-            port: "80",
-            path: url,
-            method: "POST",
-            headers: {
-                "Content-Type": "application/x-www-form-urlencoded",
-                "Content-Length": Buffer.byteLength(post_data)
-            }
-        };
-    var post_req = http.request(post_options, function(res) {
-        res.setEncoding("utf8");
-        res.on("data", function(data) {
-            try {
-                data = JSON.parse(data);
-            } catch (e) {
-                console.log("This doesn\'t look like a valid JSON: ", data);
-                return;
-            }
-            if(typeof callback === "function") {
-                callback(data);
-            }
-            console.log(data);
-        });
-    });
-
-    post_req.on('error', function(err) {
-        if (err.code === "ECONNRESET") {
-            console.log(this.date_std() + " Timeout occurs");
-        }
-        console.log(this.date_std() + " POST - Socket error.", err);
-    });
-
-    post_req.setTimeout(10000, function() {
-        this.abort();
-    });
-
-    post_req.write(post_data);
-    post_req.end();
-}
-
-exports.GetThis = function(host, path, callback) {
-    var options = {
-        host: host,
-        path: path
-    };
-
-    var req = http.request(options, function(response) {
-        var data = '';
-        response.on('data', function(chunk) {
-            data += chunk;
-        });
-
-        response.on('end', function() {
-            console.log(data);
-            if (data !== '') {
-                try {
-                    data = JSON.parse(data);
-                } catch (e) {
-                    console.log(this.date_std() + 'This doesn\'t look like a valid JSON: - ' + host + path);
-                    return;
-                }
-            }
-            if (typeof callback === "function") {
-                callback(data);
-            }
-        });
-    });
-
-    req.on('error', function(err) {
-        if (err.code === "ECONNRESET") {
-            console.log(this.date_std() + " Timeout occurs");
-        }
-        console.log(this.date_std() + " GET - Socket error.", err);
-    });
-
-    req.setTimeout(10000, function() {
-        this.abort();
-    });
-
-    req.end();
-}
-
-exports.sql = function(d, sql, callback) {
-    var c = this.db[d];
-
-    var con = this.mysql.createConnection(c);
-
-    con.connect(function(err) {
-        if (err) {
-            console.log(err);
-            return con.end();
-        }
-        if(sql.indexOf("select") !== -1 || sql.indexOf("SELECT") !== -1) {
-            if(sql.indexOf("limit") === -1 && sql.indexOf("LIMIT") === -1) {
-                sql += " LIMIT 10";
-            }
-        }
-        con.query(sql, function(err, result) {
-            if(typeof callback == "function") {
-                if (err) {
-                    callback(err);
-                } else {
-                    callback(result);
-                }
-            }
-            return con.end();
-        });
-    });
-
-    con.on('error', function(err) {
-        console.log(err);
-        return con.destroy();
-    });
 }
 
 exports.MD5 = function (string) {

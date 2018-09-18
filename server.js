@@ -25,8 +25,12 @@ process.on('SIGTERM', function (err) {
 
 /* ============================================= VARIABLE ================================================= */
 
-var config = require("./config"),
+var config = require("./config.js"),
+    webSocketServer = config.webSocketServer,
+    querystring = config.querystring,
+    fs = config.fs,
     channels = [],
+    clients = [],
     users = [],
     apps = [],
     channel_list = [],
@@ -37,9 +41,8 @@ var config = require("./config"),
     debug = true,
     msg_count = 0,
     shutdown = false,
-	store_msg = false,
+    store_msg = false,
     max_connection = 200,
-    webSocketServer = config.websocket,
     http = config.http,
     https = config.https,
     fs = config.fs,
@@ -77,10 +80,19 @@ create_server(function(request, response) {
         'Content-Type': 'application/json'
     });
 
-    var req = request.url.split("/").splice(1),
+    var params = {};
+    if (request.url.indexOf("?") !== -1)
+        params = config.querystring.parse(request.url.substr(request.url.indexOf("?")+1));
+
+    var url = request.url;
+    if (request.url.indexOf("?") !== -1)
+        url = request.url.substr(0, request.url.indexOf("?"));
+
+    var req = url.split("/").splice(1),
         e = (req[0]) ? req[0] : null,
         f = (req[1]) ? req[1] : null,
-        g = (req[2]) ? req[2] : null;
+        g = (req[2]) ? req[2] : null,
+        h = (req[3]) ? req[3] : null;
 
     /* =========================== POST REQUEST =========================== */
     if (request.method == "POST") {
@@ -89,10 +101,11 @@ create_server(function(request, response) {
             message: "Invalid Token"
         }));
 
-        config.processPost(request, response, function() {
-            console.log(request.post);
-        });
-
+        if (e == "live_update") {
+            config.processPost(request, response, function(data) {
+                console.log(data);
+            });
+        }
         return response.end(JSON.stringify({
             status: "Success"
         }));
@@ -101,13 +114,16 @@ create_server(function(request, response) {
     /* =========================== GET REQUEST =========================== */
     if (e === 'users') {
         response.end(JSON.stringify({
-        	status: 200,
-        	users: config.get_user(users, f),
+            status: 200,
+            users: config.get_user(users, f),
         }));
-    } else if (e === 'channels') {
+    } else if (e == "fcm") {
+        if (f && g && !params.message) config.fcm(f, g);
+        if (f && g && params.message) config.fcm(f, g, decodeURI(params.message));
+
         response.end(JSON.stringify({
-        	status: 200,
-        	channel_list: channel_list
+            status: "Success",
+            fcm: config.fcm_history
         }));
     } else if (e === 'stat') {
         response.end(JSON.stringify({
@@ -368,8 +384,6 @@ wsServer.on("request", function(request) {
                                 reconnect = true;
 
                                 connection.user = users[i].detail;
-                                connection.active = true;
-                                connection.ping_ = true;
 
                                 if (admin) users[i].admin = true;
                                 connection.sendUTF(JSON.stringify({
@@ -448,6 +462,7 @@ wsServer.on("request", function(request) {
                                 active: true,
                                 online: true,
                                 ping: null,
+                                ping_: false,
                                 ping_timeout: null,
                                 is_blocked: false,
                                 start: now(),
@@ -469,8 +484,6 @@ wsServer.on("request", function(request) {
                             users.push(detail);
                             index = users.length - 1;
                             connection.user = detail;
-                            connection.active = true;
-                            connection.ping_ = true;
 
                             if (channel == "ladiesfoto") {
                                 config.GetThis("www.ladiesfoto.com", "/websocket/login_mail.php?username=" + userName);
@@ -517,7 +530,7 @@ wsServer.on("request", function(request) {
                                     author: "[Server]",
                                     channel: channel,
                                 }));
-                                config.sql("websocket", "INSERT into log (username, ip_address) VALUES ('"+userName+"', '"+ip_address+"')");
+                                config.sql("INSERT into log (username, ip_address) VALUES ('"+userName+"', '"+ip_address+"')");
                             }
                             online_users(channel);
                             if (debug) console.log(config.get_time() + " User is known as: " + userName + " - " + userId);
@@ -596,7 +609,7 @@ wsServer.on("request", function(request) {
                     var sql = res.toString().replace(/,/g, " ");
                     if (debug) console.log(sql);
 
-                    config.sql("websocket", sql, function(result) {
+                    config.sql(sql, function(result) {
                         connection.sendUTF(JSON.stringify({
                             type: "json",
                             time: now(),
@@ -653,20 +666,21 @@ wsServer.on("request", function(request) {
                         }));
                         return;
                     }
-                    for (var i = 0, len = users.length; i < len; i++) {
-                        if (receipient == users[i].user_name) {
-                            users[i].connection.sendUTF(JSON.stringify({
+                    var wc = wsServer.connections;
+                    for (var i = 0, len = wc.length; i < len; i++) {
+                        if (receipient == wc[i].user.user_name) {
+                            wc[i].sendUTF(JSON.stringify({
                                 type: "reload",
                                 time: now(),
                                 author: "[Server]",
                                 channel: channel,
                             }));
                             blocked_id.push({
-                                user_id: users[i].user_id,
-                                user_name: users[i].user_name
+                                user_id: wc[i].user.user_id,
+                                user_name: wc[i].user.user_name
                             });
-                            users[i].is_blocked = true;
-                            users[i].connection.close();
+                            wc[i].user.is_blocked = true;
+                            wc[i].close();
                             return;
                         }
                     }
@@ -720,11 +734,12 @@ wsServer.on("request", function(request) {
                         }));
                         return;
                     }
-                    for (var i = 0, len = users.length; i < len; i++) {
-                        if (receipient_id == users[i].user_id && users[i].assigned == null) {
-                            users[i].assigned = userId;
-                            connection.user.client = users[i].user_id;
-                            users[i].connection.sendUTF(JSON.stringify({
+                    var wc = wsServer.connections;
+                    for (var i = 0, len = wc.length; i < len; i++) {
+                        if (receipient_id == wc[i].user.user_id && wc[i].user.assigned == null) {
+                            wc[i].user.assigned = userId;
+                            connection.user.client = wc[i].user.user_id;
+                            wc[i].user.connection.sendUTF(JSON.stringify({
                                 type: "assigned",
                                 assigned: userId,
                                 time: now(),
@@ -732,7 +747,7 @@ wsServer.on("request", function(request) {
                                 author: "[Server]",
                                 channel: channel,
                             }));
-                            receipient = users[i].user_name;
+                            receipient = wc[i].user.user_name;
                             break;
                         }
                     }
@@ -758,13 +773,14 @@ wsServer.on("request", function(request) {
                         }));
                         return;
                     }
-                    for (var i = 0, len = users.length; i < len; i++) {
-                        if (receipient == users[i].user_id && users[i].assigned !== null && connection.user.client == receipient) {
-                            users[i].assigned = null;
-                            users[i].msg = [];
+                    var wc = wsServer.connections;
+                    for (var i = 0, len = wc.length; i < len; i++) {
+                        if (receipient == wc[i].user.user_id && wc[i].user.assigned !== null && connection.user.client == receipient) {
+                            wc[i].user.assigned = null;
+                            wc[i].user.msg = [];
                             connection.user.msg = [];
                             connection.user.client = null;
-                            users[i].connection.sendUTF(JSON.stringify({
+                            wc[i].user.connection.sendUTF(JSON.stringify({
                                 type: "unassigned",
                                 assigned: userId,
                                 time: now(),
@@ -913,10 +929,11 @@ wsServer.on("request", function(request) {
                         }));
                         return;
                     }
-                    for (var i = 0, len = users.length; i < len; i++) {
-                        if (users[i].user_name == receipient) {
+                    var wc = wsServer.connections;
+                    for (var i = 0, len = wc.length; i < len; i++) {
+                        if (wc[i].user.user_name == receipient) {
                             var c = "",
-                                chnls = users[i].channels;
+                                chnls = wc[i].user.channels;
                             for(var n = 0; n < chnls.length; n++) {
                                 c += chnls[n] + ", ";
                             }
@@ -924,17 +941,17 @@ wsServer.on("request", function(request) {
                                 type: "json",
                                 time: now(),
                                 data: {
-                                    user_name: users[i].user_name,
-                                    user_id: users[i].user_id,
-                                    online: config.DateDiff(now(), users[i].start),
-                                    last_seen: config.DateDiff(now(), users[i].timestamp),
-                                    origin: users[i].origin,
-                                    ip_address: users[i].ip_address,
-                                    screen: users[i].screen,
-                                    active: users[i].active,
-                                    agent: users[i].agent,
-                                    channel: users[i].channel,
-                                    channels: users[i].channels,
+                                    user_name: wc[i].user.user_name,
+                                    user_id: wc[i].user.user_id,
+                                    online: config.DateDiff(now(), wc[i].user.start),
+                                    last_seen: config.DateDiff(now(), wc[i].user.timestamp),
+                                    origin: wc[i].user.origin,
+                                    ip_address: wc[i].user.ip_address,
+                                    screen: wc[i].user.screen,
+                                    active: wc[i].user.active,
+                                    agent: wc[i].user.agent,
+                                    channel: wc[i].user.channel,
+                                    channels: wc[i].user.channels,
                                 },
                                 author: "[Server]",
                                 channel: channel,
@@ -971,10 +988,11 @@ wsServer.on("request", function(request) {
                         return send(json, channel, userId);
                     }
                     var found = false;
-                    for (var i = 0, len = users.length; i < len; i++) {
-                        if (users[i].user_name == receipient && users[i].active === true && users[i].channel == channel) {
-                            users[i].connection.sendUTF(JSON.stringify(json));
-                            users[i].seen = false;
+                    var wc = wsServer.connections;
+                    for (var i = 0, len = wc.length; i < len; i++) {
+                        if (wc[i].user.user_name == receipient && wc[i].user.active === true && wc[i].user.channel == channel) {
+                            wc[i].user.connection.sendUTF(JSON.stringify(json));
+                            wc[i].user.seen = false;
                             found = true;
                             break;
                         }
@@ -1278,10 +1296,11 @@ wsServer.on("request", function(request) {
                     } else {
                         var found = false;
                         connection.user.seen = true;
-                        for (var i = 0, len = users.length; i < len; i++) {
-                            if ((users[i].user_name == receipient || users[i].user_id == receipient) && users[i].active === true && users[i].channel == channel) {
-                                users[i].connection.sendUTF(JSON.stringify(json));
-                                users[i].seen = false;
+                        var wc = wsServer.connections;
+                    for (var i = 0, len = wc.length; i < len; i++) {
+                            if ((wc[i].user.user_name == receipient || wc[i].user.user_id == receipient) && wc[i].user.active === true && wc[i].user.channel == channel) {
+                                wc[i].user.connection.sendUTF(JSON.stringify(json));
+                                wc[i].user.seen = false;
                                 connection.user.seen = false;
                                 found = true;
                                 break;
@@ -1322,15 +1341,16 @@ wsServer.on("request", function(request) {
                         author_id: userId,
                     };
                     var found = false;
-                    for (var i = 0, len = users.length; i < len; i++) {
-                        if (users[i].user_name == receipient && users[i].channel == channel) {
-                            if (users[i].active === true) {
-                                users[i].connection.sendUTF(JSON.stringify(json));
+                    var wc = wsServer.connections;
+                    for (var i = 0, len = wc.length; i < len; i++) {
+                        if (wc[i].user.user_name == receipient && wc[i].user.channel == channel) {
+                            if (wc[i].user.active === true) {
+                                wc[i].user.connection.sendUTF(JSON.stringify(json));
                             } else {
-                                users[i].msg.push(json);
-                                users[i].msg = users[i].msg.slice(-20);
+                                wc[i].user.msg.push(json);
+                                wc[i].user.msg = wc[i].user.msg.slice(-20);
                             }
-                            users[i].seen = false;
+                            wc[i].user.seen = false;
                             connection.user.seen = false
                             found = true;
 
@@ -1340,7 +1360,7 @@ wsServer.on("request", function(request) {
                                 insert += ",'"+channel+"'";
                                 insert += ",'"+ip_address+"'";
                                 var sql = "INSERT INTO message (msg, username, channel, ip_address) VALUES ("+insert+")";
-                                config.sql("websocket", sql);
+                                config.sql(sql);
                             }
                             return;
                         }
@@ -1361,10 +1381,11 @@ wsServer.on("request", function(request) {
                     var receipient = res[1];
                     if (userName == receipient) return;
 
-                    for (var i = 0, len = users.length; i < len; i++) {
-                        if (users[i].user_name == receipient) {
+                    var wc = wsServer.connections;
+                    for (var i = 0, len = wc.length; i < len; i++) {
+                        if (wc[i].user.user_name == receipient) {
                             quit = true;
-                            users[i].connection.close();
+                            wc[i].user.connection.close();
                             return;
                         }
                     }
@@ -1386,16 +1407,18 @@ wsServer.on("request", function(request) {
                     };
                     if (channel == "kpj") {
                         if (connection.user.assigned !== null) {
-                            for (var i = 0, len = users.length; i < len; i++) {
-                                if (connection.user.assigned == users[i].user_id) {
-                                    users[i].connection.sendUTF(JSON.stringify(json));
+                            var wc = wsServer.connections;
+                    for (var i = 0, len = wc.length; i < len; i++) {
+                                if (connection.user.assigned == wc[i].user.user_id) {
+                                    wc[i].user.connection.sendUTF(JSON.stringify(json));
                                 }
                             }
                         }
                         if (connection.user.operator === true && connection.user.client !== null) {
-                            for (var i = 0, len = users.length; i < len; i++) {
-                                if (connection.user.client == users[i].user_id) {
-                                    users[i].connection.sendUTF(JSON.stringify(json));
+                            var wc = wsServer.connections;
+                    for (var i = 0, len = wc.length; i < len; i++) {
+                                if (connection.user.client == wc[i].user.user_id) {
+                                    wc[i].user.connection.sendUTF(JSON.stringify(json));
                                 }
                             }
                         }
@@ -1414,16 +1437,18 @@ wsServer.on("request", function(request) {
                     };
                     if (channel == "kpj") {
                         if (connection.user.assigned !== null) {
-                            for (var i = 0, len = users.length; i < len; i++) {
-                                if (connection.user.assigned == users[i].user_id) {
-                                    users[i].connection.sendUTF(JSON.stringify(json));
+                            var wc = wsServer.connections;
+                    for (var i = 0, len = wc.length; i < len; i++) {
+                                if (connection.user.assigned == wc[i].user.user_id) {
+                                    wc[i].user.connection.sendUTF(JSON.stringify(json));
                                 }
                             }
                         }
                         if (connection.user.operator === true && connection.user.client !== null) {
-                            for (var i = 0, len = users.length; i < len; i++) {
-                                if (connection.user.client == users[i].user_id) {
-                                    users[i].connection.sendUTF(JSON.stringify(json));
+                            var wc = wsServer.connections;
+                    for (var i = 0, len = wc.length; i < len; i++) {
+                                if (connection.user.client == wc[i].user.user_id) {
+                                    wc[i].user.connection.sendUTF(JSON.stringify(json));
                                 }
                             }
                         }
@@ -1435,10 +1460,11 @@ wsServer.on("request", function(request) {
                     var client_count = 0;
                     connection.user.seen = true;
 
-                    for (var i = 0, len = users.length; i < len; i++) {
-                        for (var ii = 0, lenn = users[i].channels.length; ii < lenn; ii++) {
-                            if (users[i].channels[ii] == channel) {
-                                if (users[i].seen === false) all = false;
+                    var wc = wsServer.connections;
+                    for (var i = 0, len = wc.length; i < len; i++) {
+                        for (var ii = 0, lenn = wc[i].user.channels.length; ii < lenn; ii++) {
+                            if (wc[i].user.channels[ii] == channel) {
+                                if (wc[i].user.seen === false) all = false;
                                 client_count++;
                             }
                         }
@@ -1450,9 +1476,10 @@ wsServer.on("request", function(request) {
                             channel: channel
                         };
                     }
-                    for (var i = 0, len = users.length; i < len; i++) {
-                        if (users[i].active === true && users[i].user_id == receipient) {
-                            users[i].connection.sendUTF(JSON.stringify(json));
+                    var wc = wsServer.connections;
+                    for (var i = 0, len = wc.length; i < len; i++) {
+                        if (wc[i].user.active === true && wc[i].user.user_id == receipient) {
+                            wc[i].user.connection.sendUTF(JSON.stringify(json));
                             return;
                         }
                     }
@@ -1510,7 +1537,7 @@ wsServer.on("request", function(request) {
                 } else if (msgs.msg == "/admin") {
                     if(!admin) return;
                     var sql = "SELECT * FROM users";
-                    config.sql("websocket", sql, function(data) {
+                    config.sql(sql, function(data) {
                         if (debug) console.log(JSON.stringify(data));
                         var a = "<i>------------------------------------<br>Admins<br>";
                         for(var i in data) {
@@ -1558,7 +1585,7 @@ wsServer.on("request", function(request) {
                         if (connection.user.channel == "kpj") {
                             config.sql("amirosol_newkpj", sql);
                         } else {
-                            config.sql("websocket", sql);
+                            config.sql(sql);
                         }
                     }
                 }
@@ -1568,7 +1595,7 @@ wsServer.on("request", function(request) {
 
 
     connection.on("pong", function(msg) {
-        connection.ping_ = true;
+        connection.user.ping_ = true;
     });
 
 
@@ -1614,18 +1641,18 @@ var ping = function(user) {
     if (timeout[id]) clearTimeout(timeout[id]);
 
     timeout[id] = setTimeout(function() {
-        if (user.connection.active === false || user.online === false) {
+        if (user.active === false || user.online === false) {
             delete timeout[id];
             return;
         }
-		
-        user.connection.ping_ = false;
+        
+        user.ping_ = false;
         user.connection.ping();
 
         timeout[id] = setTimeout(function() {            
-            if (user.connection.ping_ === false) {
+            if (user.ping_ === false) {
                 console.log("no respond.. set as inactive");
-                user.connection.active = false;
+                user.active = false;
             } else {
                 ping(user);
             }
@@ -1637,42 +1664,43 @@ var ping = function(user) {
 var remove_client = function(user, pingresult) {
     if (debug) console.log(config.get_time() + " " + user.user_name + pingresult);
     
-	var chnls = user.channels;
-	var _name = user.user_name;
-	var _id = user.user_id;
-	users.splice(users.indexOf(user), 1);
+    var chnls = user.channels;
+    var _name = user.user_name;
+    var _id = user.user_id;
+    users.splice(users.indexOf(user), 1);
 
-	for (var i = 0, len = chnls.length; i < len; i++) {
-		var json = {
-	        type: "info",
-	        user_id: _id,
-	        time: now(),
-	        msg: "<i><b>" + _name + "</b>" + pingresult + "</i>",
-	        author: "[server]",
-	        channel: chnls[i]
-	    };
-		send(json, chnls[i]);
-		online_users(chnls[i]);
-	}
+    for (var i = 0, len = chnls.length; i < len; i++) {
+        var json = {
+            type: "info",
+            user_id: _id,
+            time: now(),
+            msg: "<i><b>" + _name + "</b>" + pingresult + "</i>",
+            author: "[server]",
+            channel: chnls[i]
+        };
+        send(json, chnls[i]);
+        online_users(chnls[i]);
+    }
 };
 
 var online_users = function(chnl, conn) {
     var users_ = [];
-    for (var i = 0, len = users.length; i < len; i++) {
-    	for (var ii = 0, lenn = users[i].channels.length; ii < lenn; ii++) {
-	        if (users[i].active === true && users[i].channels[ii] === chnl) {
-	            users_.push({
-	                name: users[i].user_name,
-	                id: users[i].user_id,
-	                ip_address: users[i].ip_address,
-	                assigned: users[i].assigned,
-	                operator: users[i].operator,
-	                admin: users[i].admin,
-	            });
-	            break;
-	        }
-	    }
-	}
+    var wc = wsServer.connections;
+    for (var i = 0, len = wc.length; i < len; i++) {
+        for (var ii = 0, lenn = wc[i].user.channels.length; ii < lenn; ii++) {
+            if (wc[i].user.active === true && wc[i].user.channels[ii] === chnl) {
+                users_.push({
+                    name: wc[i].user.user_name,
+                    id: wc[i].user.user_id,
+                    ip_address: wc[i].user.ip_address,
+                    assigned: wc[i].user.assigned,
+                    operator: wc[i].user.operator,
+                    admin: wc[i].user.admin,
+                });
+                break;
+            }
+        }
+    }
     var json = {
         type: "users",
         channel: chnl,
@@ -1682,21 +1710,22 @@ var online_users = function(chnl, conn) {
     };
 
     if (conn) return conn.sendUTF(JSON.stringify(json));
-	send(json, chnl);
+    send(json, chnl);
 };
 
 var get_users = function(chnl, uid) {
-	var users_ = [];
-	var n = 1;
-	for (var i = 0, len = users.length; i < len; i++) {
+    var users_ = [];
+    var n = 1;
+    var wc = wsServer.connections;
+    for (var i = 0, len = wc.length; i < len; i++) {
         if (chnl == "all") {
-        	users_.push(users[i].user_name);
+            users_.push(wc[i].user.user_name);
         } else {
-        	for (var ii = 0, lenn = users[i].channels.length; ii < lenn; ii++) {
-        		if (users[i].channels[ii] == chnl) {
-	        		users_.push(users[i].user_name);
-	        	}
-	        }
+            for (var ii = 0, lenn = wc[i].user.channels.length; ii < lenn; ii++) {
+                if (wc[i].user.channels[ii] == chnl) {
+                    users_.push(wc[i].user.user_name);
+                }
+            }
         }
     }
     return users_;
@@ -1756,14 +1785,14 @@ var get_history = function(chnl) {
 };
 
 var check_password = function(username, password, callback) {
-	if (debug) console.log("Verifying password..");
-	var sql = "SELECT id FROM users WHERE username = '"+username+"' AND password = '"+config.MD5(password)+"'";
-	config.sql("websocket", sql, function(data) {
-		var check = false;
-		if(data.length > 0) check = true;
-		if (typeof callback == "function") return callback(check);
-		return check;
-	});
+    if (debug) console.log("Verifying password..");
+    var sql = "SELECT id FROM users WHERE username = '"+username+"' AND password = '"+config.MD5(password)+"'";
+    config.sql(sql, function(data) {
+        var check = false;
+        if(data.length > 0) check = true;
+        if (typeof callback == "function") return callback(check);
+        return check;
+    });
 };
 
 var check_blocked_id = function(id) {
@@ -1776,9 +1805,10 @@ var check_blocked_id = function(id) {
 };
 
 var check_username = function(id, n) {
-	for (var i = 0, len = users.length; i < len; i++) {
-        if(users[i].user_id != id && users[i].user_name == n) return false;
-	}
+    var wc = wsServer.connections;
+                    for (var i = 0, len = wc.length; i < len; i++) {
+        if(wc[i].user.user_id != id && wc[i].user.user_name == n) return false;
+    }
     return true;
 }
 
@@ -1792,8 +1822,8 @@ var date_std = function (timestamp) {
 }
 
 var ShutTheHellUp = function() {
-	shutdown = true;
-	process.exit(0);
+    shutdown = true;
+    process.exit(0);
 }
 
 var count_channel = function(chnl) {
@@ -1809,53 +1839,53 @@ var reset_count_channel = function(chnl) {
 };
 
 var server_stat = function(chnl) {
-	reset_count_channel();
+    reset_count_channel();
 
-	for (var n = 0, len2 = users.length; n < len2; n++) {
-		var chnl_list_count_inside = 0;
-		for (var nn = 0, lenn = users[n].channels.length; nn < lenn; nn++) {
-			count_channel(users[n].channels[nn]);
-		}
-	}
+    for (var n = 0, len2 = users.length; n < len2; n++) {
+        var chnl_list_count_inside = 0;
+        for (var nn = 0, lenn = users[n].channels.length; nn < lenn; nn++) {
+            count_channel(users[n].channels[nn]);
+        }
+    }
 
-	var chnl_list = "";
-	for (i in channel_list) {
-		if (channel_list[i].users > 0) chnl_list += "<b>" + channel_list[i].name + "</b> (<b>" + channel_list[i].users + "</b>), ";
-	}
+    var chnl_list = "";
+    for (i in channel_list) {
+        if (channel_list[i].users > 0) chnl_list += "<b>" + channel_list[i].name + "</b> (<b>" + channel_list[i].users + "</b>), ";
+    }
 
-	var blocked = "";
-	if (blocked_list.length > 0) {
-		blocked += "<br> - Blocked Orogin : <b>";
-		for (var i = 0, len = blocked_list.length; i < len; i++) {
-			blocked += blocked_list[i] + ", ";
-		}
-		blocked += "</b>";
-	}
-	var store_msg_stat = (store_msg) ? "On" : "Off";
-	var results = "<i>----------------------------------------------------------------<br>Server Info" +
-		"<br> - Up Time : <b>" + config.DateDiff(now(), START_TIME) + "</b>" +
-		"<br> - Total Users : <b>" + users.length + "</b>" +
-		"<br> - Total Message : <b>" + msg_count + "</b>" +
-		"<br> - Channel List : " + chnl_list +
-		"<br> - Current Connection : <b>" + wsServer.connections.length + "</b>" +
-		"<br> - Current Channel : <b>" + chnl + "</b>" +
-		"<br> - Store Message : <b>" + store_msg_stat + "</b>" +
-		blocked +
-		"<br>----------------------------------------------------------------</i>";
+    var blocked = "";
+    if (blocked_list.length > 0) {
+        blocked += "<br> - Blocked Orogin : <b>";
+        for (var i = 0, len = blocked_list.length; i < len; i++) {
+            blocked += blocked_list[i] + ", ";
+        }
+        blocked += "</b>";
+    }
+    var store_msg_stat = (store_msg) ? "On" : "Off";
+    var results = "<i>----------------------------------------------------------------<br>Server Info" +
+        "<br> - Up Time : <b>" + config.DateDiff(now(), START_TIME) + "</b>" +
+        "<br> - Total Users : <b>" + users.length + "</b>" +
+        "<br> - Total Message : <b>" + msg_count + "</b>" +
+        "<br> - Channel List : " + chnl_list +
+        "<br> - Current Connection : <b>" + wsServer.connections.length + "</b>" +
+        "<br> - Current Channel : <b>" + chnl + "</b>" +
+        "<br> - Store Message : <b>" + store_msg_stat + "</b>" +
+        blocked +
+        "<br>----------------------------------------------------------------</i>";
 
-	var result = {
-		ServerInfo: {
-			UpTime: config.DateDiff(now(), START_TIME),
-			TotalUsers: users.length,
-			TotalMessage: msg_count,
-			ChannelList: chnl_list,
-			CurrentConnection: wsServer.connections.length,
-			CurrentChannel: chnl,
-			StoreMessage: store_msg,
-		}
-	};
-		
-	return result;
+    var result = {
+        ServerInfo: {
+            UpTime: config.DateDiff(now(), START_TIME),
+            TotalUsers: users.length,
+            TotalMessage: msg_count,
+            ChannelList: chnl_list,
+            CurrentConnection: wsServer.connections.length,
+            CurrentChannel: chnl,
+            StoreMessage: store_msg,
+        }
+    };
+        
+    return result;
 }
 
 
@@ -1865,7 +1895,7 @@ clean_up = setInterval(function() {
             console.log("User not found...");
             continue;
         }
-        if ((now() - users[i].timestamp) > 86400 && users[i].connection.active === false) {
+        if ((now() - users[i].timestamp) > 86400 && !users[i].connection) {
             remove_client(users[i], " has been removed");
         }
     }
